@@ -10,7 +10,7 @@ on GitHub's certification domains. Starting with **GitHub Actions**.
 ## Install
 
 ```
-/plugin marketplace add <this-repo-git-url>
+/plugin marketplace add toddkasper/expert-skills
 /plugin install github@expert-skills
 ```
 

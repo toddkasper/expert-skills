@@ -10,7 +10,7 @@ knowledge strong Node, TypeScript, React, Next.js, and React Native engineers ap
 ## Install
 
 ```
-/plugin marketplace add <this-repo-git-url>
+/plugin marketplace add toddkasper/expert-skills
 /plugin install web@expert-skills
 ```
 

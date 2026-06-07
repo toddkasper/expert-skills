@@ -13,7 +13,7 @@ anti-patterns.
 ## Install (as a plugin)
 
 ```
-/plugin marketplace add <this-repo-git-url>
+/plugin marketplace add toddkasper/expert-skills
 /plugin install salesforce@expert-skills
 ```
 

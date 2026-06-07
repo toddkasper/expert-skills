@@ -26,7 +26,7 @@ Claude Code plugins.
 As a Claude Code plugin marketplace:
 
 ```
-/plugin marketplace add <this-repo-git-url>
+/plugin marketplace add toddkasper/expert-skills
 /plugin install salesforce@expert-skills
 ```
 

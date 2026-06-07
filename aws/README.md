@@ -11,7 +11,7 @@ practitioners — Professional tier plus the Security Specialty.
 ## Install (as a plugin)
 
 ```
-/plugin marketplace add <this-repo-git-url>
+/plugin marketplace add toddkasper/expert-skills
 /plugin install aws@expert-skills
 ```
 
