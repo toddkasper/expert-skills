@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "web",
+  "displayName": "Web Development Skills",
+  "description": "Operational skills for web/runtime competence: nodejs (anchored on the OpenJS Node.js certifications), typescript, react, nextjs, and react-native (competence skills — no first-party certification exists for these). Skeletons in progress. Guidance, not ground truth.",
+  "version": "0.0.1",
+  "author": {
+    "name": "Todd Kasper"
+  },
+  "license": "MIT",
+  "keywords": ["nodejs", "typescript", "react", "javascript", "web", "frontend", "backend"]
+}

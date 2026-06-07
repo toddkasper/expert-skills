@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "aws",
+  "displayName": "AWS Certification Skills",
+  "description": "Operational skills covering AWS certification domains. Professional tier first: Solutions Architect – Professional (SAP-C02) and DevOps Engineer – Professional (DOP-C02). Skeletons in progress — structure and exam blueprint are in place; operational rules, decision tables, and verification steps are TODO. Guidance, not ground truth.",
+  "version": "0.0.1",
+  "author": {
+    "name": "Todd Kasper"
+  },
+  "license": "MIT",
+  "keywords": ["aws", "certification", "solutions-architect", "devops", "cloud", "professional"]
+}

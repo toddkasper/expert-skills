@@ -1,0 +1,341 @@
+---
+name: react-native
+description: Operational playbook for building and reviewing React Native and Expo mobile apps — core components and APIs, navigation (Expo Router and React Navigation), native modules, the Expo SDK and EAS Build/Submit/Update, iOS/Android platform differences, and mobile performance. Assumes core React competence (see sibling skill `react`); covers the mobile/native deltas only. No first-party certification exists; this is a competence skill.
+metadata:
+  credential: None — competence skill (no first-party React Native / Expo certification)
+  domain: web
+  type: competence-playbook
+  status: active
+  last-updated: 2026-06-07
+---
+
+# React Native + Expo — Skills Reference
+
+## Overview
+
+React Native lets you build iOS and Android apps in JavaScript/TypeScript using a React component model, but the runtime, component set, and performance constraints differ fundamentally from the browser. This skill covers those deltas — what a strong React Native / Expo engineer knows that goes beyond React-on-the-web competence.
+
+Key shifts from the web:
+- No DOM, no CSS — layout is Flexbox-only via `StyleSheet`, components are `View`/`Text`/`Image`, not `div`/`span`/`img`
+- Two threads that must stay unblocked — the JS thread and the UI/main thread; dropped frames come from overloading either
+- New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory from Expo SDK 55+)
+- Ship cycle is different — JS-only changes can be pushed OTA via EAS Update; anything touching native code requires a new store binary
+
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md). Load that file when looking up official docs or library links.
+
+---
+
+## 1. RN Core — Components, Styling, Lists, and Platform Differences
+
+### Components: no HTML, no DOM
+
+| Web equivalent | React Native component | Notes |
+|---|---|---|
+| `<div>` | `<View>` | Layout container; Flexbox column by default |
+| `<span>` / `<p>` | `<Text>` | All visible text must be inside `<Text>`; nesting `<Text>` inside `<View>` without wrapping in `<Text>` throws an error |
+| `<img>` | `<Image>` | Requires explicit `width`/`height` or a flex layout; remote images need a `{ uri: '...' }` source |
+| `<input>` | `<TextInput>` | No `onChange` — use `onChangeText`; `value` + `onChangeText` for controlled inputs |
+| `<button>` | `<Pressable>` (preferred) or `<Button>` | `<Button>` is heavily platform-styled; `<Pressable>` with custom children for pixel-level control |
+| `<div style={{ overflow: 'scroll' }}>` | `<ScrollView>` | Renders all children up front — do NOT use for long dynamic lists |
+| Long dynamic list | `<FlatList>` | Virtualized — renders only visible items + a small buffer; requires `data` + `renderItem` + `keyExtractor` |
+| Sectioned list | `<SectionList>` | Like `FlatList` but with section headers; data shape is `[{ title, data: [] }]` |
+
+**Text nesting rule:** every string literal rendered to screen must be wrapped in `<Text>`. Rendering a bare string inside `<View>` is a runtime error on Android.
+
+### Styling — Flexbox only
+
+- `StyleSheet.create({ ... })` — pass objects through this; validates style keys in development and improves perf via style ID deduplication
+- Default flex direction is **column** (not row, unlike the web default)
+- No `%` widths in most contexts — use `flex: 1` to fill available space; use `Dimensions.get('window')` or the `useWindowDimensions` hook for pixel math
+- No `em`/`rem` — use the `PixelRatio` API for density-aware sizing or rely on `Dimensions`
+- `position: 'absolute'` works as expected; no `position: fixed` (use native modal or navigation header for sticky UI)
+
+### FlatList — the mandatory performance knob
+
+`FlatList` defers rendering of off-screen items. Key props:
+
+| Prop | Why it matters |
+|---|---|
+| `keyExtractor` | Must return a unique stable string — missing or unstable keys cause full re-renders on data change |
+| `getItemLayout` | Tells RN item size without measuring — skip this for variable-height items only; providing it enables instant scroll-to-index |
+| `windowSize` | Controls how many screen-heights of items are pre-rendered (default 21); lower it for heavy items |
+| `removeClippedSubviews` | Unmounts off-screen native views — effective on Android; can cause blank flashes on iOS if overused |
+| `initialNumToRender` | Items rendered on first paint — set high enough to fill the screen, not higher |
+
+**Red flag:** using `<ScrollView>` with a `.map()` for a list of unknown length. It renders all items immediately, causes layout jank, and can exhaust memory.
+
+**FlashList alternative:** Shopify's FlashList is significantly faster than FlatList for homogeneous-item lists because it recycles item components. Use it for any list > ~100 items with a consistent item type. Requires New Architecture.
+
+### Platform-specific code
+
+```typescript
+// Inline conditional
+import { Platform } from 'react-native';
+const hitSlop = Platform.OS === 'ios' ? { top: 10, bottom: 10 } : { top: 5, bottom: 5 };
+
+// Platform-specific files (auto-selected at bundle time)
+// MyComponent.ios.tsx  — used on iOS
+// MyComponent.android.tsx  — used on Android
+// MyComponent.tsx  — fallback
+```
+
+Key platform differences to remember:
+- **Back button:** Android has a hardware back button; iOS does not. Use `BackHandler` (or React Navigation's built-in handling) to intercept it on Android
+- **Safe area:** status bar, notch, and home indicator insets differ by device. Use `react-native-safe-area-context` (`SafeAreaView` from that library, not from RN core — the core `SafeAreaView` is deprecated)
+- **Permissions model:** iOS asks once per permission category and stores the choice permanently; Android (M+) differentiates "normal" vs "dangerous" permissions and allows the user to revoke at any time
+- **Keyboard:** `KeyboardAvoidingView` behavior differs by platform — use `behavior="padding"` on iOS and `behavior="height"` on Android, or test both and use `Platform.select`
+
+---
+
+## 2. Navigation — Expo Router and React Navigation
+
+### Expo Router (file-based — preferred for new projects)
+
+Expo Router is built on React Navigation internally but adds a file-system convention: every file in the `app/` directory becomes a route. No navigator registration, no manual type definitions.
+
+```
+app/
+  _layout.tsx        — root layout, wraps everything (define Stack/Tabs here)
+  index.tsx          — maps to "/"
+  (tabs)/
+    _layout.tsx      — tab bar definition
+    home.tsx         — tab route
+    profile.tsx      — tab route
+  products/
+    [id].tsx         — dynamic segment → accessible as useLocalSearchParams().id
+```
+
+**Stack, tab, and drawer in Expo Router:**
+- `<Stack>` in `_layout.tsx` → stack navigator for that segment
+- `<Tabs>` in `_layout.tsx` → bottom tab bar
+- `<Drawer>` requires `expo-router/drawer` and Reanimated 3+
+
+**Navigation calls:**
+```typescript
+import { router, Link } from 'expo-router';
+router.push('/products/42');   // push onto stack
+router.replace('/home');       // replace (no back)
+router.back();                 // go back
+<Link href="/profile">Profile</Link>  // declarative link
+```
+
+**Typed routes:** enable `experiments.typedRoutes: true` in `app.json` — the router then infers valid hrefs from the file system; broken links become TypeScript errors.
+
+**Deep linking:** automatic — every route is a universal link/app link without extra configuration. Pass `scheme` in `app.json`; Expo CLI generates the entitlements/intent filters.
+
+### React Navigation (imperative — for bare projects or complex custom navigators)
+
+Use React Navigation directly when: you are not using Expo Router, you need a custom navigator type, or you need fine-grained control over the transition animations that Expo Router's file system abstraction doesn't expose.
+
+Navigators: `createNativeStackNavigator` (native platform transitions, best performance), `createBottomTabNavigator`, `createDrawerNavigator`, `createMaterialTopTabNavigator`.
+
+**`createNativeStackNavigator` vs `createStackNavigator`:** always prefer native stack — it delegates transitions to the OS's native navigation stack (UINavigationController on iOS, Fragment on Android), which runs on the UI thread and is unaffected by JS thread load. The JS stack is rendered in React and drops frames under heavy JS work.
+
+**Red flags:**
+- Using `createStackNavigator` (JS-based) when `createNativeStackNavigator` is available
+- Performing data fetching or heavy computation synchronously in a screen component during a navigation transition — defer with `useEffect` + a loading state
+- Forgetting `SafeAreaProvider` at the root — causes overlapping content on notched devices
+
+---
+
+## 3. Native Capabilities — Expo SDK, Permissions, and Native Modules
+
+### Expo SDK modules
+
+The Expo SDK is a set of libraries that expose native device capabilities with a consistent, cross-platform JavaScript API. Prefer Expo SDK modules over raw React Native APIs or arbitrary npm packages — they are maintained, integrate with EAS, and support config plugins for build-time configuration.
+
+| Capability | Expo module |
+|---|---|
+| Camera | `expo-camera` |
+| Image picker | `expo-image-picker` |
+| Location | `expo-location` |
+| Notifications (local + push) | `expo-notifications` |
+| Secure key-value store | `expo-secure-store` |
+| File system | `expo-file-system` |
+| Tracking transparency (iOS) | `expo-tracking-transparency` |
+| Media library | `expo-media-library` |
+
+Check [React Native Directory](https://reactnative.directory/) for New Architecture compatibility before adding any non-Expo library.
+
+### Permissions — the two-step pattern
+
+**Build time:** permissions must be declared before they can be requested. In Expo managed workflow this happens automatically via config plugins when you add a library. For custom permissions or messages, configure in `app.json`:
+```json
+{
+  "expo": {
+    "android": { "permissions": ["android.permission.CAMERA"] },
+    "ios": { "infoPlist": { "NSCameraUsageDescription": "Used to scan barcodes." } }
+  }
+}
+```
+
+**Runtime:** request with the library's API (e.g. `Camera.requestCameraPermissionsAsync()`). Always check status first — if `granted`, proceed; if `denied`, show a message directing users to Settings; if `undetermined`, request.
+
+**Critical iOS gotcha:** permission messages in `Info.plist` cannot be updated over-the-air. Changing a usage description string requires a new native binary submission to the App Store. Plan permission messaging carefully before the first production release.
+
+**Critical Android gotcha:** removing a permission that a library adds via its own manifest requires explicitly listing it in `android.blockedPermissions`. Without this, the permission remains in the merged manifest even if you remove the library.
+
+### Native modules and JSI (when Expo SDK is not enough)
+
+Under the New Architecture, native modules are **TurboModules** — they expose a C++ spec to JS via JSI and are loaded lazily (only when first called, reducing startup cost).
+
+When you need custom native code:
+1. First, look for an Expo module via `expo-modules-core` — it generates the JSI bindings from a Swift/Kotlin API surface automatically
+2. If writing a TurboModule directly, define a TypeScript spec file (`NativeMyModule.ts` with `TurboModuleRegistry.getEnforcing`); codegen generates the C++/Java/ObjC glue
+3. Legacy "Native Modules" using the bridge (`NativeModules.MyModule`) still work in SDK 52-54 but will break in future versions — do not write new code against the old bridge
+
+**Red flag:** calling native module methods synchronously from the JS thread in a hot path. JSI calls are synchronous but still cross the JS-to-C++ boundary — batch calls and avoid per-frame native calls.
+
+---
+
+## 4. Build, Ship, and EAS
+
+### Managed workflow vs bare workflow
+
+| | Managed (CNG) | Bare |
+|---|---|---|
+| `ios/` and `android/` directories | Generated on demand by `npx expo prebuild` | Committed to the repo |
+| Upgrade path | Run prebuild again after updating; native config re-generated from `app.json` | Manual native file edits required for each upgrade |
+| Config plugins | Apply automatically at prebuild | Apply automatically at prebuild; manual native edits also possible |
+| When to use | Default for all new projects | Only when you need native changes that no config plugin can express |
+
+**Decision rule:** start managed. Only commit `ios/` and `android/` (bare) if you have a concrete native change that cannot be expressed as a config plugin. Once you manually edit those directories you cannot safely re-run `npx expo prebuild` without overwriting your changes.
+
+### EAS Build
+
+EAS Build compiles and signs your app in the cloud. Key commands:
+```bash
+eas build --platform ios --profile production
+eas build --platform android --profile production
+eas build --platform all --profile preview   # internal distribution build
+```
+
+Profiles are defined in `eas.json`. Common profiles: `development` (creates a development client), `preview` (internal distribution, no store), `production` (store-ready, signed).
+
+Credentials: EAS stores and manages your iOS provisioning profile + distribution certificate and your Android keystore. Use `eas credentials` to inspect or rotate them. **Never lose your Android keystore** — Google Play ties the app to the keystore; a lost keystore means you cannot update your Play Store listing.
+
+### EAS Submit
+
+```bash
+eas submit --platform ios    # submits latest production build to App Store Connect
+eas submit --platform android
+```
+
+Prerequisites:
+- **iOS:** Apple Developer Program membership ($99 USD/year). App Store Connect API key configured in `eas.json` for automated submission.
+- **Android:** Google Play Developer account ($25 USD one-time). Google Service Account Key with "Release manager" permission configured for automated submission.
+
+### EAS Update — OTA updates
+
+EAS Update pushes JavaScript and asset changes to users without a store review. It cannot update native code (anything in `ios/` or `android/`), new permissions, or new native modules.
+
+**Runtime version:** a label that identifies the JS-native interface contract of a build. When native code changes in a way that affects the JS API surface, bump the runtime version in `app.json`. Updates are only delivered to builds whose runtime version exactly matches.
+
+**Channels and branches:** a build is assigned a channel (e.g. `production`, `staging`). A channel is linked to a branch. Publishing an update pushes to a branch; all builds on the linked channel receive it.
+
+```bash
+eas update --branch production --message "Fix login crash"
+```
+
+**What OTA can and cannot update:**
+
+| Can update OTA | Cannot update OTA |
+|---|---|
+| JavaScript/TypeScript logic | Native modules (new or changed) |
+| React component tree | Permissions (Info.plist / AndroidManifest) |
+| Assets bundled at build time | App icons, splash screen |
+| Expo SDK version (JS side only) | SDK upgrades that change native code |
+
+**Red flag:** assuming an EAS Update can deliver a new native module, a new permission, or a new Expo SDK module that has native code. That requires a new build + store submission.
+
+### App store requirements (as of 2026)
+
+- **iOS:** requires building with the iOS 26 SDK or later (Apple updated this requirement for apps submitted from April 2026). Privacy manifest required. Account deletion required if the app has account creation. AI transparency disclosure required if the app uses external AI services.
+- **Android:** target API level must meet Google Play's minimum (verify the current floor at Google Play policy — it advances annually).
+
+---
+
+## 5. New Architecture — JSI, Fabric, TurboModules
+
+The New Architecture is the default from React Native 0.76+ and mandatory from Expo SDK 55+ (cannot be disabled).
+
+### The three components
+
+**JSI (JavaScript Interface):** replaces the async serialization bridge. JS holds a direct C++ reference to native objects and can call methods synchronously without JSON serialization. This eliminates the queuing latency and the copy overhead that made the old bridge a bottleneck.
+
+**Fabric:** the new renderer. It runs the React shadow tree calculation in C++ (on any thread) and can perform synchronous layout measurement — enabling Reanimated's `measure()` and React 18 concurrent features. The old renderer was JS-only and required a full async round-trip to measure views.
+
+**TurboModules:** native modules built on JSI. They load lazily (only when first accessed) rather than at startup. For apps with many native modules, this alone improves cold-start time measurably.
+
+### Migration checklist for existing projects
+
+1. Run `npx expo-doctor@latest` — it flags libraries incompatible with the New Architecture
+2. Check [React Native Directory](https://reactnative.directory/) for the `new arch` badge on every dependency
+3. Major ecosystem libraries that require minimum versions: React Navigation 7.2+, Reanimated 3.5.1+, Gesture Handler 2.16.2+, Vision Camera 4.0+
+4. Legacy bridge modules (`NativeModules.X`) still work via interop in SDK 52-54; plan migration before SDK 55
+
+**Red flag:** adding a library without checking its New Architecture support status — it may cause silent runtime failures or a hard crash rather than a clean error.
+
+---
+
+## 6. Performance
+
+### The two-thread model (memorize this)
+
+| Thread | Runs | Blocked by |
+|---|---|---|
+| JS thread | React rendering, business logic, API calls, event handlers | Heavy computation, synchronous JS, large re-renders |
+| UI thread (main) | Native layout, animations with `useNativeDriver: true`, scroll handling | Native layout recalculation, rendering too many views |
+
+Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
+
+### Performance rules
+
+**Animations:** always pass `useNativeDriver: true` to `Animated` API calls. This moves the animation interpolation to the UI thread; without it, every animation frame crosses to the JS thread and drops when JS is busy. Use `react-native-reanimated` for animations that need to react to gesture state — Reanimated worklets run entirely on the UI thread.
+
+**Lists:** for lists with >50 items, provide `getItemLayout` to `FlatList` if items are fixed-height. For variable-height or very long lists (>200 items), consider FlashList. Never put `FlatList` inside a `ScrollView` with the same scroll axis — the outer scroll view disables virtualization.
+
+**Images:** do not animate `width`/`height` — iOS re-crops from the original on every frame. Animate `transform: [{ scale }]` instead. For remote images, use `expo-image` (not the core `Image` component) — it has built-in memory and disk caching and BlurHash placeholder support.
+
+**JS thread load:** defer expensive work after navigation transitions complete with `InteractionManager.runAfterInteractions`. Avoid inline arrow functions in `renderItem` — they create new function references on every render and prevent memoization.
+
+**Startup:** remove all `console.log` statements from production bundles (use `babel-plugin-transform-remove-console`). Use `import()` lazy imports for heavy screens not in the critical path. TurboModules load lazily by default in the New Architecture — no extra work needed.
+
+**Testing performance:** always profile in a release build, not development mode. Development mode enables runtime warnings and extra checks that add 5–10× overhead; perf numbers from dev mode are not representative.
+
+### Common anti-patterns (red flags in review)
+
+- `<ScrollView>` rendering a list of unknown length — use `FlatList`
+- `FlatList` inside a `ScrollView` on the same axis — kills virtualization
+- `Animated.Value` without `useNativeDriver: true` on a looping animation
+- New `renderItem` function created per render (inline arrow) without `useCallback`
+- `console.log` left in production code paths
+- Calling `setState` inside an `onScroll` handler that fires at 60 FPS — debounce or use native event handlers
+- Loading a full-resolution camera roll photo for a thumbnail — request a specific size via `expo-image-picker`'s `quality` and `width`/`height` options
+
+---
+
+## Operational Rules Quick Reference
+
+- **DO** wrap all visible strings in `<Text>` — a bare string inside `<View>` is a runtime error on Android
+- **DON'T** use `<ScrollView>` for long or dynamic lists — use `<FlatList>` (virtualized)
+- **DO** use `<Pressable>` instead of `<TouchableOpacity>` for new touch targets — it is the current recommended primitive
+- **DON'T** use the deprecated `SafeAreaView` from `react-native` — use `react-native-safe-area-context`
+- **DO** provide `keyExtractor` returning a unique stable string to every `FlatList`
+- **DO** prefer `createNativeStackNavigator` over `createStackNavigator` — native stack runs on the UI thread
+- **DO** start with Expo managed workflow (CNG); only commit native directories when a config plugin cannot cover the requirement
+- **DON'T** assume an EAS Update can deliver new native modules or new permissions — those require a new store binary
+- **DO** bump the EAS Update runtime version whenever native-facing code changes
+- **DO** check React Native Directory for New Architecture compatibility before adding any dependency (mandatory from SDK 55+)
+- **DON'T** write new native modules against the legacy bridge (`NativeModules.X`) — use `expo-modules-core` or a TurboModule spec
+- **DO** use `useNativeDriver: true` on all `Animated` API calls; use Reanimated for gesture-driven animations
+- **DON'T** animate `width`/`height` on images — animate `transform: [{ scale }]` instead
+- **DO** test performance in release builds, not dev mode
+- **DON'T** put DML-equivalent work (data fetching, heavy computation) synchronously in a component rendered during a navigation transition
+- **DO** plan iOS permission messages before the first production release — they cannot be changed OTA
+- **DON'T** lose the Android keystore — it is tied to the Play Store listing and unrecoverable
+- **DO** verify library compatibility with `npx expo-doctor@latest` before upgrading Expo SDK versions
+
+---
+
+_Independent educational content to upskill AI agents. React Native is a trademark of Meta; Expo is a trademark of Expo. Not affiliated with or endorsed by either. Guidance only — verify against official documentation before acting._

@@ -1,0 +1,340 @@
+---
+name: github-actions
+description: Operational playbook for authoring, maintaining, and securing GitHub Actions — CI/CD workflows, reusable and composite workflows, custom actions, runners, secrets and OIDC, and enterprise governance. Use when building or reviewing GitHub Actions automation, pipelines, or release workflows. The GitHub Actions (GH-200) certification scopes and benchmarks this skill.
+metadata:
+  credential: "GitHub Actions (GH-200)"
+  exam-code: GH-200
+  domain: github
+  type: certification-playbook
+  blueprint: January 2026 revision
+---
+
+# GitHub Actions — Skills Reference
+
+## Overview
+
+The GitHub Actions certification (exam GH-200) validates that a practitioner can design, implement, and maintain automation workflows using GitHub Actions at individual, organizational, and enterprise scale. It covers five competency areas: workflow authoring, workflow consumption and troubleshooting, custom action development, enterprise management of runners and policies, and security hardening.
+
+**This file is an operational playbook, not an exam outline.** Each section states the rules an agent must apply when building or reviewing Actions automation: the concrete syntax constraints, the security invariants, the decision criteria for picking a pattern, and the anti-patterns to catch in review.
+
+> **Deeper context:** Study resources, official links, and domain weight details live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
+
+---
+
+## Certification Details
+
+| Field | Value |
+|---|---|
+| Exam code | GH-200 |
+| Provider | GitHub / Microsoft, delivered via Pearson VUE |
+| Format | Multiple choice + interactive components, proctored |
+| Time | 100 minutes |
+| Passing score | 700 / 1000 |
+| Cost | Varies by region; ~$99 USD (confirm at Pearson VUE scheduling) |
+| Retake | 24 h after first attempt; subsequent gaps vary |
+| Prerequisites | None; intermediate Actions experience recommended |
+| Languages | English, Spanish, Portuguese (Brazil), Korean, Japanese |
+
+> Logistics verified against the official Microsoft Learn certification page (updated Feb 2026). Cost is widely cited as $99 USD but is not published on the study guide page itself — confirm at registration. The exam migrated from PSI to Pearson VUE in July 2025.
+
+Domain weights (January 2026 revision):
+
+| Domain | Weight |
+|---|---|
+| Author and manage workflows | 20–25% |
+| Consume and troubleshoot workflows | 15–20% |
+| Author and maintain actions | 15–20% |
+| Manage GitHub Actions for the enterprise | 20–25% |
+| Secure and optimize automation | 10–15% |
+
+---
+
+## 1. Authoring and Managing Workflows
+
+### Triggers
+
+Every workflow starts with `on:`. Pick the narrowest trigger that fits.
+
+| Pattern | Trigger |
+|---|---|
+| Push/PR to specific branches | `push: branches:` / `pull_request: branches:` |
+| Manual with inputs | `workflow_dispatch: inputs:` |
+| Called by another workflow | `workflow_call: inputs: secrets:` |
+| Schedule (cron) | `schedule: cron:` |
+| Webhook event (e.g. issue labeled) | `on: issues: types: [labeled]` |
+| After another workflow completes | `workflow_run: workflows: types: [completed]` |
+
+`workflow_dispatch` inputs have types: `string`, `boolean`, `choice`, `environment`, `number`. Always declare `required` and `default`. Pass inputs into a called workflow via `with:` (for inputs) and `secrets: inherit` or explicit mapping (for secrets).
+
+**Filtering is a first-class cost control:** use `paths:` and `branches:` filters to avoid triggering expensive matrix builds on unrelated changes. A workflow with no filters runs on every push to every branch.
+
+### Jobs, Steps, and Needs
+
+- Jobs run in parallel by default. Use `needs: [job-a, job-b]` to declare dependencies. A job only starts when all its `needs` have succeeded (or set `if: always()` / `if: failure()` to override).
+- Steps within a job run sequentially and share the runner filesystem. Use `id:` on steps whose `outputs` you need downstream.
+- **Conditional logic:** `if:` expressions are evaluated with `${{ }}` syntax. Use `success()`, `failure()`, `always()`, `cancelled()` status functions. `if: always()` runs even when a previous step fails — use it for cleanup. Omitting `if:` means the step runs only if all prior steps in the job succeeded.
+
+### Matrix Builds
+
+```yaml
+strategy:
+  matrix:
+    os: [ubuntu-latest, windows-latest]
+    node: [18, 20]
+  fail-fast: false
+  max-parallel: 4
+```
+
+- `fail-fast: true` (the default) cancels remaining matrix jobs the moment one fails — useful for cost savings but obscures how many variants are broken. Set `false` when you need full coverage data.
+- `include:` adds specific combinations; `exclude:` prunes them.
+- Runner image changes affect matrix silently: `ubuntu-20.04` was deprecated; `windows-latest` migrated to Windows Server 2025. Check the runner-images release notes before assuming a matrix is stable.
+
+### Contexts and Expressions
+
+Key contexts: `github`, `runner`, `env`, `vars`, `secrets`, `inputs`, `matrix`, `needs`, `strategy`, `job`, `steps`, `github.event`, `github.ref`.
+
+- Contexts are evaluated at runtime (inside `${{ }}`); some values are only available in certain job phases.
+- **Secret leakage in expressions:** never construct a shell command string by interpolating `${{ secrets.FOO }}` directly into a `run:` step's inline script — a log echoing the expression would expose the secret. Instead, pass secrets via environment variables: set `env: MY_SECRET: ${{ secrets.FOO }}` on the step and reference `$MY_SECRET` in the script.
+- `github.ref` is the full ref (`refs/heads/main`); `github.ref_name` is the short name (`main`). Use `github.event_name` to branch behavior between push and PR triggers.
+
+### YAML Reuse within a File
+
+YAML anchors (`&anchor`), aliases (`*anchor`), and merge keys (`<<: *anchor`) reduce repetition within a single workflow file. They are **not** cross-file; for cross-workflow reuse, use reusable workflows or composite actions.
+
+### Environments, Protections, and Concurrency
+
+```yaml
+environment:
+  name: production
+  url: ${{ steps.deploy.outputs.url }}
+```
+
+Environments support required reviewers, wait timers, and deployment branch restrictions. A job targeting a protected environment pauses until a reviewer approves — the primary declarative approval gate in Actions.
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+`cancel-in-progress: true` cancels any in-progress run for the same group when a new one starts — essential for branch-based CD to avoid simultaneous deployments. For the default branch where you never want to drop a run, set `cancel-in-progress: false`.
+
+**Red flags in review:** `on: push:` with no `branches:` filter on a high-traffic repo (every push triggers a full matrix); `if: always()` on a deploy step that should only run on success; `fail-fast: true` on a cross-OS test matrix where you need all failure data; `${{ secrets.X }}` interpolated directly into a `run:` command string.
+
+---
+
+## 2. Consuming Workflows and Troubleshooting
+
+### Reusable Workflows vs. Composite Actions vs. Starter Workflows
+
+| | Reusable workflow | Composite action | Starter workflow |
+|---|---|---|---|
+| Definition location | `.github/workflows/` in a repo | `action.yml` in a repo | `.github/workflow-templates/` in org `.github` repo |
+| Invoked via | `uses: org/repo/.github/workflows/ci.yml@ref` | `uses: org/repo/path@ref` (as a step) | Copied into a new repo (scaffold, then independent) |
+| Gets own runners? | Yes — each job in the called workflow spawns its own runner | No — runs as steps on the caller's runner | N/A — it's a scaffold, not live invocation |
+| Passes secrets | `secrets: inherit` or explicit map | via `inputs:` (secrets not natively supported; pass via env) | N/A |
+| Best for | Full job/pipeline reuse across repos | Step-level logic encapsulation | Giving teams a starting template |
+
+Caller limitations: a reusable workflow can itself call another reusable workflow, up to 4 levels deep. The called workflow's jobs appear in the caller's UI as nested job groups.
+
+### Artifacts and Caching
+
+- **Artifacts** (`actions/upload-artifact` / `actions/download-artifact`) persist files across jobs within a run, or across runs if `retention-days:` is set. Default retention is 90 days (configurable at repo/org level). Artifacts are scoped to a workflow run.
+- **Cache** (`actions/cache`) restores and saves by key + restore-keys. Cache is branch-scoped: a PR branch can read from the default branch cache but not write to it. Cache entries expire after 7 days of no access (or when the repo's 10 GB quota is reached and old entries are evicted).
+- **Do not confuse them:** use cache for build/dependency artifacts that are reproducible (node_modules, Gradle cache, pip wheels); use artifacts for files you need to keep (test reports, build binaries, signed packages).
+
+### Passing Data Between Jobs
+
+Three mechanisms, in order of preference:
+
+1. **`GITHUB_OUTPUT`** — write `key=value` to `$GITHUB_OUTPUT` in a step; reference via `${{ needs.job-id.outputs.key }}` in downstream jobs. This is the current pattern; `::set-output` is deprecated.
+2. **`GITHUB_ENV`** — write `VAR=value` to `$GITHUB_ENV`; available in all subsequent steps of the same job only (not across jobs).
+3. **Artifacts** — when the data is a file or too large for an output string.
+
+**Job summaries:** write Markdown to `$GITHUB_STEP_SUMMARY` to generate rich per-job summaries visible in the Actions UI (test results tables, coverage badges, links). No output variable needed — it renders automatically.
+
+### Troubleshooting Failed Runs
+
+1. **Check the job log:** expand each step; the red X pinpoints the failing step. Look for exit code, error message, and preceding output.
+2. **Enable debug logging:** set repository secret `ACTIONS_STEP_DEBUG=true` and `ACTIONS_RUNNER_DEBUG=true` for verbose runner/step logs on the next run.
+3. **Matrix failures:** you can re-run individual matrix jobs (not the whole matrix) from the UI — use this to confirm a fix without burning the full matrix.
+4. **Interpret YAML anchors in logs:** anchors and aliases are expanded at parse time; the log shows the resolved commands, not the anchor reference.
+
+**Red flags in review:** downloading artifacts in a job with no corresponding upload; relying on `GITHUB_ENV` to pass data across jobs (it only spans within a job); cache keys with no versioning component (a dependency upgrade won't bust the cache).
+
+---
+
+## 3. Authoring Custom Actions
+
+### Action Types
+
+| Type | Runtime | Best for | Key file |
+|---|---|---|---|
+| JavaScript | Node.js (on runner, no container spin-up) | Fast, cross-OS, access to Actions toolkit | `action.yml` + `index.js` (or compiled dist/) |
+| Docker | Container | Custom OS/tools, Python/Ruby/compiled binaries | `action.yml` + `Dockerfile` |
+| Composite | YAML steps, no container | Wrapping a sequence of steps/shell commands | `action.yml` with `runs.steps` |
+
+**Immutable actions on GitHub-hosted runners:** GitHub has been rolling out enforcement that actions pinned to a tag are resolved against an immutable copy in the GitHub Container Registry (GHCR), not the live repo at that tag. This means floating tags (`@v3`) can no longer silently pick up new commits pushed to that tag — you get the GHCR snapshot. Implication: pin to a full commit SHA for exact reproducibility; use a tag for convenience only when you trust the publisher's release process.
+
+### `action.yml` Structure
+
+```yaml
+name: My Action
+description: One-sentence description
+inputs:
+  my-input:
+    description: What it controls
+    required: true
+    default: 'fallback'
+outputs:
+  result:
+    description: What is returned
+    value: ${{ steps.compute.outputs.result }}
+runs:
+  using: 'composite'   # or 'node20', 'docker'
+  steps: ...
+```
+
+- `outputs.value` for composite actions must reference a step output via `${{ steps.<id>.outputs.<name> }}`.
+- For JavaScript actions, outputs are set by calling `core.setOutput('result', value)` from the `@actions/core` toolkit.
+- `branding:` (`icon` + `color`) is required to publish to the Marketplace but has no effect on functionality.
+
+### Versioning and Publishing
+
+- **Semantic tags + SHA pin:** tag releases (`v1`, `v1.2`, `v1.2.3`); move major version tags (`v1`) to point at the latest patch. Callers pin to `v1` for auto-updates within major, or to a full SHA for exact reproducibility.
+- **Marketplace publication:** the action repo must be public; `action.yml` must be at the repo root; Marketplace listing requires a description, icon, and color. A `README.md` is expected for discoverability.
+- **Private actions:** reference directly as `uses: org/private-repo/.github/actions/my-action@ref` — accessible if the calling repo has read access. No Marketplace publication needed.
+
+**Red flags in review:** a JavaScript action without a compiled `dist/` committed (the runner has no build step; the source must be pre-compiled); a Docker action with no health check or CMD; an action with hardcoded secrets in `action.yml` (use inputs mapped from `secrets:`).
+
+---
+
+## 4. Enterprise Management of Runners and Policies
+
+### Runner Types
+
+| | GitHub-hosted | Self-hosted |
+|---|---|---|
+| Provisioning | Automatic | You manage |
+| Cost | Billed per minute (beyond free tier) | Infrastructure cost; Actions minutes free |
+| Isolation | Fresh VM per job | Shared state between jobs unless you clean up |
+| OS choice | Ubuntu, Windows, macOS (fixed image versions) | Any OS you provision |
+| Preinstalled software | Fixed; see runner-images release notes | You control |
+| Network access to private resources | Not without VNET integration or tunneling | Yes (on-prem or VPC) |
+
+**Runner groups** (org/enterprise level) gate which repos can use which self-hosted runners. Default group is accessible to all repos; restrict by creating named groups and assigning repos explicitly.
+
+**Self-hosted runner hardening:**
+- Never run self-hosted runners on public repos — any fork PR can trigger a workflow that runs on your runner with your network access.
+- Treat the runner machine as untrusted code execution: no persistent credentials on disk, no elevated privileges, ephemeral runners (re-image after each job) preferred for sensitive environments.
+- Runner registration tokens expire in 1 hour; do not store them in CI artifacts.
+
+### Secrets and Variables
+
+Three scopes, each inherited downward:
+
+| Scope | Visible to |
+|---|---|
+| Organization secret | All repos in the org (or selected repos) |
+| Repository secret | That repo only |
+| Environment secret | Jobs targeting that named environment only |
+
+Variables (`vars.`) follow the same scope hierarchy and are non-sensitive (appear in logs as plain text). Use variables for configuration values (region, URL, feature flags); use secrets for credentials.
+
+- **Access in workflows:** `${{ secrets.NAME }}` / `${{ vars.NAME }}`. Secrets are masked in logs (replaced with `***`); variables are not.
+- **Programmatic management:** REST API endpoints exist for CRUD on org/repo/environment secrets and variables — useful for rotation automation.
+- `secrets.GITHUB_TOKEN` is the ephemeral token minted per run (see §5).
+
+### Policies and Governance
+
+At the org and enterprise level, administrators can:
+- **Restrict which actions can run:** allow only actions from GitHub, from verified creators, or a specific allowlist (by `owner/repo@ref` pattern).
+- **Require approval for first-time contributors** on public repos.
+- **Restrict self-hosted runner registration** to admins (prevent repos from adding their own runners to the org pool).
+- **Enforce required status checks** at the branch protection level — specific workflow job names must pass before merge.
+
+**Red flags in review:** a self-hosted runner registered to a public repo; secrets scoped to org-wide when only one repo needs them; no branch protection requiring CI to pass before merge on the default branch.
+
+---
+
+## 5. Security and Optimization
+
+### `GITHUB_TOKEN` — the ephemeral identity
+
+`GITHUB_TOKEN` is minted at workflow start, scoped to the repo, and expires when the run ends. Its default permissions are set at the repo/org level (either "permissive" — read/write to most resources — or "restricted" — read only). Override at the workflow or job level:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write   # required for OIDC
+```
+
+**Least privilege rule:** set `permissions:` at the workflow level to the minimum required. If different jobs need different scopes, set a restrictive workflow-level default and override per job. Never leave the default permissive setting active for a workflow that writes to the repo or calls external services.
+
+`GITHUB_TOKEN` cannot trigger other workflow runs by default (prevents infinite loops from push-triggered workflows that commit). Use a PAT or app token only when cross-workflow triggering is genuinely needed, and scope it narrowly.
+
+### OIDC — Eliminating Long-Lived Cloud Credentials
+
+OIDC lets a workflow authenticate to a cloud provider (AWS, Azure, GCP) without storing a long-lived key as a secret. The workflow requests a short-lived token from GitHub's OIDC provider, which the cloud provider validates.
+
+Requirements:
+1. `permissions: id-token: write` in the workflow/job.
+2. A cloud provider trust policy that grants access only when the OIDC token's claims match expected values (`repository`, `ref`, `environment`, `workflow`).
+3. A setup action provided by the cloud provider (e.g., `aws-actions/configure-aws-credentials`, `azure/login`, `google-github-actions/auth`) that exchanges the token.
+
+**Scope the trust policy tightly:** restrict to a specific repo, branch, or environment in the cloud trust policy — not to the entire org. An overly broad trust allows any repo in the org to assume the role.
+
+### Pinning Actions to Commit SHAs
+
+```yaml
+- uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+```
+
+Pinning to a full SHA is the only guarantee that the action code cannot change between runs. Tags are mutable; a malicious or compromised publisher can repoint `v4` to different code. SHA-pinning is especially important for actions that have `id-token: write` or elevated `contents: write` permission.
+
+With immutable actions enforcement on GitHub-hosted runners, GitHub resolves tag-pinned actions from an immutable GHCR snapshot — this closes the tag-mutation attack vector for hosted runners, but SHA pinning remains the best practice for auditability and self-hosted runner consistency.
+
+### Script Injection
+
+Script injection occurs when user-controlled input (e.g., a PR title, issue body, branch name) is interpolated into a `run:` shell script via `${{ github.event.pull_request.title }}`. An attacker can craft a PR title containing shell metacharacters to execute arbitrary code.
+
+**Mitigations:**
+- Pass untrusted context values through an intermediate environment variable, never directly into the script body:
+  ```yaml
+  env:
+    PR_TITLE: ${{ github.event.pull_request.title }}
+  run: echo "$PR_TITLE"   # shell-quoted variable, not ${{ }} expression
+  ```
+- Prefer vetted marketplace actions over inline `run:` scripts for complex processing.
+- Never grant `pull_request_target` workflows write permissions without careful review — this trigger runs in the context of the base repo (with secrets access) even for fork PRs.
+
+### Artifact Attestations
+
+Actions now supports generating signed provenance attestations (SLSA Build L2+) via `actions/attest-build-provenance`. This creates a verifiable record linking a build artifact to the workflow run that produced it. Consumers can verify attestations before deploying using `gh attestation verify`. Use this for release artifacts and container images in security-sensitive pipelines.
+
+**Red flags in review:** `permissions: write-all` or unscoped permissions on any workflow; `${{ github.event.*.body }}` or similar user-controlled context values inside a `run:` script; a `pull_request_target` workflow that checks out the PR head and runs it (classic code-exec attack surface); floating action tags (`@main`, `@v3`) without a SHA comment; OIDC trust policies scoped to an entire org rather than a specific repo+branch.
+
+---
+
+## Operational Rules Quick Reference
+
+- **DO** set `permissions:` explicitly at the workflow level; never rely on the org default permissive setting for a workflow that writes or deploys.
+- **DON'T** interpolate `${{ secrets.X }}` or user-controlled context values directly into a `run:` script — use `env:` to pass them as shell variables.
+- **DO** pin third-party actions to a full commit SHA and add a comment with the corresponding tag for readability.
+- **DON'T** register self-hosted runners to public repos — any fork PR can execute arbitrary code on your runner.
+- **DO** use OIDC federation for cloud provider auth; never store long-lived cloud credentials as GitHub secrets.
+- **DO** use `concurrency:` with `cancel-in-progress: true` on branch-based CD workflows to prevent simultaneous deployments.
+- **DON'T** use `GITHUB_ENV` to pass data between jobs — it only spans steps within the same job; use `GITHUB_OUTPUT` + job `outputs:` for cross-job data.
+- **DO** add `paths:` and `branches:` filters to push/PR triggers on large repos to avoid unnecessary matrix runs.
+- **DON'T** set `fail-fast: true` (the default) on a matrix where you need complete failure data — set `false` explicitly.
+- **DO** treat `pull_request_target` as a high-risk trigger; never check out and execute PR-head code in a `pull_request_target` workflow without explicit isolation.
+- **DON'T** use the deprecated `::set-output` command — write to `$GITHUB_OUTPUT` instead.
+- **DO** scope OIDC cloud trust policies to a specific repo + branch or environment, never to an entire org.
+- **DO** use ephemeral (re-imaged) self-hosted runners for sensitive workloads; never allow persistent state between jobs on shared runners.
+- **DON'T** store a runner registration token beyond its 1-hour expiry — regenerate at provisioning time.
+- **DO** verify artifact attestations with `gh attestation verify` before deploying release artifacts in security-critical pipelines.
+
+---
+
+_Independent educational content for upskilling AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by GitHub, Microsoft, or any certification body. "GitHub," "GitHub Actions," and related marks are property of GitHub, Inc. / Microsoft and are used here for identification purposes only. Guidance only — verify against official documentation and live systems. No certification outcome is implied or guaranteed._

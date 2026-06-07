@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "salesforce",
+  "displayName": "Salesforce Certification Skills",
+  "description": "Operational skills covering Salesforce certification domains (Administrator, Platform Developer I/II, JavaScript Developer I, Technical Architect, the Consultants, Business Analyst, Agentforce Specialist). Each skill gives an agent the rules, limits, decision criteria, and anti-patterns a credentialed practitioner applies. Guidance, not ground truth — verify against live orgs and official docs.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Todd Kasper"
+  },
+  "license": "MIT",
+  "keywords": ["salesforce", "certification", "apex", "soql", "flow", "lwc", "agentforce", "npsp", "administrator", "platform-developer", "architect", "consultant"]
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "github",
+  "displayName": "GitHub Certification Skills",
+  "description": "Operational skills covering GitHub's certification domains, starting with GitHub Actions (CI/CD workflows, custom actions, runners, security, governance). Skeletons in progress. Guidance, not ground truth.",
+  "version": "0.0.1",
+  "author": {
+    "name": "Todd Kasper"
+  },
+  "license": "MIT",
+  "keywords": ["github", "github-actions", "ci-cd", "devops", "automation", "certification"]
+}

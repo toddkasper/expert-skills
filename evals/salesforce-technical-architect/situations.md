@@ -1,0 +1,27 @@
+# Eval situations — salesforce-technical-architect (held-out set, 2026-06-07)
+
+Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
+
+1. An SFDX deploy of a new permission set succeeds. The permset includes `<fieldPermissions>` for every custom field on `Grant__c`, including `Grant__c.ApplicationType__c`, which was set to Required in the org last sprint. The deploy call returns success. Within an hour, a support ticket arrives: the field `ApplicationType__c` is suddenly invisible to permission-set users who previously could see it. What happened, and what should the architect do now?
+
+2. A nonprofit's Salesforce org has a nightly Batch Apex job that loads 40,000 donation records from an external payment processor. The architect proposes switching to row-by-row REST upserts triggered by a webhook. The business wants real-time receipt confirmations, so "near-real-time" is an explicit requirement. Evaluate this proposal and recommend the correct integration pattern.
+
+3. After a sandbox refresh, the JWT Bearer integration between a Node.js sweep job and the Salesforce sandbox stops authenticating. The certificate, private key, Consumer Key, and Named Credential are all confirmed to still exist in the org. The error is `invalid_client_id`. What are the two most likely refresh-specific causes, and what is the verification step for each?
+
+4. A developer adds a second lookup field on `Application__c` pointing to `Contact` — one for the primary applicant, one for the co-applicant. Both lookups use `relationshipName = "Applications"` in the field-meta XML. The deploy fails. What is the root cause, and what is the fix?
+
+5. A senior architect proposes storing each type of grant application (Standard, Emergency, Youth) as its own custom object (`StandardApplication__c`, `EmergencyApplication__c`, `YouthApplication__c`) to "keep schemas clean." A junior architect counters with a single `Application__c` object plus a `Type__c` picklist. The board asks you to defend one choice and name what you give up. What is the competent answer?
+
+6. A Salesforce org is integrated with an external document system. When a staff member approves an application, an approval handler is supposed to attach the applicant's intake PDF to both the `Application__c` record and the applicant's `Contact` record. The developer used `ContentVersion` to store the file and a single `ContentDocumentLink` pointing to the `Application__c`. The PDF is visible on the Application but not on the Contact. What is wrong, and what is the fix?
+
+7. An automation architect designs a Record-Triggered Flow on `Contact` to set a `HasActiveGrant__c` checkbox. During a staff training backfill, a data-loader job updates 8,000 Contact records in a single operation. The org begins throwing errors and the backfill rolls back. The flow itself has no SOQL — it only sets a field value. What is the likely limit being hit, and what is the correct architectural fix?
+
+8. A Salesforce-to-external-system integration writes confirmed records to Salesforce using an idempotent upsert keyed on `ExternalSubmissionId__c`. After a network partition, the external system retries and sends the same payload three times before receiving a response. Staff later report duplicate records in Salesforce. The architect investigates and finds `ExternalSubmissionId__c` is defined as a custom text field but was never marked as an External ID. What is the consequence, and what must the architect do to restore idempotency without data loss?
+
+9. A security team flags that a headless ETL server is authenticating to Salesforce using the OAuth Web Server flow with a refresh token stored in an environment variable. The server has no user interaction at any point. The security team says this is the wrong flow. They are correct — what is wrong with the current approach, and what should replace it?
+
+10. An NPSP org has a managed workflow rule in the `npe01` namespace that fires on every Contact insert and copies `Phone` to `MobilePhone` when `npe01__PreferredPhone__c` equals "Telephone." A new intake process collects mobile numbers in a `MobilePhone` field at submission time. Staff report that after a Contact is created via the API, `MobilePhone` is unexpectedly overwritten with the landline value. No custom Apex or Flow touches `MobilePhone`. What is the root cause, and what is the fix?
+
+11. A team is preparing a production cutover for a new `CaseType__c` field on the `Case` object. The metadata was deployed to a full-copy sandbox and tested. Before deploying to production, a teammate runs `sf project deploy start` from the monorepo root (one level above the SFDX project root). The command exits with `InvalidProjectWorkspaceError`. The teammate assumes this means the metadata is broken and begins editing field XML. What is the actual problem, and what should they do instead?
+
+12. A nonprofit Technical Architect is presenting a solution to the executive director and volunteer board. The proposed design uses JWT Bearer auth, Named Credentials, Bulk API 2.0 for batch loads, and a Platform Events bus for change-driven sync. The board chair interrupts: "What does all this mean for our budget and risk if our IT volunteer leaves?" The architect responds by explaining JWT Bearer token expiry and the Bulk API 2.0 daily limit calculation. The board chair looks confused. What communication mistake did the architect make, and what is the correct framing?

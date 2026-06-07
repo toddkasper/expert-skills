@@ -1,0 +1,42 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "expert-skills",
+  "owner": {
+    "name": "Todd Kasper"
+  },
+  "description": "Agent skills that upskill AI agents with the specialized operational knowledge of credentialed practitioners. Not test-prep — see POLICY.md.",
+  "plugins": [
+    {
+      "name": "salesforce",
+      "source": "./salesforce",
+      "description": "13 skills covering Salesforce certification domains — Administrator, Platform Developer, Technical Architect, the Consultants, and Agentforce — giving an agent credentialed-practitioner competence.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "keywords": ["salesforce", "certification", "apex", "agentforce", "administrator", "architect"]
+    },
+    {
+      "name": "aws",
+      "source": "./aws",
+      "description": "AWS Professional-tier certification skills — Solutions Architect Professional (SAP-C02) and DevOps Engineer Professional (DOP-C02). Skeletons; operational content in progress.",
+      "version": "0.0.1",
+      "license": "MIT",
+      "keywords": ["aws", "certification", "solutions-architect", "devops", "professional"]
+    },
+    {
+      "name": "github",
+      "source": "./github",
+      "description": "GitHub certification skills — starting with GitHub Actions (workflows, custom actions, runners, security). Skeleton.",
+      "version": "0.0.1",
+      "license": "MIT",
+      "keywords": ["github", "github-actions", "ci-cd", "devops"]
+    },
+    {
+      "name": "web",
+      "source": "./web",
+      "description": "Web/runtime competence skills — nodejs (OpenJS JSNAD/JSNSD), typescript, react, nextjs, react-native (the latter four are competence, no vendor cert). Skeletons.",
+      "version": "0.0.1",
+      "license": "MIT",
+      "keywords": ["nodejs", "typescript", "react", "web", "frontend", "backend"]
+    }
+  ]
+}
