@@ -53,4 +53,4 @@ Official and community resources for deepening React competence. Verify links ar
 
 ---
 
-_Independent educational content. React is a trademark of the React Foundation (a Linux Foundation project) `[volatile — verify live]`. Not affiliated with or endorsed by the React Foundation or any contributor. See react.dev/blog/2026/02/24/the-react-foundation._
+_Independent educational content. React is a trademark of the React Foundation (a Linux Foundation project). Not affiliated with or endorsed by the React Foundation or any contributor. See react.dev/blog/2026/02/24/the-react-foundation._

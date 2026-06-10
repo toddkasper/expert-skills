@@ -28,7 +28,7 @@ No vendor certification exists for React. This playbook encodes the working comp
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** React evolves rapidly — hooks, concurrent features, and the React Compiler change behavior across minor versions. `[volatile — verify live]` marks apply to: React Compiler availability and defaults (production-ready late 2025 — check the project's `babel-plugin-react-compiler` version before assuming it is active); compiler lint rules — `eslint-plugin-react-compiler` is superseded by `eslint-plugin-react-hooks` v6, which folds in the compiler rules (React 19.2, Oct 2025) `[volatile — verify live]`; `useActionState` and `useOptimistic` (React 19+ only — `[volatile — verify live]`); React 18 batching behavior in non-React-managed event handlers (verify with React 18+); TanStack Query and SWR API surface (major-version breaking changes — always check installed version). Check `react` in `package.json` — React 18 and 19 differ on form actions, optimistic updates, and compiler support.
+- **Always re-verify live:** React evolves rapidly — hooks, concurrent features, and the React Compiler change behavior across minor versions. `[volatile — verify live]` marks apply to: React Compiler availability and defaults (production-ready late 2025 — check the project's `babel-plugin-react-compiler` version before assuming it is active); compiler lint rules — `eslint-plugin-react-compiler` is superseded by `eslint-plugin-react-hooks` v6, which folds in the compiler rules (React 19.2, Oct 2025); `useActionState` and `useOptimistic` (React 19+ only); React 18 batching behavior in non-React-managed event handlers (verify with React 18+); TanStack Query and SWR API surface (major-version breaking changes — always check installed version). Check `react` in `package.json` — React 18 and 19 differ on form actions, optimistic updates, and compiler support.
 - **Live wins:** the installed React version's actual behavior and [react.dev](https://react.dev) are authoritative over this file → log discrepancies via Feedback protocol below.
 - **Escalate to a human:** upgrading from React 17→18 or 18→19 in a production app (concurrent mode and batching changes can surface latent bugs); removing `StrictMode` from a production app; major data-fetching library upgrades (TanStack Query v4→v5 API changes); production deploys.
 - **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
@@ -48,7 +48,7 @@ No vendor certification exists for React. This playbook encodes the working comp
 1. Call hooks only at the top level of a React function — never inside loops, conditionals, or early returns.
 2. Call hooks only from React function components or from other custom hooks, never from plain functions.
 
-Violating either rule makes hook call order unstable across renders; React will corrupt state. ESLint's `eslint-plugin-react-hooks` (v6+ in React 19.2 projects, which folds in the former `eslint-plugin-react-compiler` rules) `[volatile — verify live]` enforces both rules automatically — enable and trust it. See react.dev/blog/2025/10/01/react-19-2.
+Violating either rule makes hook call order unstable across renders; React will corrupt state. ESLint's `eslint-plugin-react-hooks` (v6+ in React 19.2 projects, which folds in the former `eslint-plugin-react-compiler` rules) enforces both rules automatically — enable and trust it. See react.dev/blog/2025/10/01/react-19-2.
 
 ### `useState` — right tool, right scope
 
@@ -78,7 +78,7 @@ Violating either rule makes hook call order unstable across renders; React will 
 
 **Always return a cleanup function** when the effect sets up a subscription, timer, or connection. Without cleanup, re-mounting, StrictMode double-invoke, or hot reload will leak.
 
-**`useEffectEvent` — non-reactive values in effects** `[volatile — verify live]`: Stable since React 19.2 (Oct 2025). When an effect needs to read a prop or state value (e.g., a logging callback or analytics flag) without re-running the effect every time that value changes, wrap the non-reactive read in `useEffectEvent`. The event function always sees the latest value but is not a reactive dependency — you do not add it to the deps array. This replaces the previous workaround of holding the value in a `useRef` and reading `ref.current` inside the effect. Source: react.dev/reference/react/useEffectEvent.
+**`useEffectEvent` — non-reactive values in effects:** Stable since React 19.2 (Oct 2025). When an effect needs to read a prop or state value (e.g., a logging callback or analytics flag) without re-running the effect every time that value changes, wrap the non-reactive read in `useEffectEvent`. The event function always sees the latest value but is not a reactive dependency — you do not add it to the deps array. This replaces the previous workaround of holding the value in a `useRef` and reading `ref.current` inside the effect. Source: react.dev/reference/react/useEffectEvent.
 
 **Common effect over-use patterns — and the fix:**
 
@@ -137,8 +137,8 @@ React itself has no built-in data-fetching — use a library that handles cachin
 | Need | Tool |
 |---|---|
 | Server state (remote data, REST/GraphQL) | TanStack Query (React Query) or SWR |
-| Optimistic updates before server confirmation | `useOptimistic` (React 19) `[volatile — verify live]` or TanStack Query's `optimisticUpdate` |
-| Form submission with loading/error state | `useActionState` (React 19) `[volatile — verify live]` replaces the `useState` + `onSubmit` + loading flag pattern |
+| Optimistic updates before server confirmation | `useOptimistic` (React 19) or TanStack Query's `optimisticUpdate` |
+| Form submission with loading/error state | `useActionState` (React 19) replaces the `useState` + `onSubmit` + loading flag pattern |
 | Client/global UI state | `useState` / `useReducer` + context, or Zustand |
 | Complex cross-component state | Redux Toolkit or Zustand |
 
@@ -158,13 +158,18 @@ Avoid writing `useEffect` + `fetch` + `useState` for server data — you get no 
 
 **Folder / feature structure and framework scope boundary** (Next.js/RN handoff rules, feature-based co-location guidance): [references/advanced-patterns.md](references/advanced-patterns.md) → "Folder Structure and Framework Scope."
 
-### React 19 / 19.2 Notable Additions `[volatile — verify live]`
+### React 19 and 19.2 Notable Additions
 
-These features are in scope for this skill and ship with React 19 / 19.2 (Oct 2025). Source: react.dev/blog/2025/10/01/react-19-2.
+These features are in scope for this skill. They shipped across two releases — React 19.0 (Dec 2024) and React 19.2 (Oct 2025) — so version attribution matters when checking availability.
+
+**React 19.0 (2024-12-05)** — source: <https://react.dev/blog/2024/12/05/react-19>
 
 - **`use()` hook** — reads a resource (a Promise or a Context) during render. `use(SomeContext)` replaces `useContext(SomeContext)`. `use(promise)` suspends until the promise resolves (must be inside a Suspense boundary). Unlike hooks, `use()` can be called conditionally. Use for data-loading patterns that pair with Suspense; prefer `useContext` for simple context reads (more explicit).
 - **`ref` as a prop** — function components now accept `ref` directly as a prop (e.g. `function Input({ ref, ...props })`). `forwardRef` is no longer needed for new components. Existing `forwardRef` usage continues to work but is considered legacy.
 - **`<Context>` as a provider** — render `<MyContext value={…}>` directly; `<MyContext.Provider value={…}>` still works but is no longer required.
+
+**React 19.2 (2025-10-01)** — source: <https://react.dev/blog/2025/10/01/react-19-2>
+
 - **`<Activity>` component** — hides/shows a subtree without unmounting it, preserving state while the subtree is visually hidden. Intended for tabs, expandable panels, and off-screen pre-rendering. Use instead of CSS `display:none` when you need preserved state across visibility changes.
 - **Performance Tracks in DevTools** — React DevTools 19.2 adds a "Performance Tracks" panel in the browser profiler timeline, visualizing when React components render, commit, and suspend alongside native browser tasks. Use it to pinpoint jank sources more precisely than the Profiler flame chart alone.
 
@@ -340,7 +345,8 @@ These are harvested back into the skill via the learning loop. When the live sys
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 - **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: useEffect cleanup/Strict Mode, useActionState vs useState, renderHook/act) to meet the teaching-scenario standard (≥4 inline). references/scenarios.md deleted (all scenarios now inline). Custom hooks, Concurrent features, race-condition code block, and Folder/framework scope subsections moved to references/advanced-patterns.md to offset body length.
 - **2026-06-10** — Curation pass C3 (inbox 2026-06-10). Six findings integrated: (1) **useTransition/controlled-input correctness bug** — corrected guidance: useTransition cannot be used to control text inputs (react.dev); useDeferredValue+memo is the right tool; updated Operational Rules and Section 2 pointer; eval answer-key scenario 6 rewritten. (2) **useEffectEvent added** — new paragraph in useEffect section covering stable React 19.2 API for non-reactive deps in effects. (3) **useDeferredValue mischaracterization fixed** — corrected in references/advanced-patterns.md: not a debounce/timer; immediate interruptible background re-render; only helps with memo'd consumer; added tool-selection table. (4) **Stale tooling** — `eslint-plugin-react-compiler` superseded by `eslint-plugin-react-hooks` v6 (React 19.2); updated Uncertainty section and Rules of Hooks paragraph. (5) **Coverage gaps** — added React 19/19.2 Notable Additions section: `use()` hook, ref-as-prop, Context-as-provider, `<Activity>` component, Performance Tracks in DevTools. (6) **Trademark + link** — disclaimer updated from Meta to React Foundation (Linux Foundation, Feb 2026); Rules-of-Hooks link in study-resources.md corrected to react.dev/reference/rules/rules-of-hooks; study-resources footer updated. Eval: situations.md scenario 6 prompt clarified for coherence with corrected answer; 6 new held-out scenarios added (13–18) probing useEffectEvent, useDeferredValue+memo, Activity, use(), ref-as-prop, and useTransition/controlled-input distinctions.
+- **2026-06-10** — Cycle-3 volatile reconciliation: 6 facts confirmed (markers cleared); corrected React 19.0 vs 19.2 attribution for use()/ref-as-prop/Context-as-provider (19.0) vs Activity/Performance Tracks (19.2).
 
 ---
 
-_Independent educational content for upskilling AI agents. React is a trademark of the React Foundation (a Linux Foundation project) `[volatile — verify live]` — see react.dev/blog/2026/02/24/the-react-foundation. Not affiliated with, authorized by, endorsed by, or sponsored by the React Foundation or any contributor. All guidance is provided as-is; verify against official documentation and the live react.dev site before acting. No credential or certification outcome is implied._
+_Independent educational content for upskilling AI agents. React is a trademark of the React Foundation (a Linux Foundation project) — see react.dev/blog/2026/02/24/the-react-foundation. Not affiliated with, authorized by, endorsed by, or sponsored by the React Foundation or any contributor. All guidance is provided as-is; verify against official documentation and the live react.dev site before acting. No credential or certification outcome is implied._

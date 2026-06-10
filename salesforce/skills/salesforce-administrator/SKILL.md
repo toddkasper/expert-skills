@@ -132,7 +132,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 **Field sizing is a contract.** Form/integration string lengths and picklist constraints must be **derived from live Salesforce field metadata**, not hand-set literals, and regenerated whenever a field is resized or a picklist changes. A field resize is rarely a one-file change: SF metadata, generated schema/validation artifacts, and data-model docs move together — all or none. Truncation at the write boundary is a fallback, not a substitute.
 
-**Record types** drive page-layout assignment (profile × record type → layout) and picklist subsets. **External IDs** are the upsert key for idempotency and late re-linking — unique, indexed, max **25 per object** (shared pool with unique custom fields) `[volatile — verify live]`.
+**Record types** drive page-layout assignment (profile × record type → layout) and picklist subsets. **External IDs** are the upsert key for idempotency and late re-linking — unique, indexed, max **25 per object** (shared pool with unique custom fields).
 
 **Quick Action / Lightning cache scar:** Adding fields to a Quick Action's layout via SFDX does **not** invalidate the runtime QA cache on Lightning contextual tabs (`console:relatedRecord`). New fields are silently absent even after logout/login. **Cache-bust:** edit any non-field-list metadata on the QA (`<description>`, `<label>`, or `<layoutSectionStyle>`) and redeploy — SF treats the structural change as meaningful and flushes the cache.
 
@@ -150,7 +150,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 ## 4. Automation — Flow first, and the managed-package trap
 
-**Workflow Rules and Process Builder reached end of support Dec 31, 2025 `[volatile — verify live]` — build all new automation in Flow.** Existing automation continues to execute; still recognize them — managed packages and legacy configs still contain them and they still fire.
+**Workflow Rules and Process Builder reached end of support Dec 31, 2025 — build all new automation in Flow.** Existing automation continues to execute; still recognize them — managed packages and legacy configs still contain them and they still fire.
 
 **Pick the flow type by trigger:**
 
@@ -165,7 +165,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 **Before-save vs after-save is the key automation choice:** before-save sets fields on the triggering record with **zero added DML** (fastest, no recursion); after-save runs post-commit and is required for related records, email, or Apex. Same-record field sets → before-save. Rolls-ups, child records, emails → after-save.
 
-**Governor limits (all flows + Apex + triggers share one transaction):** 100 SOQL, 150 DML statements, 50k rows, 10k DML rows, 6 MB heap (sync), 10s CPU `[volatile — verify live]`. Flows batch in **200s**.
+**Governor limits (all flows + Apex + triggers share one transaction):** 100 SOQL, 150 DML statements, 50k rows, 10k DML rows, 6 MB heap (sync), 10s CPU. Flows batch in **200s**.
 
 **Bulkify.** Never put Get/Create/Update/Delete (or SOQL/DML) **inside a Loop** — collect once, work in memory, one DML after the loop.
 
@@ -187,7 +187,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 | | Data Import Wizard | Data Loader |
 |---|---|---|
-| Max records | 50,000 `[volatile — verify live]` | 5,000,000 `[volatile — verify live]` |
+| Max records | 50,000 | 5,000,000 `[volatile — verify live]` (sources conflict: limits cheat-sheet 5M vs data-import FAQ 150M) |
 | Objects | Accounts, Contacts, Leads, Campaign Members, Person Accounts, custom objects | All objects incl. custom |
 | Upsert by external ID | Limited | ✅ full |
 | Hard delete | ❌ | ✅ |
@@ -196,7 +196,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 **On a managed-package org, prefer the package's own loader** — it understands required relationships and field mappings a generic loader gets wrong (e.g. NPSP Data Import for Household/Contact/gift loads; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
-**Recycle Bin retention is 15 days by default**; orgs with Extended Retention enabled may retain up to **30 days** `[volatile — verify live]`. Hard delete (Data Loader) skips the Recycle Bin entirely and is unrecoverable.
+**Recycle Bin retention is 15 days by default**; orgs with Extended Retention enabled may retain up to **30 days**. Hard delete (Data Loader) skips the Recycle Bin entirely and is unrecoverable.
 
 **Duplicate management:** Matching Rules (define similarity) + Duplicate Rules (Alert = warn; Block = prevent save) — you need both; neither works alone.
 
@@ -230,7 +230,7 @@ Rules and red flags for Sales Cloud, Service Cloud, and productivity features. F
 
 **Permission reasoning is identical to §1** — the same OWD + FLS + permission sets stack.
 
-> **Naming note:** As of October 2025, Salesforce markets the agent platform under the **"Agentforce 360"** product umbrella; "Agent Builder" remains the exam-guide term and the UI label you will encounter in Setup. `[volatile — verify live]`
+> **Naming note:** As of October 2025, Salesforce markets the agent platform under the **"Agentforce 360"** product umbrella. The Setup studio is now labeled **"Agentforce Builder"** (formerly Agent Builder); the exam guide may still use older terminology.
 
 - **Agentforce** = configurable, autonomous conversational agents. Distinct from **Einstein** (predictive/generative features on standard objects: Opportunity/Lead Scoring, Next Best Action).
 - **Agent Builder:** configure identity/persona, **instructions** (guardrails evaluated before every response), **topics** (scope — if a request doesn't match an active topic, the agent declines), and **actions** (Flow, Apex, API, standard email) within topics. Actions not linked to a topic are unreachable.
@@ -343,7 +343,7 @@ Read this first. Each rule is concrete and imperative.
 - **DO** derive form/integration string `max()` and picklist constraints from live field metadata; regenerate after any field resize/picklist edit; never hand-edit generated schema files.
 - **DO** cache-bust a Quick Action after adding fields: edit `<description>`/`<label>` and redeploy, or the new fields won't render on the contextual tab.
 - **DON'T** use Data Import Wizard for >50k rows or unsupported objects — use Data Loader (5M cap); on a managed-package org prefer the package's own loader (e.g. NPSP Data Import).
-- **DO** remember Recycle Bin default retention is 15 days (up to 30 days with Extended Retention `[volatile — verify live]`); hard delete skips the Recycle Bin entirely and is unrecoverable — back up first.
+- **DO** remember Recycle Bin default retention is 15 days (up to 30 days with Extended Retention); hard delete skips the Recycle Bin entirely and is unrecoverable — back up first.
 - **DON'T** delete a user — deactivate (frees license) or freeze (instant lockout, keeps license).
 - **DO** check Setup Audit Trail (180-day) first when org behavior changes unexpectedly.
 - **DO** verify against the live org (describe objects, run SOQL, list objects, query contacts) before trusting repo XML or a schema file.
@@ -382,6 +382,7 @@ These are harvested back into the skill via the learning loop. When the live sys
   - **Finding 7:** Added **Agentforce 360** dual-naming note (Oct 2025 rebrand) to §7, marked `[volatile — verify live]`. Source: TDX 2026 blog.
   - **Finding 8:** Recycle Bin retention nuanced to **"15 days default; up to 30 days with Extended Retention"**; added Agent Builder conversation-preview testing note to §7. Source: help.salesforce.com 000387160.
   - **Finding 9:** Added **Flow fault-path** guidance to §4 (every faultable element needs a Fault path + error log; silent-failure risk in bulk); added to §4 red flags and Quick Reference.
+- **2026-06-10** — Cycle-3 volatile reconciliation: 9 facts confirmed against official docs (markers cleared); Data Loader marker kept (source conflict); Setup studio renamed Agentforce Builder.
 
 ## Disclaimer
 

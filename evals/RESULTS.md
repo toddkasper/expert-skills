@@ -45,6 +45,9 @@ application eval (`tasks.md`, Lens 4), same format. **Rubric** = 12-dimension st
 | salesforce-administrator | 2026-06-10 | claude-fable-5 | 91.7→100 (+8.3) | 91.7→91.7 (0) | 34 | 100% | **Knowledge publish-ready** (skilled ≥85, lift >0). App lift 0: both conditions missed the same Task 1 trap (flow fault paths) → content gap filed to INBOX. L5 audit: 9 findings filed |
 | react | 2026-06-10 | claude-fable-5 | 87.5→87.5 (0) | 100→100 (0) | 32 | 100% | **Needs content pass** (zero lift — restates model knowledge). NOTE: answer-key.md scenario 6 contradicts react.dev (useTransition vs useDeferredValue) — both conditions scored 0.0 for giving the react.dev-correct answer; fix key + skill together (INBOX). L5: 6 findings filed |
 | aws-security-specialty | 2026-06-10 | claude-fable-5 | 100→100 (0) | 100→100 (0) | 32 | 100% | **Eval at ceiling — does not discriminate.** Sharpen scenarios toward post-2024 specifics (Security Hub split, RCP scoping, Extended Threat Detection) per INBOX. L5: 8 findings filed |
+| salesforce-administrator | 2026-06-10 | claude-opus-4-8 | 72.2→86.1 (+13.9) | 100→100 (0) | 34 | 100% | **Cycle 3 — discrimination restored.** Skilled ≥85 AND +13.9 lift; new post-2024 scenarios 13–18 = 66.7→100 (+33.3), 0 mirror flags. App at ceiling (uninformative). 3-judge blinded panel, median. |
+| react | 2026-06-10 | claude-opus-4-8 | 100→100 (0) | 100→100 (0) | 32 | 100% | **Cycle 3 — saturated for this model.** Baseline already 100% (incl. the new 19.2 scenarios); zero lift, 0 mirror flags → model already competent on these probes, not a mirroring artifact. Needs sharper/obscurer probes or accept low-lift. |
+| aws-security-specialty | 2026-06-10 | claude-opus-4-8 | 100→100 (0) | 100→100 (0) | 32 | 100% | **Cycle 3 — saturated + held-out-hygiene flag.** Zero lift (ceiling). Judges flagged new scenarios **13,14,15 as mirroring skill text** — no lift inflation here (ceiling) but a validity bug → INBOX rewrite before reuse. |
 
 _Lens 3–4 (live baseline-vs-skilled) and Lens 5 (adversarial web audit) run in a separate
 session per [run-eval.md](run-eval.md). The 8 rubric findings from this cycle (7× D9, 1× D10)
@@ -67,3 +70,28 @@ state, and all 22 skills now meet the rubric publish bar (no dimension < 2, tota
 > run-eval.md now mandates a 3-judge panel + per-scenario blinded A/B grading + a wider solver
 > fence (excludes scorecards/RESULTS). **Re-run Lens 3/4 on these 3 skills next**; append new
 > dated rows (don't overwrite the Cycle-2 rows above)._
+>
+> **Cycle 3 (2026-06-10) — re-measure of the 3 curated skills, model `claude-opus-4-8`** (orchestrated
+> subagents; 3-judge blinded median panel; solver fence instruction-enforced). Trend point three.
+> Result: the curation **restored discrimination on salesforce-administrator** (+13.9 overall, +33.3
+> on the new post-2024 scenarios, no mirror flags) — the new scenarios probe facts the base model
+> lacks. **react and aws-security-specialty remain at ceiling** (baseline already 100% on
+> `claude-opus-4-8`), so zero lift is real saturation, not mirroring — these evals don't discriminate
+> for a strong model and need sharper probes (filed). **Held-out-hygiene:** judges flagged
+> aws-security new scenarios 13–15 as mirroring skill text (filed for rewrite). NOTE: model differs
+> from Cycle-2 (`claude-fable-5`), so cross-cycle deltas are model-confounded; the within-run
+> baseline-vs-skilled lift is the valid signal. Application evals all hit ceiling this run
+> (uninformative)._
+>
+> **Cycle 3 Lens 5 (2026-06-10) — live-web freshness/coverage/contradiction audit of the 19
+> un-pilot skills + volatile-fact confirmation on the 3 pilot skills.** 22 agents, official-source
+> cited. **80 findings filed** to [../feedback/INBOX.md](../feedback/INBOX.md) (72 `new` across 19
+> skills; the 3 pilot skills' volatile facts confirmed → markers cleared, or corrected in-body and
+> filed `integrated`). Dominant themes: stale cert blueprints / domain weights / passing scores
+> (most consultant + specialist skills), renamed-or-retired products (QLDB EOL, Snowmobile,
+> Social Studio, Einstein Copilot→Agentforce, Data Cloud→Data 360, Nonprofit Cloud→Agentforce
+> Nonprofit), and a few hard technical errors (PD2 SOQL selectivity thresholds inverted; Apex
+> default sharing now WITH sharing in API v67+; GH reusable-workflow nesting 4→10; a fabricated
+> GuardDuty AttackSequence finding type — fixed). One unresolved source conflict: Data Loader
+> 5M vs 150M (two official Salesforce pages disagree) → left `[volatile]`, filed `new`. These
+> `new` items are the work-list for the next curation cycle (validate → integrate → eval probe)._
