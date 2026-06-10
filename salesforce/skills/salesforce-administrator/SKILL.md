@@ -8,7 +8,7 @@ metadata:
   type: certification-playbook
   blueprint: December 2025 refresh
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -132,11 +132,17 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 **Field sizing is a contract.** Form/integration string lengths and picklist constraints must be **derived from live Salesforce field metadata**, not hand-set literals, and regenerated whenever a field is resized or a picklist changes. A field resize is rarely a one-file change: SF metadata, generated schema/validation artifacts, and data-model docs move together — all or none. Truncation at the write boundary is a fallback, not a substitute.
 
-**Record types** drive page-layout assignment (profile × record type → layout) and picklist subsets. **External IDs** are the upsert key for idempotency and late re-linking — unique, indexed, max 7 per object.
+**Record types** drive page-layout assignment (profile × record type → layout) and picklist subsets. **External IDs** are the upsert key for idempotency and late re-linking — unique, indexed, max **25 per object** (shared pool with unique custom fields) `[volatile — verify live]`.
 
 **Quick Action / Lightning cache scar:** Adding fields to a Quick Action's layout via SFDX does **not** invalidate the runtime QA cache on Lightning contextual tabs (`console:relatedRecord`). New fields are silently absent even after logout/login. **Cache-bust:** edit any non-field-list metadata on the QA (`<description>`, `<label>`, or `<layoutSectionStyle>`) and redeploy — SF treats the structural change as meaningful and flushes the cache.
 
-**Red flags:** choosing master-detail when the child must sometimes exist alone (use Lookup); expecting a roll-up over a Lookup; two same-parent Lookups with identical relationshipName; hand-editing generated schema/validation files; a form `max()` literal that doesn't trace to the field-length source of truth; adding QA fields and not seeing them on the tab (apply the cache-bust).
+**Lightning App Builder (LAB)** — 15% of the December 2025 exam domain "Object Manager and Lightning App Builder":
+
+- **Page types:** App pages (standalone), Home pages (per-app or org default), Record pages (per object).
+- **Dynamic Forms:** put individual fields/sections on the record page as components with **visibility rules** (by field value, profile, permission, device) — replaces separate layouts. The layout "Upgrade" migration is all-or-nothing (sections migrate as units).
+- **Activation & assignment:** org default → app default → **app + record type + profile**; the **most specific** assignment wins; Lightning Experience only (Classic ignores LAB assignments).
+
+**Red flags:** choosing master-detail when the child must sometimes exist alone (use Lookup); expecting a roll-up over a Lookup; two same-parent Lookups with identical relationshipName; hand-editing generated schema/validation files; a form `max()` literal that doesn't trace to the field-length source of truth; adding QA fields and not seeing them on the tab (apply the cache-bust); setting a Dynamic Forms visibility rule on a field that has Required = true at the field level (the field still enforces its required constraint even when hidden).
 
 **Verify:** Describe the object (MCP / `sf sobject describe --sobject <object>` / Object Manager) to read true field lengths and picklist values before trusting any schema file. List objects (MCP / `sf sobject list` / Object Manager) to confirm an object exists before referencing it.
 
@@ -144,7 +150,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 ## 4. Automation — Flow first, and the managed-package trap
 
-**Workflow Rules and Process Builder were retired Dec 31, 2025 `[volatile — verify live]` — build all new automation in Flow.** Still recognize them — managed packages and legacy configs still contain them and they still fire.
+**Workflow Rules and Process Builder reached end of support Dec 31, 2025 `[volatile — verify live]` — build all new automation in Flow.** Existing automation continues to execute; still recognize them — managed packages and legacy configs still contain them and they still fire.
 
 **Pick the flow type by trigger:**
 
@@ -163,11 +169,13 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 **Bulkify.** Never put Get/Create/Update/Delete (or SOQL/DML) **inside a Loop** — collect once, work in memory, one DML after the loop.
 
+**Fault paths — every faultable element needs one.** Any Flow element that can fault — DML (Create/Update/Delete Records), Send Email, Action calls, HTTP callouts — must have a **Fault path** connector. Without it, a fault in a bulk transaction causes the entire batch to fail **silently**, with no user-visible error and no log entry. Best practice: connect the Fault path to a Create Records element that logs the fault message to a custom `Flow_Error_Log__c` object (or similar), then fault-terminate gracefully. A Flow with zero fault handling is a silent data-integrity risk in production.
+
 **Managed-package automation silently mutates your data.** A managed package ships Workflow Rules, flows, and triggers in its namespace that fire on your records. When a field changes with no code of yours responsible, **suspect managed-package automation first** — check Setup → Workflow Rules and Flows filtered by namespace, then enable an Apex debug log in a sandbox to catch the culprit. The fix is usually deactivating the offending rule. Canonical scar: NPSP copies `Phone → MobilePhone` from a defaulted preferred-phone picklist on insert (worked example: [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 **Approval processes** — place actions correctly: Initial Submission, Approval, Rejection, Recall, Final Approval/Rejection. Approver sources: specific user, role, queue, related-user field, or manager field.
 
-**Red flags:** any Get/Create/Update/Delete element inside a Loop; before-save flow doing DML on other objects (use after-save); building a *new* Workflow Rule or Process Builder; assuming "the field changed itself" without checking managed-package automation; an after-save flow that re-triggers itself (recursion — add entry criteria / `ISCHANGED` guards).
+**Red flags:** any Get/Create/Update/Delete element inside a Loop; before-save flow doing DML on other objects (use after-save); building a *new* Workflow Rule or Process Builder; assuming "the field changed itself" without checking managed-package automation; an after-save flow that re-triggers itself (recursion — add entry criteria / `ISCHANGED` guards); a DML, email, or action element with no Fault path (silent bulk failure).
 
 **Verify:** `SELECT Id, MasterLabel, TriggerType, Status FROM FlowDefinitionView WHERE Status='Active'` (MCP / `sf data query` / Developer Console) to see what's firing; describe the affected object (MCP / `sf sobject describe` / Object Manager) to inspect managed-package fields before debugging mystery data changes; Setup Audit Trail for recent automation changes.
 
@@ -188,7 +196,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 **On a managed-package org, prefer the package's own loader** — it understands required relationships and field mappings a generic loader gets wrong (e.g. NPSP Data Import for Household/Contact/gift loads; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
-**Recycle Bin retention is 15 days**; hard delete (Data Loader) skips it and is unrecoverable.
+**Recycle Bin retention is 15 days by default**; orgs with Extended Retention enabled may retain up to **30 days** `[volatile — verify live]`. Hard delete (Data Loader) skips the Recycle Bin entirely and is unrecoverable.
 
 **Duplicate management:** Matching Rules (define similarity) + Duplicate Rules (Alert = warn; Block = prevent save) — you need both; neither works alone.
 
@@ -222,11 +230,15 @@ Rules and red flags for Sales Cloud, Service Cloud, and productivity features. F
 
 **Permission reasoning is identical to §1** — the same OWD + FLS + permission sets stack.
 
+> **Naming note:** As of October 2025, Salesforce markets the agent platform under the **"Agentforce 360"** product umbrella; "Agent Builder" remains the exam-guide term and the UI label you will encounter in Setup. `[volatile — verify live]`
+
 - **Agentforce** = configurable, autonomous conversational agents. Distinct from **Einstein** (predictive/generative features on standard objects: Opportunity/Lead Scoring, Next Best Action).
 - **Agent Builder:** configure identity/persona, **instructions** (guardrails evaluated before every response), **topics** (scope — if a request doesn't match an active topic, the agent declines), and **actions** (Flow, Apex, API, standard email) within topics. Actions not linked to a topic are unreachable.
 - **Prompt Builder:** template types — Flex, Sales Email, Record Summary, Field Generation. Running user's FLS controls which fields merge.
 - **Security:** an agent **runs in a configured user context — OWD + FLS + permission sets apply.** "Agent can't see a record" → diagnose as a normal access problem: object CRUD, FLS, sharing. Use conversation transcripts + debug logs.
 - **Einstein (not Agentforce):** Opportunity Scoring, Lead Scoring, Next Best Action, Einstein Activity Capture — predictive/generative features on standard objects; configured separately from Agent Builder; no topics/actions model.
+
+**Conversation-preview testing:** use Agent Builder's built-in **conversation preview** panel to exercise topics, actions, and instruction guardrails interactively before activation — it runs as the configured agent user so sharing/FLS gaps surface in preview rather than in a live deployment.
 
 **Red flag:** assuming an agent bypasses sharing/FLS (it does not); an action that exists but is not linked to a topic (agent can't reach it); pointing an agent at PII without checking the running user's data scope; confusing Einstein feature configuration with Agentforce Agent Builder.
 
@@ -319,9 +331,10 @@ Read this first. Each rule is concrete and imperative.
 - **DO** treat object CRUD, FLS, and record sharing as three separate gates that must all pass.
 - **DON'T** expect a permission set to revoke anything — permsets are additive; use a muting permset to subtract inside a group.
 - **DO** assign External Client App access on the ECA → Policies → App Policies → Select Permission Sets, and verify via `PermissionSetAssignment` query.
-- **DON'T** ever build a new Workflow Rule or Process Builder — both retired Dec 31, 2025; build in Flow.
+- **DON'T** ever build a new Workflow Rule or Process Builder — both reached end of support Dec 31, 2025; existing automation still executes, but build all new automation in Flow.
 - **DO** prefer a before-save record-triggered flow for same-record field changes (zero added DML); use after-save only for related records/email.
 - **DON'T** place any Get/Create/Update/Delete element (or SOQL/DML) inside a Loop — bulkify: collect, then one DML after the loop.
+- **DO** add a Fault path to every DML, Send Email, Action, and callout element in a Flow — without one, faults fail silently in bulk transactions. Log the fault message (e.g. to a custom error-log object).
 - **DO** stay under per-transaction limits: 100 SOQL, 150 DML, 50k rows retrieved, 10k DML rows; flows batch in 200s.
 - **DO** suspect managed-package automation (e.g. NPSP namespaces) when a field changes value with no code of yours responsible.
 - **DON'T** edit managed-package (NPSP) metadata directly; extend alongside it.
@@ -330,7 +343,7 @@ Read this first. Each rule is concrete and imperative.
 - **DO** derive form/integration string `max()` and picklist constraints from live field metadata; regenerate after any field resize/picklist edit; never hand-edit generated schema files.
 - **DO** cache-bust a Quick Action after adding fields: edit `<description>`/`<label>` and redeploy, or the new fields won't render on the contextual tab.
 - **DON'T** use Data Import Wizard for >50k rows or unsupported objects — use Data Loader (5M cap); on a managed-package org prefer the package's own loader (e.g. NPSP Data Import).
-- **DO** remember Recycle Bin is 15 days; hard delete is unrecoverable — back up first.
+- **DO** remember Recycle Bin default retention is 15 days (up to 30 days with Extended Retention `[volatile — verify live]`); hard delete skips the Recycle Bin entirely and is unrecoverable — back up first.
 - **DON'T** delete a user — deactivate (frees license) or freeze (instant lockout, keeps license).
 - **DO** check Setup Audit Trail (180-day) first when org behavior changes unexpectedly.
 - **DO** verify against the live org (describe objects, run SOQL, list objects, query contacts) before trusting repo XML or a schema file.
@@ -359,6 +372,16 @@ These are harvested back into the skill via the learning loop. When the live sys
 ## Changelog
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
+- **2026-06-10** — Curation (inbox audit, 2026-06-10):
+  - **Finding 1:** External ID limit corrected 7 → **25** (shared pool with unique custom fields); updated §3 body and Quick Reference. Source: help.salesforce.com 000385134.
+  - **Finding 2:** Group task user limit corrected 200 → **100**; updated references/sales-service-detail.md. Source: help.salesforce.com 000380133.
+  - **Finding 3:** Web-to-Lead overflow behavior corrected: "silently dropped" → **pending request queue processed when limit resets**; updated references/sales-service-detail.md lead bullet and red-flags paragraph. Source: help.salesforce.com 000382807.
+  - **Finding 4:** Web-to-Case overflow behavior corrected: "emailed to default case address" → **pending request queue**; fixed internal contradiction in references/sales-service-detail.md. Source: help.salesforce.com 000382807.
+  - **Finding 5:** Workflow Rules / Process Builder "retired" → **"reached end of support (Dec 31 2025); still executes"**; updated §4 and Quick Reference. Source: help.salesforce.com 001096524.
+  - **Finding 6:** Added **Lightning App Builder** subsection to §3 (page types, Dynamic Forms, activation/assignment) to close 15% domain coverage gap. Source: admin.salesforce.com 2026 exam-update blog.
+  - **Finding 7:** Added **Agentforce 360** dual-naming note (Oct 2025 rebrand) to §7, marked `[volatile — verify live]`. Source: TDX 2026 blog.
+  - **Finding 8:** Recycle Bin retention nuanced to **"15 days default; up to 30 days with Extended Retention"**; added Agent Builder conversation-preview testing note to §7. Source: help.salesforce.com 000387160.
+  - **Finding 9:** Added **Flow fault-path** guidance to §4 (every faultable element needs a Fault path + error log; silent-failure risk in bulk); added to §4 red flags and Quick Reference.
 
 ## Disclaimer
 

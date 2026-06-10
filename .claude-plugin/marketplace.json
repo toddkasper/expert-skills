@@ -10,7 +10,7 @@
       "name": "salesforce-skills",
       "source": "./salesforce",
       "description": "Unofficial — not affiliated with or endorsed by Salesforce. 13 operational skills covering Salesforce practitioner domains — Administrator, Advanced Administrator, Platform Developer I/II, JavaScript Developer I (LWC), Technical Architect, the Sales/Service/Experience/Nonprofit consultants, Marketing Cloud Email, Business Analyst, and Agentforce — each with rules, decision tables, scars, and portable verify steps.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "license": "MIT",
       "keywords": ["salesforce", "unofficial", "apex", "soql", "lwc", "flow", "agentforce", "npsp", "administrator", "architect", "consultant"]
     },
@@ -18,7 +18,7 @@
       "name": "aws-skills",
       "source": "./aws",
       "description": "Unofficial — not affiliated with or endorsed by Amazon Web Services. 3 operational AWS skills — Solutions Architect – Professional (SAP-C02), DevOps Engineer – Professional (DOP-C02), and Security – Specialty (SCS-C03) — each ~4k words of rules, decision tables, and aws-CLI verify steps.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "license": "MIT",
       "keywords": ["aws", "unofficial", "solutions-architect", "devops", "security", "professional"]
     },
@@ -26,7 +26,7 @@
       "name": "github-skills",
       "source": "./github",
       "description": "Unofficial — not affiliated with or endorsed by GitHub. GitHub Actions operational skill — CI/CD workflows, reusable/composite workflows, custom actions, runners, OIDC, and supply-chain hardening — with gh-CLI/workflow-lint verify steps.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "license": "MIT",
       "keywords": ["github", "unofficial", "github-actions", "ci-cd", "devops"]
     },
@@ -34,7 +34,7 @@
       "name": "web-skills",
       "source": "./web",
       "description": "5 operational web/runtime skills — nodejs (mapped to OpenJS JSNAD/JSNSD), typescript, react, nextjs, react-native — each with rules, decision tables, red flags, and tsc/node/test verify steps. The latter four are competence skills (no vendor cert). Independent content; project/vendor marks used for identification only.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "license": "MIT",
       "keywords": ["nodejs", "typescript", "react", "web", "frontend", "backend"]
     }

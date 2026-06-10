@@ -4,7 +4,19 @@ Repo-level history. Per-skill changes live in each `SKILL.md`'s `## Changelog`; 
 versions live in `marketplace.json` / `.claude-plugin/plugin.json` (semver convention in
 [CONTRIBUTING.md](CONTRIBUTING.md)).
 
-## 2026-06-10 — Legal/IP hardening + project polish
+## 2026-06-10 — Legal/IP hardening + project polish + Cycle-2 curation
+_Versions: `salesforce-skills` 0.3.0; `aws-skills` / `github-skills` / `web-skills` 0.2.0._
+
+- **Cycle-2 curation (learning loop):** integrated 23 Lens 3–5 findings — salesforce-administrator
+  (External ID 7→25, group tasks 200→100, web-to-lead/case overflow = pending queue, WFR/PB
+  "retired"→end-of-support, Lightning App Builder coverage, Flow fault paths, Recycle Bin 30-day
+  Extended Retention, Agentforce 360 naming), react (useTransition→useDeferredValue for controlled
+  inputs **+ the matching answer-key #6 defect**, useEffectEvent/Activity/use()/ref-as-prop for
+  React 19.2, React Foundation trademark), aws-security-specialty (Security Hub CSPM split, RCP
+  Nov-2024 + service scoping, Domain-1 logging, GuardDuty ETD, Firewall Manager→Config, S3 BPA
+  rationale). Six held-out eval scenarios added per skill (situations 12→18). run-eval.md
+  hardened: 3-judge panel, per-scenario blinded A/B grading, solver fence excluding
+  scorecards/RESULTS.
 - **Plugin rename (breaking):** plugin identifiers → `salesforce-skills` / `aws-skills` /
   `github-skills` / `web-skills`; displayNames retitled to the "…(unofficial)" pattern;
   non-affiliation framing added throughout. Install commands and skill namespaces change

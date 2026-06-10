@@ -12,7 +12,7 @@ Official and community resources for deepening React competence. Verify links ar
 
 - Built-in hooks listed with signatures and canonical examples: <https://react.dev/reference/react/hooks>
 - "You Might Not Need an Effect" — the single most important reading for effect discipline: <https://react.dev/learn/you-might-not-need-an-effect>
-- Rules of hooks: <https://react.dev/reference/rules/react-calls-components-and-hooks>
+- Rules of hooks: <https://react.dev/reference/rules/rules-of-hooks>
 
 ## Testing
 
@@ -53,4 +53,4 @@ Official and community resources for deepening React competence. Verify links ar
 
 ---
 
-_Independent educational content. React is a trademark of Meta. Not affiliated with or endorsed by Meta._
+_Independent educational content. React is a trademark of the React Foundation (a Linux Foundation project) `[volatile — verify live]`. Not affiliated with or endorsed by the React Foundation or any contributor. See react.dev/blog/2026/02/24/the-react-foundation._

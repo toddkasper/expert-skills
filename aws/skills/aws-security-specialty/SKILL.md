@@ -1,13 +1,13 @@
 ---
 name: aws-security-specialty
-description: AWS security engineering — threat detection (GuardDuty, Security Hub, Detective, Security Lake), incident response and containment, IAM policy evaluation and permission boundaries, infrastructure/network security (security groups, NACLs, WAF, Shield, PrivateLink), data protection and KMS encryption strategy, Secrets Manager, Macie, and multi-account governance (SCPs, Control Tower, Config, Firewall Manager). Use when designing or reviewing AWS security controls, detection/response automation, or compliance guardrails. Not pipeline/IaC delivery (see aws-devops-engineer-professional) or broad architecture trade-offs (see aws-solutions-architect-professional). Scoped and benchmarked by the AWS Security – Specialty (SCS-C03) blueprint.
+description: AWS security engineering — threat detection (GuardDuty, Security Hub CSPM, Detective, Security Lake), incident response and containment, IAM policy evaluation and permission boundaries, infrastructure/network security (security groups, NACLs, WAF, Shield, PrivateLink), data protection and KMS encryption strategy, Secrets Manager, Macie, and multi-account governance (SCPs, Control Tower, Config, Firewall Manager). Use when designing or reviewing AWS security controls, detection/response automation, or compliance guardrails. Not pipeline/IaC delivery (see aws-devops-engineer-professional) or broad architecture trade-offs (see aws-solutions-architect-professional). Scoped and benchmarked by the AWS Security – Specialty (SCS-C03) blueprint.
 metadata:
   anchor-credential: AWS Certified Security – Specialty
   exam-code: SCS-C03
   domain: aws
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
   blueprint: SCS-C03 (December 2025)
 ---
@@ -18,7 +18,7 @@ metadata:
 
 Operational playbook for AWS security work. Each section states the rule to apply: decision criteria, concrete limits, anti-patterns, and verification steps. **Verify against the live account** — effective permissions result from combining multiple policy types, and a single missing allow or extra deny changes the outcome. Benchmarked against AWS Security – Specialty (SCS-C03, December 2025).
 
-> **Load this skill when…** designing or reviewing IAM policies, permission boundaries, SCPs, or RCPs; configuring threat detection (GuardDuty, Security Hub, Detective, Security Lake); implementing KMS encryption strategy or Secrets Manager rotation; auditing network defenses (WAF, Shield, PrivateLink, NACLs) or building IR/containment automation.
+> **Load this skill when…** designing or reviewing IAM policies, permission boundaries, SCPs, or RCPs; configuring threat detection (GuardDuty, Security Hub CSPM, Detective, Security Lake); implementing KMS encryption strategy or Secrets Manager rotation; auditing network defenses (WAF, Shield, PrivateLink, NACLs) or building IR/containment automation.
 > **Not this skill:** pipeline/IaC delivery → see `aws-devops-engineer-professional`; enterprise architecture trade-offs → see `aws-solutions-architect-professional`.
 
 > **Study resources, SCS-C02→SCS-C03 changes, and credential logistics:** [references/study-resources.md](references/study-resources.md).
@@ -29,7 +29,7 @@ Operational playbook for AWS security work. Each section states the rule to appl
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live — volatile facts:** KMS automatic-rotation minimum interval `[volatile — verify live]`, Shield Advanced pricing `[volatile — verify live]`, GuardDuty finding type catalog (new finding families added quarterly) `[volatile — verify live]`, IAM Access Analyzer supported resource types `[volatile — verify live]`, RCP (Resource Control Policy) region/service availability `[volatile — verify live]`, and any feature flagged in the `blueprint:` frontmatter as a recent addition.
+- **Always re-verify live — volatile facts:** KMS automatic-rotation minimum interval `[volatile — verify live]`, Shield Advanced pricing `[volatile — verify live]`, GuardDuty finding type catalog (new finding families added quarterly) `[volatile — verify live]`, IAM Access Analyzer supported resource types `[volatile — verify live]`, RCP (Resource Control Policy) service coverage and region availability `[volatile — verify live]`, Security Hub CSPM and Security Hub (risk-correlation) feature boundaries `[volatile — verify live]`, and any feature flagged in the `blueprint:` frontmatter as a recent addition.
 - **Live wins:** when the live AWS account, CLI output, or official AWS docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
 - **Escalate to a human — do not silently execute:** modifying KMS key policies or deleting CMKs; changing SCPs or RCPs; revoking IAM sessions or attaching explicit-deny policies to production roles; quarantining or terminating EC2 instances (even as an IR step); disabling GuardDuty or CloudTrail in any account; opening security-group or network-boundary rules; any Secrets Manager rotation that affects a production database.
 - **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with AWS service updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
@@ -44,7 +44,7 @@ Every authorization decision passes through this stack in order. **Explicit Deny
 
 1. **Explicit Deny** (any policy type) → AccessDenied, full stop.
 2. **SCPs** — ceiling on what principals in the OU/account may do. SCPs do not grant; they cap.
-3. **RCPs (Resource Control Policies)** — ceiling on what any principal (including cross-account) may do to resources in the OU/account. Introduced late 2023; tested in SCS-C03 `[volatile — verify live]`.
+3. **RCPs (Resource Control Policies)** — ceiling on what any principal (including cross-account) may do to resources in the OU/account. Introduced Nov 2024; apply only to supported services (S3, STS, KMS, SQS, Secrets Manager, ECR, OpenSearch Serverless, DynamoDB) `[volatile — verify live]`.
 4. **Permission Boundaries** — ceiling on what an IAM principal's identity policies may grant. Does not cap resource-policy grants made directly to the role.
 5. **Session Policies** — ceiling applied at `AssumeRole` / `GetFederationToken`; caps the session below the role's full permissions.
 6. **Resource Policies + Identity Policies** — the grant layer:
@@ -57,7 +57,7 @@ Every authorization decision passes through this stack in order. **Explicit Deny
 
 ### Least privilege tools
 
-- **IAM Access Analyzer** — region-scoped; scans resource-based policies for unintended external access. Create one per region, or use an org-level analyzer (covers all accounts in that region). Also generates policy suggestions from CloudTrail history.
+- **IAM Access Analyzer** — region-scoped; three analyzer types: **external-access** (unintended external access to resource-based policies), **unused-access** (unused roles/permissions/keys within a configurable look-back window), **internal-access** (cross-account access within the org). Also performs **custom policy checks** (validate against reference policies before deployment). Create one per region, or use an org-level analyzer (covers all accounts in that region).
 - **IAM Access Advisor** — last-accessed timestamps per service/action; prune unused permissions.
 - **Amazon Verified Permissions** — Cedar-based fine-grained app authorization, separate from IAM.
 
@@ -65,9 +65,7 @@ Every authorization decision passes through this stack in order. **Explicit Deny
 
 **IAM Identity Center (SSO):** recommended for human multi-account access — permission sets, automatic temporary credentials, no long-lived keys. **SAML 2.0** uses `AssumeRoleWithSAML`; **OIDC** uses an OIDC provider principal with a `Condition` to scope subjects.
 
-**Red flags:** identity-policy Allow to KMS key with no key policy delegation; cross-account S3 with only one side configured; permission boundary treated as a grant; single-region analyzer covering all regions; long-lived IAM user credentials for humans.
-
-**Verify:** IAM Policy Simulator; Access Analyzer findings; CloudTrail `AssumeRole` and `GetCallerIdentity`.
+**Red flags:** identity-policy Allow to KMS with no key policy delegation; cross-account S3 with one side missing; boundary treated as grant; single-region analyzer; long-lived IAM user keys for humans.
 
 ---
 
@@ -92,9 +90,9 @@ Every authorization decision passes through this stack in order. **Explicit Deny
 - **WAF:** Layer 7 on CloudFront, ALB, API Gateway, AppSync, Cognito. Managed rule groups cover OWASP Top 10, bot control, IP reputation. Deploy on CloudFront AND ALB — protecting only ALB allows origin-IP bypass.
 - **Shield Standard:** automatic, free, L3/L4. **Shield Advanced `[volatile — verify live]`:** paid; L7 DDoS detection, SRT engagement, cost protection.
 - **SSM Session Manager:** no SSH/RDP required — instance needs SSM Agent + `AmazonSSMManagedInstanceCore` profile. All session activity logged to CloudTrail. Never maintain standing port-22/3389 ingress.
-- **Inspector:** continuous CVE assessment for EC2, Lambda, ECR images; findings flow to Security Hub.
+- **Inspector:** continuous CVE assessment for EC2, Lambda, ECR images; findings flow to Security Hub CSPM.
 
-**Red flags:** NACL missing outbound ephemeral port rules; VPC endpoint with no endpoint policy; WAF only on ALB (not CloudFront); SSH/RDP open to `0.0.0.0/0`; no SSM Agent instance profile.
+**Red flags:** NACL missing outbound ephemeral ports; VPC endpoint with no endpoint policy; WAF only on ALB not CloudFront; SSH/RDP open to `0.0.0.0/0`; no SSM Agent instance profile.
 
 ---
 
@@ -109,9 +107,9 @@ Every authorization decision passes through this stack in order. **Explicit Deny
 | Multi-region key | Customer | Optional | Yes (replicate into target regions) | Disaster recovery, global applications, cross-region replication |
 | Imported key material | Customer | No (must re-import) | No | Regulatory requirements to control key material source |
 
-Only **symmetric** CMKs with AWS-generated material support automatic rotation. Asymmetric keys and imported-material keys do not support automatic rotation. When you rotate a key, the old backing material is retained to decrypt data encrypted with it; the new material encrypts new data.
+Only **symmetric** CMKs with AWS-generated material support automatic rotation (asymmetric and imported-material keys do not). On rotation, old backing material is retained for decryption; new material encrypts new data.
 
-**Envelope encryption:** KMS generates a data key; data key encrypts the payload; only the encrypted data key and ciphertext are stored. `GenerateDataKey` → encrypt locally → discard plaintext key. `Decrypt` calls KMS to get the plaintext data key.
+**Envelope encryption:** `GenerateDataKey` → encrypt locally with the plaintext data key → store only the ciphertext + encrypted data key → discard plaintext key. Decryption calls KMS to get the plaintext data key.
 
 **Key policy primacy:** if the key policy lacks `"Principal": {"AWS": "arn:aws:iam::<account-id>:root"}`, no IAM policy can grant access. Every CMK needs the account root delegation statement; IAM policies can then add or restrict beyond it.
 
@@ -124,11 +122,11 @@ Only **symmetric** CMKs with AWS-generated material support automatic rotation. 
 
 ### Secrets Manager and Macie
 
-**Secrets Manager:** CMK-encrypted; auto-rotation via Lambda (needs network access to both Secrets Manager and the target service — VPC interface endpoints in private subnets). Rotation stages: `AWSPENDING` → `AWSCURRENT` → `AWSPREVIOUS`; cached-secret apps must handle the overlap window gracefully.
+**Secrets Manager:** CMK-encrypted; auto-rotation via Lambda (VPC interface endpoints needed in private subnets). **Managed rotation** (AWS-provided Lambda rotators for supported services — RDS, Redshift, DocumentDB) available without custom code. Two strategies: **single-user** (rotates one credential, brief gap on switch) vs **alternating-users** (two credentials rotated alternately — zero-downtime). Rotation stages: `AWSPENDING` → `AWSCURRENT` → `AWSPREVIOUS`; cached-secret apps must handle the overlap window.
 
-**Macie:** ML+pattern scanning for PII/credentials in S3. Continuous monitoring evaluates bucket-level controls; findings flow to Security Hub. Deploy org-wide. Run a **discovery job** to classify existing object content — continuous monitoring alone does not scan object data.
+**Macie:** ML+pattern scanning for PII/credentials in S3. Continuous monitoring evaluates bucket-level controls; findings flow to Security Hub CSPM. Deploy org-wide. Run a **discovery job** to classify object content — continuous monitoring does not scan object data.
 
-**Red flags:** CMK with no key policy root delegation; SSE-S3 where key-usage audit trail is required (use SSE-KMS); S3 Block Public Access disabled at account level; secrets in environment variables or Parameter Store standard tier when rotation is required; SSE-KMS objects replicated cross-region without configuring destination key policy.
+**Red flags:** CMK with no key policy root delegation; SSE-S3 where key-usage audit trail required (use SSE-KMS); S3 Block Public Access off at account level; secrets in env vars or Parameter Store when rotation required; SSE-KMS objects replicated cross-region without destination key policy.
 
 ---
 
@@ -138,23 +136,39 @@ Only **symmetric** CMKs with AWS-generated material support automatic rotation. 
 
 GuardDuty analyzes CloudTrail, VPC Flow Logs, DNS, EKS audit logs, Lambda network activity, and RDS login activity — no log source setup required. Enable in every region and account; use the org delegated-administrator so member accounts cannot disable it.
 
-Severity: **Low** (informational — do not auto-isolate), **Medium** (investigate + auto-notify), **High** (auto-contain).
+**Protection plans** (enable per account or org-wide): S3 Protection, EKS Protection, Malware Protection (EBS scanning), RDS Protection (login anomalies), Lambda Network Activity Monitoring `[volatile — verify live]`.
 
-| Finding family | High-severity example | Auto-remediation |
+Severity: **Low** (do not auto-isolate), **Medium** (auto-notify + investigate), **High** (auto-contain), **Critical** `[volatile — verify live]` (immediate escalation).
+
+**Extended Threat Detection:** `AttackSequence` findings (e.g., `AttackSequence:IAM/CompromisedCredentials`) correlate multi-stage signals into a single compound Critical/High finding — treat with highest priority; review all constituent events, not just the most recent `[volatile — verify live]`.
+
+| Finding family | Example finding | Auto-remediation |
 |---|---|---|
-| Compromised EC2 | `UnauthorizedAccess:EC2/MaliciousIPCaller` | Quarantine SG + EBS snapshot + notify |
-| Credential exfiltration | `UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration` | Explicit-deny role policy + notify |
+| Compromised EC2 | `Recon:EC2/PortProbeUnprotectedPort` | Quarantine SG + EBS snapshot + notify |
+| Credential exfiltration | `UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS` | Explicit-deny role policy + notify |
 | S3 data exposure | `Policy:S3/BucketPublicAccessGranted` | Re-enable Block Public Access |
 | Malware | `Execution:EC2/MaliciousFile` | Isolate instance + Malware Protection scan |
+| Multi-stage attack | `AttackSequence:IAM/CompromisedCredentials` | Immediate escalation + IR playbook `[volatile — verify live]` |
 
-### Security Hub, Security Lake, and Detective
+### Security Hub CSPM, Security Hub, Security Lake, and Detective
 
-- **Security Hub:** aggregates GuardDuty, Inspector, Macie, Access Analyzer, Firewall Manager findings (ASFF format); runs CIS, FSBP, PCI DSS checks. Use org delegated-admin so all-account findings flow centrally. Route HIGH/CRITICAL to EventBridge → SNS → on-call.
-- **Security Lake** normalizes sources (CloudTrail, VPC Flow Logs, WAF, EKS, Security Hub) to OCSF/Parquet for long-term SIEM analytics. **Detective** provides graph-based investigation of GuardDuty findings — use instead of manually joining CloudTrail + VPC Flow Logs.
+**Naming (Oct/Dec 2025):** Original findings-aggregation product → renamed **Security Hub CSPM** (Oct 2025). New **Security Hub** (GA Dec 2025) = separate risk-correlation/exposure product. They are distinct — verify which product a feature references `[volatile — verify live]`.
 
-**Pipeline:** GuardDuty → EventBridge (on severity) → Lambda / Step Functions / SSM Automation → containment + SNS + Security Hub update.
+- **Security Hub CSPM:** aggregates GuardDuty, Inspector, Macie, Access Analyzer, Firewall Manager findings (ASFF format); runs CIS, FSBP, PCI DSS checks. Use org delegated-admin so all-account findings flow centrally. Route HIGH/CRITICAL to EventBridge → SNS → on-call.
+- **Security Hub (risk-correlation):** exposure management product; correlates findings into prioritized attack paths and risk scores across the org `[volatile — verify live]`.
+- **Security Lake** normalizes sources (CloudTrail, VPC Flow Logs, WAF, EKS, Security Hub CSPM) to OCSF/Parquet for long-term SIEM analytics. **Detective** provides graph-based investigation of GuardDuty findings — use instead of manually joining CloudTrail + VPC Flow Logs.
 
-**Red flags:** GuardDuty not org-wide; member accounts can disable GuardDuty; Security Hub without delegated admin; all finding severities routed to the same auto-remediation Lambda (low severity = high false-positive rate); manual CloudTrail + Flow Log correlation instead of Detective.
+### CloudTrail and log analysis — Domain 1 design and troubleshooting
+
+**Org-level CloudTrail:** enable in the management account with "Apply to all accounts in my organization" — member accounts cannot disable it. Centralize logs in the Log Archive account S3 bucket.
+
+**CloudTrail Lake:** SQL queries on CloudTrail events directly (no S3/Athena pipeline); retention ≤7 years; org-wide aggregation. Use alongside **Athena** (S3-backed, partition by account/region/date) or **OpenSearch** for dashboards.
+
+**Missing-logs — top causes:** (1) single-region trail missing global-service events (IAM) — enable "Include global service events"; (2) S3 bucket policy blocking CloudTrail `s3:PutObject`; (3) SSE-KMS on the log bucket — key policy must allow CloudTrail `kms:GenerateDataKey`; (4) data events (S3 object-level, Lambda invoke) are off by default — must be explicitly enabled per trail.
+
+**Pipeline:** GuardDuty → EventBridge (on severity) → Lambda / Step Functions / SSM Automation → containment + SNS + Security Hub CSPM update.
+
+**Red flags:** GuardDuty not org-wide or member accounts can disable it; Security Hub CSPM without delegated admin; all severities routed to same auto-remediation Lambda; manual CloudTrail + Flow Log correlation instead of Detective; single-region trail missing global-service events; data events not enabled when object-level audit required.
 
 ---
 
@@ -168,9 +182,9 @@ Severity: **Low** (informational — do not auto-isolate), **Medium** (investiga
 
 **SSM Automation runbooks:** pre-build for EC2 isolation, credential revocation, and restore-from-backup. Use managed runbooks (`AWS-IsolateEC2Instance`) where available; add Approval steps for destructive actions.
 
-**Forensic accounts:** VPC-endpoint-only access (S3/CloudTrail/Athena), no internet egress, strict role-based access.
+**Forensic accounts:** VPC-endpoint-only (S3/CloudTrail/Athena), no internet egress, role-based access only.
 
-**Red flags:** no pre-built runbooks; terminating an instance before EBS snapshot; root credentials for IR; no org-level multi-region CloudTrail.
+**Red flags:** no pre-built runbooks; terminating instance before EBS snapshot; root credentials for IR; no org-level CloudTrail.
 
 ---
 
@@ -179,13 +193,13 @@ Severity: **Low** (informational — do not auto-isolate), **Medium** (investiga
 ### Multi-account structure (AWS SRA canonical)
 
 - **Management account** — Organizations, billing, Control Tower. No workloads.
-- **Security OU** → Log Archive account (CloudTrail, VPC Flow Logs, Security Lake) + Audit/Security Tooling account (GuardDuty delegated admin, Security Hub delegated admin, Firewall Manager).
+- **Security OU** → Log Archive account (CloudTrail, VPC Flow Logs, Security Lake) + Audit/Security Tooling account (GuardDuty delegated admin, Security Hub CSPM delegated admin, Firewall Manager).
 - **Workload OUs** — Sandbox, Dev, Staging, Prod with appropriate SCPs per OU.
 
 ### SCPs, RCPs, and Control Tower
 
 - **SCPs** cap what IAM principals in the OU/account may do. Do not grant. A Deny SCP blocks even `AdministratorAccess`.
-- **RCPs** cap what any principal — including cross-account and service principals — may do to resources in the OU/account. Enforce encryption at rest or block non-TLS org-wide regardless of individual bucket policies.
+- **RCPs** (introduced Nov 2024) cap what any principal — including cross-account and service principals — may do to resources in the OU/account. Apply only to supported services (S3, STS, KMS, SQS, Secrets Manager, ECR, OpenSearch Serverless, DynamoDB) `[volatile — verify live]`. Enforce encryption at rest or block non-TLS org-wide regardless of individual bucket policies.
 - **Deny-list SCP strategy** (start with `FullAWSAccess`, add targeted Denies) is preferred over allow-list (allow-list requires enumerating every allowed action, becomes unmanageable).
 - **Control Tower preventive guardrails** = SCPs (block); **detective guardrails** = Config rules (alert, don't block). Deploy preventive controls only after validating with detective guardrails.
 
@@ -193,9 +207,30 @@ Severity: **Low** (informational — do not auto-isolate), **Medium** (investiga
 
 - **Config** records configuration changes; evaluates managed or custom-Lambda rules; aggregators roll up compliance centrally.
 - **Conformance packs** (Config rules via StackSets) for CIS, NIST, PCI — deploy org-wide.
-- **Firewall Manager** centrally deploys WAF, Shield Advanced, Security Group audit/enforce, and Network Firewall policies — propagates to new accounts as they join a target OU. Requires Organizations + Security Hub.
+- **Firewall Manager** centrally deploys WAF, Shield Advanced, Security Group audit/enforce, and Network Firewall policies — propagates to new accounts as they join a target OU. Requires Organizations + **AWS Config** (Config must be enabled in all member accounts; Firewall Manager uses Config to track resource compliance).
 
-**Red flags:** SCPs at root without break-glass exceptions; Config rules deployed per-account manually (use conformance packs); Firewall Manager WAF not covering all internet-facing ALBs; Log Archive with write access for workload accounts; security tooling co-mingled with workloads in the same OU.
+**Red flags:** SCPs at root without break-glass exceptions; Config rules per-account (use conformance packs); Firewall Manager WAF missing internet-facing ALBs; Log Archive with workload-account write access; security tooling in same OU as workloads.
+
+### Additional governance controls
+
+- **Declarative policies** — organization-policy type (alongside SCPs/RCPs) that enforce a specific resource configuration state regardless of what resource policies or IAM policies say; used for immutable baseline settings `[volatile — verify live]`.
+- **AI-services opt-out policies** — organization policy to opt all accounts out of using customer content to improve AWS AI services (Bedrock, Rekognition, etc.) — required in data-sensitive orgs `[volatile — verify live]`.
+- **Centralized root access** — AWS Organizations management account can centralize root-credential management for member accounts, allowing root action only via trusted-access delegation and removing the need for member-account root passwords `[volatile — verify live]`.
+- **Audit Manager** — automates evidence collection for compliance frameworks (SOC 2, PCI DSS, HIPAA); maps AWS Config rules and CloudTrail API calls to control requirements; generates assessment reports.
+
+### Additional services — Domain 3 to 6 (condensed)
+
+Key services with brief decision rules (full service guides in [references/study-resources.md](references/study-resources.md)):
+
+- **Network Firewall** — stateful VPC network firewall; Firewall Manager deploys policies org-wide.
+- **DNS Firewall** — Route 53 Resolver DNS Firewall blocks DNS tunneling/exfiltration from VPCs.
+- **Verified Access** — zero-trust app access (no VPN); enforces identity + device posture `[volatile — verify live]`.
+- **Cognito** — user pools (app auth) + identity pools (federated AWS credentials); scope identity-pool trust policies tightly.
+- **IAM Roles Anywhere** — STS temp credentials for on-premises workloads via X.509 certs; replaces long-lived keys.
+- **ABAC** — tag-based policies (`aws:ResourceTag`, `aws:RequestTag`); scales IAM without per-resource policy edits.
+- **CloudHSM** — FIPS 140-2 Level 3 dedicated HSM (single-tenant). **XKS** — KMS key backed by on-premises HSM (HYOK) `[volatile — verify live]`.
+- **AWS Private CA** — managed private CA for internal TLS and code-signing certificates.
+- **Bedrock Guardrails** — content filtering, PII redaction, topic denial for GenAI inference `[volatile — verify live]`.
 
 ---
 
@@ -256,11 +291,11 @@ Severity: **Low** (informational — do not auto-isolate), **Medium** (investiga
 
 > **Situation:** A financial-services team deploys a VPC Gateway Endpoint for S3 so EC2 instances in private subnets can reach S3 without traversing the internet. Two weeks after go-live, a GuardDuty finding fires: one instance is pushing data to an S3 bucket owned by an external account. The security team assumed the Gateway endpoint kept traffic "internal" and safe. No endpoint policy was configured.
 
-> **Competent move:** A VPC Gateway Endpoint with no endpoint policy uses the default policy — `"Principal": "*", "Action": "s3:*", "Resource": "*"` — which allows any instance in the VPC to reach *any* S3 bucket, including buckets in attacker-controlled accounts. Add an endpoint policy that restricts `Resource` to only the bucket ARNs the workload legitimately needs (e.g., `arn:aws:s3:::my-company-bucket` and `arn:aws:s3:::my-company-bucket/*`), and deny all other S3 access through the endpoint. This prevents the endpoint from becoming an exfiltration channel while keeping legitimate access intact.
+> **Competent move:** A Gateway Endpoint with no endpoint policy defaults to `Principal: *, Action: s3:*, Resource: *` — any instance can reach any S3 bucket, including attacker-controlled ones. Add an endpoint policy restricting `Resource` to company bucket ARNs only; deny all other S3 through the endpoint.
 
-> **Tempting-but-wrong:** Relying on the EC2 instance's IAM role permissions alone. The IAM role may correctly restrict `s3:PutObject` to company-owned buckets — but if the instance is compromised and the attacker obtains the instance credentials, they can use those same credentials to call S3 from outside the VPC over the internet (bypassing the endpoint policy entirely). The endpoint policy adds a complementary control that is enforced at the network/endpoint layer regardless of which caller holds the credentials.
+> **Tempting-but-wrong:** Relying on the IAM role permissions alone. If the instance is compromised, the attacker can use the credentials outside the VPC over the internet, completely bypassing the endpoint policy. The endpoint policy is a network-layer control independent of credential scope.
 
-> **Verify:** `aws ec2 describe-vpc-endpoints --query 'VpcEndpoints[?ServiceName==\`com.amazonaws.<region>.s3\`].PolicyDocument'` — confirm the policy restricts `Resource` to specific bucket ARNs; attempt `aws s3 cp` from an instance in the VPC to an external bucket through the endpoint — it should be denied.
+> **Verify:** `aws ec2 describe-vpc-endpoints --query 'VpcEndpoints[?ServiceName==\`com.amazonaws.<region>.s3\`].PolicyDocument'` — confirm `Resource` is scoped to specific bucket ARNs; test copy to an external bucket — expect denied.
 
 ---
 
@@ -268,11 +303,11 @@ Severity: **Low** (informational — do not auto-isolate), **Medium** (investiga
 
 > **Situation:** A security engineer creates a single organization-level IAM Access Analyzer in `us-east-1` and declares the org's external-access detection posture complete. The org has workloads in `us-east-1`, `eu-west-1`, and `ap-southeast-1`. A week later a penetration test finds an unintended cross-account KMS key policy in `ap-southeast-1` that Access Analyzer never flagged.
 
-> **Competent move:** IAM Access Analyzer is **region-scoped** for resource analysis. An organization-level analyzer in `us-east-1` covers resources *in* `us-east-1` across all org accounts — it does not analyze resources in other regions. Create an organization-level analyzer in every region where the org has resources (here: `eu-west-1` and `ap-southeast-1` as well). Use a CloudFormation StackSet with SERVICE_MANAGED to deploy the analyzer in all active regions across the org in a single operation.
+> **Competent move:** IAM Access Analyzer is **region-scoped**. An org-level analyzer in `us-east-1` covers all org accounts but only resources *in* `us-east-1`. Create an org-level analyzer in every region with resources; automate with CloudFormation StackSets (SERVICE_MANAGED).
 
-> **Tempting-but-wrong:** Assuming an "organization-level" analyzer means org-wide across all regions. The org scope means it covers all *accounts* in the org, but still only for resources located in the same region as the analyzer. A single-region org analyzer is not a substitute for per-region deployment.
+> **Tempting-but-wrong:** "Organization-level" means all *accounts*, not all *regions*. A single-region org analyzer does not cover other regions.
 
-> **Verify:** `aws accessanalyzer list-analyzers --region ap-southeast-1` — if empty, no analyzer covers that region. After deploying: `aws accessanalyzer list-findings --analyzer-arn <arn> --region ap-southeast-1` to confirm findings are generated for resources in that region.
+> **Verify:** `aws accessanalyzer list-analyzers --region ap-southeast-1` — empty means no coverage; after deploying, confirm findings are generated for that region.
 
 ---
 
@@ -280,11 +315,11 @@ Severity: **Low** (informational — do not auto-isolate), **Medium** (investiga
 
 > **Situation:** A regulated financial services firm must retain trade-audit S3 logs for seven years and prevent deletion by any principal, including the account root user. A cloud engineer enables S3 Object Lock on the bucket, sets the default retention to 7 years, and selects **Governance** mode. The compliance officer signs off. Six months later an engineer with the `s3:BypassGovernanceRetention` IAM permission accidentally deletes a batch of locked objects.
 
-> **Competent move:** Use **Compliance** mode, not Governance mode. Compliance mode prevents any principal — including the account root — from shortening the retention period or deleting objects before the retention period expires, with no bypass mechanism whatsoever. Governance mode is defeatable by any principal who has `s3:BypassGovernanceRetention` — which makes it inappropriate for truly irrevocable retention requirements. Enable Compliance mode on Object Lock and remove any `s3:BypassGovernanceRetention` grants from all IAM policies as a defense-in-depth measure.
+> **Competent move:** Use **Compliance** mode. Compliance mode prevents any principal — including root — from deleting or shortening retention, with no bypass. Governance mode is defeatable by any principal with `s3:BypassGovernanceRetention`. Enable Compliance mode and remove any `s3:BypassGovernanceRetention` grants as defense-in-depth.
 
-> **Tempting-but-wrong:** Using Governance mode and revoking `s3:BypassGovernanceRetention` from all roles. While revoking the permission removes the ability to bypass today, it can be re-granted by any administrator with IAM rights — the control is not immutable. Compliance mode is the only S3 mechanism that is truly irrevocable without AWS Support involvement.
+> **Tempting-but-wrong:** Using Governance mode and revoking `s3:BypassGovernanceRetention`. Revoking can be re-granted by any IAM admin — it is not immutable. Compliance mode is the only S3 mechanism that is truly irrevocable.
 
-> **Verify:** `aws s3api get-object-lock-configuration --bucket <bucket>` — confirm `ObjectLockEnabled: Enabled` and `DefaultRetention.Mode: COMPLIANCE`. Attempt a delete from a principal with `s3:BypassGovernanceRetention` — it must be denied. `aws s3api head-object --bucket <bucket> --key <key>` shows individual object lock mode and retain-until date.
+> **Verify:** `aws s3api get-object-lock-configuration --bucket <bucket>` — confirm `Mode: COMPLIANCE`; attempt delete with `s3:BypassGovernanceRetention` — must be denied.
 
 ---
 
@@ -292,11 +327,11 @@ Severity: **Low** (informational — do not auto-isolate), **Medium** (investiga
 
 > **Situation:** A security team deploys a permission boundary (`DeveloperBoundary`) to all developer IAM roles, intending to allow developers to create and manage their own IAM service roles for Lambda and EC2 but prevent privilege escalation. The boundary explicitly allows `iam:CreateRole`, `iam:AttachRolePolicy`, and `iam:PassRole`. A developer tries to create a new Lambda execution role with `AmazonS3ReadOnlyAccess` and gets `AccessDenied` — but the developer's identity policy allows all `iam:*` actions.
 
-> **Competent move:** The permission boundary caps what the developer can do — the developer's effective permissions are the *intersection* of what the identity policy allows AND what the boundary permits. If `AmazonS3ReadOnlyAccess` includes `s3:GetObject` and the developer boundary does not permit `iam:PutRolePolicy` or the developer's identity policy allows it, the issue is that attaching the managed policy to the new role may be denied because the boundary does not allow `iam:AttachRolePolicy` on policies outside a permitted set. The fix is to review the `DeveloperBoundary` — it must explicitly allow all IAM actions the developer needs (including attaching policies to new roles) and typically should require that the created roles also carry the boundary (`iam:PutRolePermissionsBoundary` condition).
+> **Competent move:** Effective permissions = intersection of identity policy AND boundary. Even with `iam:*` in the identity policy, `iam:AttachRolePolicy` must also appear in `DeveloperBoundary` — if it does not, attaching policies to new roles is denied. Fix: add the missing IAM actions to the boundary. Best practice: add a `Condition` on `iam:CreateRole` requiring the boundary (`iam:PermissionsBoundary` condition key) on created roles to prevent escalation chains.
 
 > **Tempting-but-wrong:** Removing the permission boundary from the developer's role to fix the immediate error. This resolves the symptom but eliminates the guardrail entirely, allowing privilege escalation. The correct path is to refine the boundary to permit the specific IAM actions needed while still capping the maximum scope of any created role.
 
-> **Verify:** Use the IAM Policy Simulator: choose the developer principal, action `iam:AttachRolePolicy`, and specify the target managed policy ARN — it will identify which policy type (boundary vs identity) is causing the denial. Inspect `aws iam get-role --role-name <developer-role> --query 'Role.PermissionsBoundary'` to confirm the boundary ARN in effect.
+> **Verify:** IAM Policy Simulator for `iam:AttachRolePolicy` on the developer principal — identifies whether boundary or identity policy is the deny; `aws iam get-role --role-name <developer-role> --query 'Role.PermissionsBoundary'` confirms boundary ARN.
 
 Further scenarios (EC2 credential exfiltration containment, Macie discovery job vs continuous monitoring): [references/scenarios.md](references/scenarios.md).
 
@@ -316,7 +351,7 @@ Read this section first. Each rule is concrete and imperative.
 
 **Detection and response**
 - DO enable GuardDuty organization-wide via delegated administrator so member accounts cannot disable it.
-- DON'T auto-remediate Low-severity GuardDuty findings — false positive rate too high. Automate Medium/High only.
+- DON'T auto-remediate Low-severity GuardDuty findings — false positive rate too high. Automate notification and enrichment for Medium; automate containment actions (SG replacement, explicit-deny policy) for High and Critical only.
 - DO pre-build SSM Automation runbooks for EC2 isolation and credential revocation before an incident, not during.
 - DO preserve EBS snapshots before any instance termination during IR — evidence first, eradication second.
 - DO use Amazon Detective to investigate GuardDuty findings rather than manually correlating CloudTrail + VPC Flow Logs.
@@ -324,7 +359,7 @@ Read this section first. Each rule is concrete and imperative.
 **Encryption and data protection**
 - DO verify the KMS key policy contains the account root delegation statement before relying on IAM policies for key access.
 - DO use customer-managed keys (not AWS-managed keys) when you need CloudTrail audit logs of key usage or need to share the key across services/accounts.
-- DO enable S3 Block Public Access at the account level — bucket-level settings can be overridden by object ACLs; account-level cannot.
+- DO enable S3 Block Public Access at the account level. Bucket-level BPA blocks ACLs from granting public access (ACLs do NOT override it). Account-level BPA is stronger: it overrides bucket-level settings and cannot be disabled by bucket owners in member accounts.
 - DON'T store secrets in environment variables or SSM Parameter Store standard tier when rotation is required — use Secrets Manager.
 - DO test Secrets Manager rotation before production cutover — confirm the Lambda rotator has network access (VPC endpoint or internet) to both Secrets Manager and the target service.
 
@@ -360,6 +395,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to 12-dimension skill standard: task-vocab description, Scope block, Uncertainty & Escalation with `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, feedback protocol. Exam logistics relocated to references/study-resources.md.
 - **2026-06-09** — Inlined 4 decision scenarios; prose compression pass.
+- **2026-06-10** — C3 curation pass (inbox 2026-06-10). (1) Security Hub CSPM / Security Hub rename disambiguated. (2) RCP date corrected to Nov 2024; supported-service scope added. (3) Domain 1: org CloudTrail, CloudTrail Lake, Athena/OpenSearch, missing-logs checklist added. (4) GuardDuty: Critical severity, Extended Threat Detection / AttackSequence, protection plans added; nonexistent finding type replaced. (5) IAM Access Analyzer unused-access + internal-access + custom policy checks added; Firewall Manager prerequisite corrected to AWS Config; Secrets Manager managed rotation + single-user/alternating-users strategies added. (6) Medium/High severity automation rule made consistent; S3 BPA falsehood corrected; Scenario 4 garbled paragraph repaired; scored/unscored split fixed to 50+15 in study-resources.md. (7) Domain 3–6 gap coverage: Network Firewall, DNS Firewall, Verified Access, Cognito, IAM Roles Anywhere, ABAC, CloudHSM/XKS, Private CA, Bedrock Guardrails, declarative/AI-opt-out policies, centralized root, Audit Manager. Evals: 6 new held-out scenarios added (items 13–18).
 
 ---
 

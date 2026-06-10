@@ -27,3 +27,15 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. You are setting up Email-to-Case. Your org's IT team says they cannot open any inbound firewall ports on the mail server. Which Email-to-Case variant do you configure, and what is the key architectural difference that makes it viable without a firewall change?
 
 12. A screen flow is embedded on a record page via a Lightning App Builder component. After a release, users report the flow no longer saves correctly — it shows a generic error on the final screen. The flow itself has not changed. What should you check in Setup first, and what is a common deployment-related cause of this symptom?
+
+13. A data architect asks how many External ID fields can be defined on a single custom object and whether that limit is shared with any other field type. What are the correct limits, and what is the practical implication for an integration team that also needs several unique-indexed fields on the same object?
+
+14. An admin creates a group task in Salesforce and tries to assign it to 150 sales reps simultaneously using the group-task feature. After saving, only some reps received the task. What is the platform limit that caused the partial assignment, and what is the correct workaround to reach all 150 reps?
+
+15. Your org is running a marketing campaign that generates 800 web-to-lead submissions in a single day. A stakeholder panics and says the first 300 submissions after the daily cap were "lost." Is this accurate? What actually happens to submissions beyond the 500/day cap, and what should you communicate to the stakeholder?
+
+16. A senior admin describes Workflow Rules as "completely retired and no longer firing as of December 31, 2025." A junior admin objects, saying the rules in the managed package are still running. Which admin is correct about the current state, and what is the precise term for what happened on December 31, 2025?
+
+17. An admin builds a record-triggered Flow on Opportunity that calls an external REST service via an HTTP Callout element. In a sandbox stress test with 300 records, roughly one in fifty callouts returns a timeout fault. The Flow has no Fault path configured. What happens to the batch containing the faulting record, and what is the correct remediation?
+
+18. An admin opens Lightning App Builder for the Account record page and wants to show the "Partner Tier" field only to users with the "Channel Sales" permission set, and hide it for everyone else — without creating a separate page layout. What feature and configuration mechanism achieves this, and what is one constraint they must keep in mind about required fields?

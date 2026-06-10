@@ -1,6 +1,6 @@
 # Decision Scenarios — AWS Security Specialty
 
-Two additional judgment scenarios (Scenarios 2–4 are now inlined in the SKILL.md body). These cover complementary high-lift judgment areas.
+Two additional judgment scenarios (Scenarios 1–4 are inlined in the SKILL.md body). These cover complementary high-lift judgment areas.
 
 ---
 

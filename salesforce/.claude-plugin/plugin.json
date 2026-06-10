@@ -3,7 +3,7 @@
   "name": "salesforce-skills",
   "displayName": "Expert Skills for Salesforce Certification Domains (unofficial)",
   "description": "Unofficial — not affiliated with, authorized by, or endorsed by Salesforce. 13 operational skills covering Salesforce practitioner domains (Administrator, Advanced Administrator, Platform Developer I/II, JavaScript Developer I, Technical Architect, the Consultants, Business Analyst, Agentforce Specialist). Each gives an agent the rules, limits, decision criteria, and anti-patterns a credentialed practitioner applies. Guidance, not ground truth — verify against live orgs and official docs.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "Todd Kasper"
   },

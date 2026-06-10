@@ -60,3 +60,10 @@ state, and all 22 skills now meet the rubric publish bar (no dimension < 2, tota
 > strong (aws ceiling, react zero-lift) — eval items must probe post-cutoff/post-2024 operational
 > specifics to discriminate; one answer-key defect found (react #6); Lens 5 findings (23 items)
 > filed to the INBOX with sources._
+>
+> **Curation (2026-06-10):** all 23 Cycle-2 findings integrated (see INBOX) — facts corrected,
+> react answer-key #6 fixed, coverage gaps closed, and 6 new held-out scenarios added per skill
+> (situations 12→18) probing the post-2024 specifics that should restore discrimination.
+> run-eval.md now mandates a 3-judge panel + per-scenario blinded A/B grading + a wider solver
+> fence (excludes scorecards/RESULTS). **Re-run Lens 3/4 on these 3 skills next**; append new
+> dated rows (don't overwrite the Cycle-2 rows above)._
