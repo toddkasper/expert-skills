@@ -2,7 +2,7 @@
 name: salesforce-agentforce-specialist
 description: Building and governing Salesforce Agentforce and generative-AI features — Agentforce agents (topics, actions, agent-user security, the reasoning loop), Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex), Data Cloud and Knowledge grounding/RAG, and the Einstein Trust Layer (data masking, zero-retention, audit). Use when implementing or reviewing agents, prompt templates, grounding, or AI guardrails. Not admin-level Agentforce permission setup alone (see salesforce-administrator) or Apex action-code internals (see salesforce-platform-developer-2). Scoped and benchmarked by the Agentforce Specialist (AI-201) blueprint.
 metadata:
-  credential: Salesforce Certified Agentforce Specialist
+  anchor-credential: Salesforce Certified Agentforce Specialist
   exam-code: AI-201
   domain: salesforce
   type: certification-playbook
@@ -520,4 +520,4 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ---
 
-*Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. Guidance only — verify against official documentation and live orgs.*
+*Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. Guidance only — verify against official documentation and live orgs. No certification outcome is implied or guaranteed.*

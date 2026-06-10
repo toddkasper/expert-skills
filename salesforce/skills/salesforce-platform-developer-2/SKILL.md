@@ -2,7 +2,7 @@
 name: salesforce-platform-developer-2
 description: Advanced Apex, integration, async processing, and performance work on the Salesforce platform — design patterns (Singleton, Strategy, fflib, Bulk State Transition), asynchronous patterns (Batch/Queueable/Future/Schedulable, chaining), SOQL selectivity and Large Data Volume tuning, Platform Events, Change Data Capture, REST/Bulk API integration, dynamic Apex with FLS/CRUD enforcement, and test mocking (Stub API). Use when designing or reviewing advanced Apex, integration, or performance-critical code. Not Apex fundamentals (see salesforce-platform-developer-1) or declarative config (see salesforce-administrator). Scoped and benchmarked by the Platform Developer II (Plat-Dev-301) blueprint.
 metadata:
-  credential: Salesforce Certified Platform Developer II
+  anchor-credential: Salesforce Certified Platform Developer II
   exam-code: Plat-Dev-301
   domain: salesforce
   type: certification-playbook

@@ -2,7 +2,7 @@
 name: aws-security-specialty
 description: AWS security engineering — threat detection (GuardDuty, Security Hub, Detective, Security Lake), incident response and containment, IAM policy evaluation and permission boundaries, infrastructure/network security (security groups, NACLs, WAF, Shield, PrivateLink), data protection and KMS encryption strategy, Secrets Manager, Macie, and multi-account governance (SCPs, Control Tower, Config, Firewall Manager). Use when designing or reviewing AWS security controls, detection/response automation, or compliance guardrails. Not pipeline/IaC delivery (see aws-devops-engineer-professional) or broad architecture trade-offs (see aws-solutions-architect-professional). Scoped and benchmarked by the AWS Security – Specialty (SCS-C03) blueprint.
 metadata:
-  credential: AWS Certified Security – Specialty
+  anchor-credential: AWS Certified Security – Specialty
   exam-code: SCS-C03
   domain: aws
   type: certification-playbook

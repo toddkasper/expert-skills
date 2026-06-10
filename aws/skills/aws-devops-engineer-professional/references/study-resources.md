@@ -43,7 +43,7 @@ Blueprint domains and weights (DOP-C02):
 
 - [Digital Cloud Training — DOP-C02 Course](https://digitalcloud.training/aws-certified-devops-engineer-professional/) — widely used paid course by Neal Davis; detailed domain breakdowns and cheat sheets
 - [A Cloud Guru / Pluralsight — DevOps Engineer Professional](https://www.pluralsight.com/cloud-guru/courses/aws-certified-devops-engineer-professional) — hands-on lab environment alongside video instruction; useful for practical CodePipeline and CloudFormation exercises
-- [Tutorials Dojo — DOP-C02 Practice Exams](https://tutorialsdojo.com/courses/aws-certified-devops-engineer-professional-practice-exams/) — the most widely trusted third-party question bank; scenario-heavy, explanation-rich; check date of last update before relying on it
+- [Tutorials Dojo — DOP-C02 Practice Exams](https://tutorialsdojo.com/courses/aws-certified-devops-engineer-professional-practice-exams/) — a third-party practice-exam set; scenario-heavy, explanation-rich; check date of last update before relying on it
 - [Tutorials Dojo — DOP-C02 Study Guide](https://tutorialsdojo.com/aws-certified-devops-engineer-professional/) — free cheat sheet and service comparison tables (CodeDeploy deployment types, CloudWatch alarm states, etc.)
 - [Stephane Maarek — DOP-C02 Udemy Course](https://www.udemy.com/course/aws-certified-devops-engineer-professional-hands-on/) — deep service-level instruction with hands-on labs; frequently updated
 

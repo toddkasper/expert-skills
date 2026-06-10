@@ -2,7 +2,7 @@
 name: salesforce-nonprofit-cloud-consultant
 description: Salesforce nonprofit implementation across BOTH the NPSP managed package (Household Accounts, Relationships, Affiliations, hard/soft credit, TDTM, Customizable Rollups, Recurring Donations, Batch Gift Entry, LYBUNT/SYBUNT) and Industries Nonprofit Cloud (Gift Entry, Program/Outcome Management, Grantmaking, OmniStudio, Action/Care Plans, Data Processing Engine). Use when configuring or troubleshooting either model, or deciding which applies. This is the nonprofit data model/program layer; for the underlying platform see salesforce-administrator and the platform-developer skills. Scoped and benchmarked by the Nonprofit (NP-Con-101 NPSP, NP-Con-102 NPC) blueprints.
 metadata:
-  credential: Salesforce Certified Nonprofit Cloud Consultant
+  anchor-credential: Salesforce Certified Nonprofit Cloud Consultant
   exam-codes: NP-Con-101, NP-Con-102
   domain: salesforce
   type: certification-playbook
@@ -290,4 +290,4 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ---
 
-*Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks — including "Salesforce," "NPSP," "Nonprofit Cloud," and "Salesforce Certified" — belong to their respective owners. Guidance only — verify all configuration, limits, and feature availability against official Salesforce documentation and your live org before making changes.*
+*Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks — including "Salesforce," "NPSP," "Nonprofit Cloud," and "Salesforce Certified" — belong to their respective owners. Guidance only — verify all configuration, limits, and feature availability against official Salesforce documentation and your live org before making changes. No certification outcome is implied or guaranteed.*

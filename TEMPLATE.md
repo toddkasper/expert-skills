@@ -23,7 +23,7 @@ description: >                         # The only always-loaded text. ≤ ~600 c
   NOT cover and which sibling skill owns it (see <sibling>)>. Scoped and benchmarked by the
   <cert> blueprint.                    # ← cert framing appears ONLY here, as the last clause
 metadata:
-  credential: <Full credential name, or "None — competence skill (no first-party cert)">
+  anchor-credential: <Credential the skill is scaffolded/benchmarked against, or "None — competence skill (no first-party cert)">  # the skill imparts competence; it does NOT confer this credential
   exam-code: <CODE>                    # omit if none; use exam-codes: A, B for multi-cert
   domain: <salesforce | aws | github | web>
   type: <certification-playbook | competence-playbook>

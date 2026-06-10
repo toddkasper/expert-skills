@@ -2,7 +2,7 @@
 name: salesforce-advanced-administrator
 description: Advanced declarative Salesforce administration — the full sharing/security model (role hierarchy, owner/criteria sharing rules, muting and session-based permission sets), complex Flow automation and order-of-execution debugging, custom object and relationship design (master-detail, junctions, DLRS roll-ups), data management (Data Loader, duplicate/matching rules, External IDs), sandbox strategy, SFDX deployment, and auditing/monitoring (Setup Audit Trail, Field History, Event Monitoring). Use when designing or debugging org config beyond day-to-day admin. Not basic setup (see salesforce-administrator) or Apex/code (see salesforce-platform-developer-1). Scoped and benchmarked by the Advanced Administrator (Plat-Admn-301) blueprint.
 metadata:
-  credential: Salesforce Certified Advanced Administrator (Platform Administrator II)
+  anchor-credential: Salesforce Certified Advanced Administrator (Platform Administrator II)
   exam-code: Plat-Admn-301
   domain: salesforce
   type: certification-playbook

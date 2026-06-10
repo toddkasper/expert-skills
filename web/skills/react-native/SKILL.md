@@ -2,7 +2,7 @@
 name: react-native
 description: Building and reviewing React Native and Expo mobile apps — core components and styling (Flexbox, FlatList), navigation (Expo Router, React Navigation), the Expo SDK and permissions, native modules and the New Architecture (JSI, Fabric, TurboModules), EAS Build/Submit/Update, iOS/Android platform differences, and mobile performance. Use when building, reviewing, or debugging RN/Expo apps or the native/mobile layer. Assumes core React (see react); covers the mobile deltas only. Competence skill — no first-party certification.
 metadata:
-  credential: None — competence skill (no first-party React Native / Expo certification)
+  anchor-credential: None — competence skill (no first-party React Native / Expo certification)
   domain: web
   type: competence-playbook
   status: active

@@ -4,7 +4,7 @@
 
 A collection of **agent skills** that upskill AI agents with specialized, operational
 domain knowledge — the working competence a credentialed practitioner actually applies on
-the job. Each skill (e.g. [`salesforce-administrator`](salesforce/salesforce-administrator/))
+the job. Each skill (e.g. `salesforce-administrator`, under `salesforce/skills/`)
 gives an agent the rules, decision criteria, real limits, and anti-patterns that an expert
 in that domain uses, in the [`SKILL.md`](https://agentskills.io) open format.
 

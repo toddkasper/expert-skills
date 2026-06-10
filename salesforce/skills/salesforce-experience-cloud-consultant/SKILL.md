@@ -2,7 +2,7 @@
 name: salesforce-experience-cloud-consultant
 description: Building and configuring Salesforce Experience Cloud sites and portals — communities, partner/customer portals, LWR and Aura templates, the external sharing model (sharing sets, share groups, guest-user hardening), external license selection, user provisioning and authentication (SSO, self-registration, JIT), audiences and personalization. Use when scoping a portal to the right license/user model, configuring external-user access, or debugging external-user CRUD/FLS/OWD/sharing failures. Not internal-org sharing alone (see salesforce-advanced-administrator) or Service/Sales console config (see those consultant skills). Scoped and benchmarked by the Experience Cloud Consultant (EX-Con-101) blueprint.
 metadata:
-  credential: Salesforce Certified Experience Cloud Consultant
+  anchor-credential: Salesforce Certified Experience Cloud Consultant
   exam-code: EX-Con-101
   domain: salesforce
   type: certification-playbook
