@@ -77,7 +77,25 @@ grading (don't tell it "baseline" vs "skilled").
 
 ---
 
-## Application eval (task-based) — optional second pass
+## Lens 2 — Trigger testing (routing)
+
+Cheap and run on every `description` edit. Inputs: `evals/<skill>/triggers.md` and **the
+`description` frontmatter of every skill in the marketplace** (the router sees nothing else).
+
+1. Build the routing table: collect each skill's `name` + `description` (the validator's `fm`
+   helper, or just read the frontmatter).
+2. For each phrasing in `triggers.md`, give a fresh sub-agent ONLY the task phrasing and the list
+   of `{name: description}` pairs, and ask: "Which single skill best matches this task? Answer
+   with one skill name." Do not reveal the expected route.
+3. Compare to the expected route in `triggers.md`:
+   - "Should route to X" phrasings must return `X`.
+   - "Near-miss" phrasings must return the **named sibling**, not `X`.
+4. `trigger_pass_rate = correct / total`. A miss means the descriptions overlap or under-specify
+   — fix the boundary (and re-run). Record the rate in the scorecard and RESULTS.md.
+
+---
+
+## Application eval (task-based) — Lens 4
 
 Knowledge evals measure *knowing*; they don't catch a skill that knows but can't *do*. If
 `evals/X/tasks.md` exists, run the same baseline-vs-skilled split on each task: the agent
