@@ -1,18 +1,20 @@
-# AWS Skills
+# Expert Skills for AWS Certification Domains (unofficial)
 
 A Claude Code **plugin** that upskills an agent with the operational competence of expert AWS
 practitioners — Professional tier plus the Security Specialty.
 
-> **Not test-prep.** The AWS certifications below are used as the *scaffold and benchmark* for
-> these skills, not the product — see [../POLICY.md](../POLICY.md). Skills are guidance, not
-> ground truth: AWS changes service limits, pricing, and exam facts often, so verify against
-> official docs and the live account before acting.
+> **Unofficial — not affiliated with, authorized by, or endorsed by Amazon Web Services, Inc.**
+> "AWS," "Amazon Web Services," and related marks are trademarks of Amazon, used here only to
+> identify the subject matter. **Not test-prep** — the AWS certifications are used only as the
+> *scaffold and benchmark*. Skills are guidance, not ground truth: AWS changes service limits,
+> pricing, and exam facts often, so verify against official docs and the live account before
+> acting. Full policy and disclaimer: [POLICY.md](POLICY.md) · License: [LICENSE](LICENSE).
 
 ## Install (as a plugin)
 
 ```
 /plugin marketplace add toddkasper/expert-skills
-/plugin install aws@expert-skills
+/plugin install aws-skills@expert-skills
 ```
 
 ## Skills

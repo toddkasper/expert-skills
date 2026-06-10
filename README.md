@@ -27,10 +27,10 @@ As a Claude Code plugin marketplace:
 
 ```
 /plugin marketplace add toddkasper/expert-skills
-/plugin install salesforce@expert-skills
+/plugin install salesforce-skills@expert-skills
 ```
 
-Installed skills are namespaced, e.g. `/salesforce:salesforce-administrator`. Install only the
+Installed skills are namespaced, e.g. `/salesforce-skills:salesforce-administrator`. Install only the
 plugins a project needs — progressive disclosure keeps context lean (only each skill's short
 description is always loaded; the full body loads on demand when relevant).
 
