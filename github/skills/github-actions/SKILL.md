@@ -33,6 +33,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live — volatile facts:** GitHub-hosted runner image versions and pre-installed software (`ubuntu-latest`, `windows-latest`, `macos-latest` image mappings change on a rolling basis) `[volatile — verify live]`, action SHA pins for commonly-used actions (e.g., `actions/checkout`, `actions/setup-node`) `[volatile — verify live]`, free-tier minute allotments and per-minute pricing for larger runners `[volatile — verify live]`, reusable workflow nesting limit (currently 4 levels) `[volatile — verify live]`, artifact retention defaults and per-repo cache quota `[volatile — verify live]`.
+- **Live wins:** when the live GitHub platform, workflow logs, or official GitHub docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
+- **Escalate to a human — do not silently execute:** enterprise runner policy changes (restricting which actions can run org-wide); modifying branch protection rules or required status checks; registering or deregistering self-hosted runners, especially on public repos; force-merging protected branches; rotating or deleting org-level secrets; enabling or disabling Actions for an org or enterprise; any OIDC trust policy change on a production cloud role.
+- **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with platform updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
+
+---
+
 ## 1. Authoring and Managing Workflows
 
 ### Triggers
@@ -83,7 +92,7 @@ Key contexts: `github`, `runner`, `env`, `vars`, `secrets`, `inputs`, `matrix`, 
 
 ### YAML Reuse within a File
 
-YAML anchors (`&anchor`), aliases (`*anchor`), and merge keys (`<<: *anchor`) reduce repetition within a single workflow file. They are **not** cross-file; for cross-workflow reuse, use reusable workflows or composite actions.
+YAML anchors and merge keys reduce repetition within a single workflow file but are **not** cross-file. Full syntax reference in [references/advanced-features.md](references/advanced-features.md). For cross-workflow reuse, use reusable workflows or composite actions.
 
 ### Environments, Protections, and Concurrency
 
@@ -295,9 +304,54 @@ Script injection occurs when user-controlled input (e.g., a PR title, issue body
 
 ### Artifact Attestations
 
-Actions now supports generating signed provenance attestations (SLSA Build L2+) via `actions/attest-build-provenance`. This creates a verifiable record linking a build artifact to the workflow run that produced it. Consumers can verify attestations before deploying using `gh attestation verify`. Use this for release artifacts and container images in security-sensitive pipelines.
+Actions supports generating SLSA Build L2+ signed provenance attestations via `actions/attest-build-provenance`; verify with `gh attestation verify`. Full details and required permissions in [references/advanced-features.md](references/advanced-features.md).
 
 **Red flags in review:** `permissions: write-all` or unscoped permissions on any workflow; `${{ github.event.*.body }}` or similar user-controlled context values inside a `run:` script; a `pull_request_target` workflow that checks out the PR head and runs it (classic code-exec attack surface); floating action tags (`@main`, `@v3`) without a SHA comment; OIDC trust policies scoped to an entire org rather than a specific repo+branch.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Ship a Reusable Workflow Safely (Typed Inputs/Secrets → Pin Actions to SHA → Test from a Caller)
+
+1. In the shared `platform` repo, create `.github/workflows/reusable-build.yml`. Declare `on: workflow_call:` with typed inputs (`string`, `boolean`, `choice`) and explicit secret declarations. Set `required:` and `default:` on every input.
+   → gate: `gh workflow list --repo platform-org/platform` shows the new workflow file; confirm it does NOT appear as a triggerable workflow in the platform repo itself (it should only be callable via `workflow_call`).
+2. Inside the reusable workflow, pin every third-party action to a full commit SHA (not a floating tag): `uses: actions/checkout@<full-40-char-sha>  # v4.x.x`. Add a comment with the corresponding tag for readability.
+   → gate: `grep -r 'uses:' .github/workflows/reusable-build.yml | grep -v '@[0-9a-f]\{40\}'` should return no lines — every `uses:` must end in a 40-character SHA.
+3. Set `permissions:` at the reusable workflow level to the minimum required (e.g., `contents: read`). Do not rely on the caller to provide narrow permissions — a called workflow inherits the calling workflow's permissions but you can restrict further.
+   → gate: confirm `permissions:` block is present at the top-level `jobs:` or workflow level; no job declares `write-all` or omits `permissions:` entirely.
+4. In a caller repo, create a test workflow that calls the reusable workflow: `uses: platform-org/platform/.github/workflows/reusable-build.yml@main` with `with:` inputs and `secrets: inherit` (or explicit mapping).
+   → gate: trigger the caller workflow (`gh workflow run`); confirm the called workflow's jobs appear as nested job groups in the caller run's UI; confirm inputs are received correctly by adding a debug step that echoes `${{ inputs.my-input }}`.
+5. Verify secrets are not logged: check the caller run's step logs — all secret values should appear as `***`; if any secret value is visible in plain text, the secret was passed via `inputs:` (not `secrets:`), which logs it. Move it to the `secrets:` declaration.
+
+---
+
+### Workflow 2 — Set Up OIDC Cloud Auth (No Long-Lived Secrets) with a Scoped Trust Policy
+
+1. Add `permissions: id-token: write` to the workflow or specific job that needs cloud access. Without this permission, the OIDC token cannot be requested and the auth action will silently fail or return an empty token.
+   → gate: after adding the permission, run the workflow and confirm the auth step does not error with "credentials could not be loaded" — that error almost always means `id-token: write` is missing.
+2. In the cloud provider (e.g., AWS), create an IAM OIDC identity provider for `token.actions.githubusercontent.com` (if not already present): `aws iam create-open-id-connect-provider --url https://token.actions.githubusercontent.com --client-id-list sts.amazonaws.com --thumbprint-list <thumbprint>`.
+   → gate: `aws iam list-open-id-connect-providers` confirms the provider exists; `aws iam get-open-id-connect-provider --open-id-connect-provider-arn <arn>` shows the correct URL and client ID.
+3. Create the IAM role with a trust policy scoped to the **specific repo and branch or environment** (not the whole org). Use `StringEquals` not `StringLike` for the `sub` claim: `"repo:my-org/my-service:ref:refs/heads/main"` or `"repo:my-org/my-service:environment:production"`.
+   → gate: `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — confirm `StringEquals` is used and the `sub` value names the exact repo. Test from a different repo — `AssumeRoleWithWebIdentity` should return `AccessDenied`.
+4. Add the cloud provider's setup action to the workflow (e.g., `aws-actions/configure-aws-credentials@<sha>`) with `role-to-assume:` set to the IAM role ARN and `aws-region:` set explicitly.
+   → gate: the step output should show `Assumed role ... with web identity`; subsequent steps can call `aws sts get-caller-identity` and confirm the role ARN matches the expected role.
+5. Confirm no long-lived credentials remain: search the repo's GitHub secrets (`gh secret list`) for any `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` — if found, delete them after confirming OIDC works end-to-end.
+
+---
+
+### Workflow 3 — Harden a Public-Repo Workflow Against Fork-PR Injection (pull_request_target, Least-Privilege GITHUB_TOKEN)
+
+1. Audit the existing workflow trigger. If it uses `pull_request_target:`, it runs in the context of the base branch with full secrets access — this is the highest-risk trigger for public repos. Confirm whether the workflow checks out PR-head code.
+   → gate: `grep -r 'pull_request_target' .github/workflows/` — any hit requires review; if the workflow also has a `checkout` step with `ref: ${{ github.event.pull_request.head.sha }}`, it is actively exploitable and must be fixed immediately.
+2. Set `permissions:` at the workflow level to the minimum required. For a CI check-run workflow on a public repo, the maximum needed is typically `contents: read` and `pull-requests: write` (to post a comment). Set `permissions: {}` (all deny) as the workflow-level default and grant per-job overrides.
+   → gate: `grep -A5 'permissions:' .github/workflows/<workflow>.yml` — confirm no job has `write-all` or omits `permissions:` against the restrictive workflow default.
+3. For any step that processes user-controlled input (PR title, issue body, branch name), pass the value through an `env:` variable and reference `$ENV_VAR` in the shell — never `${{ github.event.pull_request.title }}` directly in a `run:` block.
+   → gate: `grep -rn '\${{ github.event' .github/workflows/` — every hit must be in an `env:` assignment, not directly inside a `run:` script body.
+4. Pin all third-party actions to full commit SHAs, especially any that have elevated permissions (`id-token: write`, `contents: write`). Supply-chain attacks via compromised action tags are the most common vector for privileged workflows.
+   → gate: `grep -rn 'uses:' .github/workflows/ | grep -v '@[0-9a-f]\{40\}'` — no unpinned `uses:` lines for external actions.
+5. For workflows that must use `pull_request_target` (e.g., to post a comment back to a PR from a fork), structure them as two-workflow patterns: the first workflow runs on `pull_request` (untrusted context, no secrets), saves artifacts; the second runs on `workflow_run:` (trusted context), downloads artifacts, and posts the comment — never executes PR code.
+   → gate: confirm the `workflow_run` workflow does NOT have a checkout step that uses the PR head SHA; it should only download artifacts uploaded by the untrusted `pull_request` workflow.
 
 ---
 
@@ -384,6 +438,22 @@ Actions now supports generating signed provenance attestations (SLSA Build L2+) 
 - **DO** use ephemeral (re-imaged) self-hosted runners for sensitive workloads; never allow persistent state between jobs on shared runners.
 - **DON'T** store a runner registration token beyond its 1-hour expiry — regenerate at provisioning time.
 - **DO** verify artifact attestations with `gh attestation verify` before deploying release artifacts in security-critical pipelines.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/github-actions.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

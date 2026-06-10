@@ -29,18 +29,27 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** governor limit numbers (SOQL/DML/CPU/heap) `[volatile — verify live]`; sandbox storage sizes `[volatile — verify live]`; LWC lifecycle API changes and decorator behavior across API versions `[volatile — verify live]`; any coverage threshold or deployment requirement.
+- **Live wins:** if this skill's numbers or rules conflict with what the Apex runtime, deploy output, or official Salesforce docs show, treat the live system as authoritative. Log the discrepancy immediately using the Feedback protocol below.
+- **Escalate to a human before proceeding:** production deployments touching managed-package Apex or triggers without sandbox validation; any code path that hard-deletes or mass-updates production records; adding `without sharing` to a class that processes PII or financial data; disabling or bypassing a package trigger framework in production.
+- **Confidence taxonomy:** facts in this skill are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. When in doubt, describe the object or run a SOQL query rather than trusting repo XML.
+
+---
+
 ## Governor Limits — Know These Cold
 
 These are the hard ceilings the runtime enforces per transaction. Internalize the numbers; most "this will fail in bulk" decisions reduce to one of these.
 
 | Limit | Synchronous | Asynchronous (batch/future/queueable) |
 |---|---|---|
-| SOQL queries | **100** | **200** |
+| SOQL queries | **100** `[volatile — verify live]` | **200** |
 | Rows retrieved by SOQL | **50,000** | 50,000 |
-| DML statements | **150** | 150 |
+| DML statements | **150** `[volatile — verify live]` | 150 |
 | Rows per DML / processed | **10,000** | 10,000 |
-| Heap size | **6 MB** | **12 MB** |
-| CPU time | **10,000 ms** | **60,000 ms** |
+| Heap size | **6 MB** `[volatile — verify live]` | **12 MB** |
+| CPU time | **10,000 ms** `[volatile — verify live]` | **60,000 ms** |
 | SOSL queries | 20 | 20 |
 | Callouts (HTTP/Web service) | 100 | 100 |
 | `@future` calls per transaction | 50 | n/a |
@@ -236,9 +245,7 @@ Enforce target-field length and picklist constraints at your *input-validation* 
 
 ### Visualforce (still tested on PD1)
 
-Visualforce is used for PDF generation (`renderAs="pdf"`), Classic UI, and legacy embeds. View State limit **170 KB**; mark non-persistent fields `transient`. Default output is HTML-encoded (XSS-safe); `escape="false"` needs explicit justification; `{!JSENCODE()}` for inline JS.
-
-Deep dive with worked examples: [references/visualforce.md](references/visualforce.md) — load when building or debugging VF pages, PDFs, or controller/extension patterns.
+Use for PDF generation (`renderAs="pdf"`), Classic UI, and legacy embeds only — prefer LWC for all new UI. Key constraints: View State ≤ 170 KB (mark non-persistent fields `transient`); `escape="false"` requires explicit justification; `{!JSENCODE()}` for inline JS. Deep dive with controller types, XSS safety, and testing: [references/visualforce.md](references/visualforce.md).
 
 ---
 
@@ -246,7 +253,7 @@ Deep dive with worked examples: [references/visualforce.md](references/visualfor
 
 ### Apex testing — coverage and structure
 
-- **75% org-wide Apex coverage required to deploy to production** (measured across all Apex, not just new code). Every trigger must have *some* coverage.
+- **75% org-wide Apex coverage required to deploy to production** `[volatile — verify live]` (measured across all Apex, not just new code). Every trigger must have *some* coverage.
 - `@isTest` on class/methods; `@testSetup` runs once per class and rolls back after each test method.
 - **Tests see no org data by default** (`SeeAllData=false`). Create all test data in the test.
 - **`Test.startTest()` / `Test.stopTest()`**: reset governor limits; `stopTest()` forces enqueued async to run synchronously so you can assert results.
@@ -279,6 +286,55 @@ Deep dive with worked examples: [references/visualforce.md](references/visualfor
 - Classic Connected App creation may be gated — deploying `connectedApp-meta.xml` returns *"You can't create a connected app."* Pivot to an **ECA**.
 - **ECA permission assignment is on the ECA itself** (ECA → Policies → App Policies → Select Permission Sets), not the classic "Assigned Connected Apps" page. Verify via `PermissionSetAssignment` SOQL.
 - **ECA Consumer Key is UI-only** — not exposed by Tooling API or metadata retrieve.
+
+---
+
+## Executable Workflows
+
+### 1. Add a field and surface it in Apex/LWC end-to-end (incl. FLS)
+
+1. Create the field in Object Manager or SFDX `field-meta.xml` with the correct type, length, and API name.
+   → **gate:** `sf sobject describe --sobject <object>` — confirm the field appears in the schema output.
+2. Add `<fieldPermissions>` (readable + editable) to the target permission set XML. Skip if the field is `<required>true</required>`.
+   → **gate:** confirm the permset XML contains the entry; confirm the field is not required (required fields cause deploy failure).
+3. Add the field to the relevant page layout. If surfacing in a Quick Action, also edit the QA's `<description>` or `<label>` to bust the runtime cache.
+   → **gate:** confirm field reference in layout XML.
+4. Deploy: `sf project deploy start` from the SFDX project root.
+   → **gate:** `Deploy Succeeded`; no missing-component errors.
+5. In Apex, reference the field in a SOQL query: `SELECT <Field__c> FROM <Object__c> LIMIT 1`.
+   → **gate:** no `"Invalid field"` error; query runs without exception.
+6. In the LWC, wire or imperatively call the Apex method that returns the field; confirm the value renders in the template.
+   → **gate:** field value appears in the browser UI for a non-admin user who has the permset assigned.
+
+---
+
+### 2. Write a bulk-safe trigger handler + test class to the 75% gate
+
+1. Create one trigger on the object (thin dispatcher) that calls a handler class method for each relevant context (`before insert`, `after insert`, etc.).
+   → **gate:** trigger compiles; no second raw trigger exists on the same object.
+2. In the handler, collect all record Ids/field values outside any loop. Query into a `Map<Id, SObject>` once. Compute results in memory. DML once after the loop.
+   → **gate:** code review confirms zero SOQL/DML inside loop bodies.
+3. Add a recursion guard (static Boolean) if the handler can re-enter on the same transaction.
+   → **gate:** unit test with an update that re-fires the trigger confirms the guard fires only once.
+4. Write a test class: `@testSetup` creates data; one method tests single-record, one tests bulk (200+ records), one tests negative/error path. Wrap async paths in `Test.startTest()/stopTest()`. Assert concrete field values.
+   → **gate:** `sf apex run test` shows all test methods passing; no hardcoded Ids.
+5. Run `sf project deploy start --test-level RunLocalTests` to the target org.
+   → **gate:** deploy output shows coverage ≥ 75% org-wide; every trigger has > 0% coverage.
+
+---
+
+### 3. Deploy via SFDX carrying `<fieldPermissions>`
+
+1. Confirm the SFDX project root (directory containing `sfdx-project.json`) is the working directory.
+   → **gate:** `sf project retrieve start --manifest package.xml` succeeds; no `InvalidProjectWorkspaceError`.
+2. For every new or changed custom field that is not required, add a `<fieldPermissions>` entry to the permset XML (readable + editable). Confirm no required fields are listed.
+   → **gate:** `grep -r 'fieldPermissions' force-app/` shows entries only for non-required fields.
+3. Validate with a dry-run deploy: `sf project deploy start --dry-run`.
+   → **gate:** validation succeeds; no missing-component or coverage failures.
+4. Deploy: `sf project deploy start`.
+   → **gate:** `Deploy Succeeded`; component count matches validation.
+5. Verify FLS landed: `SELECT Field, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>') AND SobjectType='<object>'` (MCP / `sf data query` / Developer Console).
+   → **gate:** each deployed field appears with `PermissionsRead = true`.
 
 ---
 
@@ -351,5 +407,17 @@ Read this first. Each rule is imperative and concrete.
 - [references/scenarios.md](references/scenarios.md) — additional decision scenarios (package trigger coexistence, bulkification failure, Quick Action cache).
 
 ---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-platform-developer-1.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. "Salesforce," "Apex," "Lightning," "NPSP," and related names are trademarks of Salesforce, Inc., used here solely to identify the subject matter. Guidance only — verify against official documentation and live orgs before acting.*

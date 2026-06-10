@@ -48,13 +48,22 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** volatile facts in this skill include CAN-SPAM penalty amounts, Gmail/Yahoo bulk-sender thresholds and enforcement dates, 10DLC registration requirements, Data Views default retention periods, IP warming ramp schedules, and any Einstein feature availability or prerequisite — verify against current RFC/FTC/ISP documentation and your SFMC org before acting.
+- **Live wins:** when the live org or official documentation contradicts a statement in this file, trust the live source and log the discrepancy via the Feedback protocol below.
+- **Escalate to a human before proceeding on:** any production send to an audience > ~50,000 contacts on a new or warmed-but-unvalidated IP; any send that re-activates a list segment not mailed in > 6 months without a re-permission step; enabling or modifying the Master Unsubscribe list; any compliance-related consent or data-erasure workflow.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. If you act on an untagged fact and the live system disagrees, file feedback — do not silently trust this file over the live org.
+
+---
+
 ## 1. Email Marketing Best Practices — Operational Rules
 
 ### Compliance is non-negotiable; build it into every send
 
 - **Every commercial email MUST carry a physical postal address and a working one-click
   unsubscribe.** CAN-SPAM requires this; omitting it is a per-message violation (up to ~$53,088 per
-  email in U.S. penalties). In SFMC this lives in the email footer / Delivery Profile, not the body —
+  email in U.S. penalties `[volatile — verify live]`). In SFMC this lives in the email footer / Delivery Profile, not the body —
   set it at the Delivery Profile so it can't be forgotten per-send.
 - **Honor unsubscribes within 10 business days** (CAN-SPAM). SFMC suppresses immediately, so never
   re-add an unsubscribed address via a fresh import — that re-subscribes them and is a violation.
@@ -74,7 +83,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 - **Authenticate the sending domain with all three: SPF, DKIM, DMARC.** Missing DKIM/DMARC is the
   most common cause of Gmail/Yahoo bulk-sender rejection (both enforce SPF+DKIM+DMARC for senders
-  >5,000/day since Feb 2024). Verify DNS before the first send, not after bounces appear.
+  >5,000/day `[volatile — verify live]`). Verify DNS before the first send, not after bounces appear.
 - **Warm a new dedicated IP over ~30 days**, ramping volume gradually (e.g. day 1: ~50/send, doubling
   every few days). Blasting full volume on a cold IP gets you throttled or blocklisted.
 - **Bounce handling — know the status transition:**
@@ -86,18 +95,12 @@ Credential logistics and study path: see [references/study-resources.md](referen
   | Spam complaint | Recipient hit "report spam" | → **Unsubscribed** |
 
 - **Keep spam-complaint rate < 0.1% and hard-bounce rate low** — Gmail enforces a 0.3% complaint
-  threshold. Use **List Detective** to screen imports for role addresses (`info@`, `sales@`) and known
+  threshold `[volatile — verify live]`. Use **List Detective** to screen imports for role addresses (`info@`, `sales@`) and known
   spam-trap patterns before they enter a send.
 - **RED FLAG in review:** sending to a list/DE that hasn't been mailed in 6–12+ months with no
   re-permission step → high bounce + complaint risk. Re-engage or suppress stale addresses first.
 
-### Email design
-
-- Mobile-first: design fluid/responsive with `@media` queries; ~half of opens are mobile. Use large
-  tap targets, big fonts, and single-column layouts — especially for older audiences.
-- Subject line + preheader are the open-rate levers. Avoid spam-trigger words, ALL CAPS, excessive `!`.
-- A/B test ONE variable at a time (subject OR from-name OR send-time), define the winner metric up
-  front (open vs. click vs. conversion), and use a large enough test cell to be significant.
+Email design rules (mobile-first, subject/preheader, A/B test discipline): [references/coverage-additions.md](references/coverage-additions.md).
 
 ---
 
@@ -241,13 +244,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
   **RED FLAG:** processing a one-list opt-out as a Master Unsubscribe → you silently kill that
   contact's eligibility for every future send org-wide.
 
-### Profile & preference management
-
-- **Profile Attributes** = identity fields. **Preference Attributes** = opt-in/opt-out toggles by
-  category (e.g. "Donor appeals" vs. "Volunteer updates"). Give people granular preferences via the
-  **Subscription Center** so they downgrade instead of fully unsubscribing.
-- Capture/update subscribers with **Web Collect** (forms posting to MC) or **Smart Capture** (forms on
-  CloudPages). For consent-sensitive lists, gate activation behind **Double Opt-In**.
+Profile Attributes vs. Preference Attributes, Subscription Center configuration, Web Collect vs. Smart Capture, and Double Opt-In setup: [references/coverage-additions.md](references/coverage-additions.md).
 
 ### Data import — pick the update mode
 
@@ -269,54 +266,21 @@ Credential logistics and study path: see [references/study-resources.md](referen
   with no `_Click` in 90 days"). SQL writes to a *target DE*; it cannot send directly.
 - **Key queryable Data Views (read-only system tables):** `_Sent`, `_Open`, `_Click`, `_Bounce`,
   `_Unsubscribe`, `_Complaint`, `_Job`, `_Subscriber`, `_ListSubscribers`. Data Views retain ~6 months
-  of data by default — for longer history, extract to a DE on a schedule.
+  of data by default `[volatile — verify live]` — for longer history, extract to a DE on a schedule.
 
 ### Marketing Cloud Connect (MCC) — the CRM bridge
 
-- MCC is the integration layer between SFMC and Salesforce CRM. Two modes: **Synchronized Data Sources**
-  (replicate CRM objects into MC as Synchronized DEs for segmentation) and **Salesforce Send** (send
-  tied to a CRM Campaign, tracking flows back to the Contact/Lead activity timeline).
-- MCC uses tenant-specific endpoints + an integration user with API access. **Verify the CRM objects
-  you intend to segment on are actually synced** before building a journey on them.
-- **Verify field-level security for the MCC integration user.** A field can be synced but unreadable —
-  if FLS isn't granted to the integration user, the synced field returns blank or "Invalid field."
-  Confirm read access for every field you intend to segment on.
-- **Exposing a custom object to MC** is possible via the connected/external client app, but the app's
-  permission assignment and consumer-key retrieval often have org-specific friction — verify the
-  integration user can actually query the object before designing segments on it.
+MCC deep-dive (Synchronized Data Sources vs. Salesforce Send, integration user FLS verification, custom object exposure): [references/coverage-additions.md](references/coverage-additions.md).
+
+Core rule to hold inline: **verify the CRM objects you intend to segment on are actually synced AND that the MCC integration user has FLS Read on every field** before building a journey — a synced field with no FLS returns blank, not an error.
 
 ---
 
 ## 5. Insights & Analytics — Operational Rules
 
-### Know the metric definitions cold
+Key metric definitions (Delivered, Open Rate, CTOR, Click Rate, Bounce Rate, Unsubscribe Rate, Spam Complaint Rate), the report-selection table (Account Send Summary, Campaign Email Tracking, Email Performance by Domain, Bounce Summary, etc.), and guidance on Tracking Extracts and Data View SQL for re-engagement suppression: [references/analytics-reports.md](references/analytics-reports.md) — load when building dashboards, diagnosing deliverability trends, or writing engagement-suppression queries.
 
-- **Delivered** = Sent − Hard Bounces
-- **Open Rate** = Unique Opens / Delivered
-- **Click-to-Open Rate (CTOR)** = Unique Clicks / Unique Opens (the truest engagement signal)
-- **Click Rate** = Unique Clicks / Delivered
-- **Bounce Rate** = Total Bounces / Sent
-- **Unsubscribe Rate** = Unsubscribes / Delivered
-- **Spam Complaint Rate** = Complaints / Delivered (keep < 0.1%)
-- **Measures** are numeric/aggregated (total unsubs/30d); **Dimensions** are categorical (domain, date,
-  region). Reports cross a Measure with a Dimension.
-- **Open tracking is pixel-based** → inflated/unreliable since Apple Mail Privacy Protection pre-fetches
-  pixels. **Lean on clicks/CTOR, not opens**, for true engagement and re-engagement suppression decisions.
-
-### Reports — which one answers which question
-
-| Question | Report |
-|---|---|
-| How did all sends perform this month? | Account Send Summary |
-| How did one campaign do? | Campaign Email Tracking |
-| Is Gmail throttling us vs. Yahoo? | Email Performance by Domain |
-| Are we trending up or down? | Email Performance Over Time |
-| What did this one person do? | Subscriber Engagement |
-| Why are bounces up? | Bounce Summary |
-| Are we getting spam complaints? | Spam Complaint Report |
-
-- For raw event-level analysis, use **Tracking Extracts** (Automation Studio → SFTP) or **SQL Query**
-  against Data Views into a DE. To re-engage, query `_Click` for no activity in N days → suppression DE.
+Core rule to hold inline: **lean on clicks/CTOR, not opens** — open tracking is pixel-based and unreliable since Apple Mail Privacy Protection pre-fetches pixels.
 
 ---
 
@@ -355,6 +319,34 @@ Credential logistics and study path: see [references/study-resources.md](referen
 Extended rules for Content Builder slot-based templates, Automation Studio File Drop / Run Once,
 AMPscript `Lookup()` empty-return, Marketing Cloud Intelligence (Datorama), and publication vs.
 suppression list wiring: [references/coverage-additions.md](references/coverage-additions.md).
+
+---
+
+## Executable Workflows
+
+### 1. Build a welcome journey (data extension → entry source → sends → verify)
+
+1. Create a Sendable Data Extension with a Subscriber Key field and any personalization fields (FirstName, etc.). Set a Primary Key. → **gate: DE appears in Email Studio; `SELECT COUNT(*) FROM <DE>` returns rows after a test import.**
+2. In Content Builder, build the welcome email with a fallback for every personalization string (e.g. `IIF(empty(@FirstName), "Friend", @FirstName)`). Test Send to a seed address. → **gate: seed receives the email; personalization renders; no blank fields.**
+3. In Journey Builder → New Journey: select the DE as the Entry Source. Set Entry Schedule (when to evaluate) and re-entry mode (**No Re-entry** for a welcome series). → **gate: entry source shows record count > 0 in preview.**
+4. Add Send Email activity; link to the welcome email and the appropriate Send Classification. Add a Wait step if a follow-up email is needed. → **gate: Validate the journey — no red errors.**
+5. Activate the journey. → **gate: Journey History shows contacts entering; Email Tracking shows sends and at least one open/click after sending to a seed.**
+
+### 2. Set up an Automation Studio batch pipeline (import → SQL → send)
+
+1. Upload the source CSV to the SFTP Marketing Cloud folder. → **gate: confirm file is present in SFTP with expected row count.**
+2. In Automation Studio → New Automation: add **Step 1** — Import File activity (source: SFTP file path, destination: Contacts DE, mode: Add/Update). → **gate: run Step 1 alone; query the DE — row count matches the file.**
+3. Add **Step 2** (new step, not same step) — SQL Query activity. Write the SQL selecting the audience from the DE joined to any Data Views needed. Target DE = the send audience DE. → **gate: run the SQL in Query Studio first; confirm row count and no syntax errors.**
+4. Add **Step 3** — Send Email activity pointing at the target DE and the correct Send Classification (Sender + Delivery Profile + suppression list wired). → **gate: test the full automation in a sandbox BU before the first production run.**
+5. Schedule the automation (cron-like schedule or File Drop trigger). → **gate: Activity History after first scheduled run shows all three steps as "Complete" with no errors.**
+
+### 3. Harden deliverability (SPF/DKIM/DMARC + IP warming + bounce handling)
+
+1. Verify DNS records for the sending domain: SPF `include:` entry for SFMC, DKIM CNAME pointing to SFMC, DMARC `p=quarantine` (or `reject` once stable). Use a DNS-lookup tool (e.g. MXToolbox). → **gate: all three pass with no lookup errors.**
+2. Confirm the Sender Authentication Package (SAP) is configured in SFMC: Setup → Account Settings → Sender Authentication Package. `[volatile — verify live]` → **gate: SAP shows the domain and DKIM signing is active.**
+3. Plan the IP warming ramp: start ~50 sends/day on the new IP, doubling every few days over ~30 days, targeting highest-engagement contacts first. → **gate: no block-listing alerts (monitor via SFMC Deliverability dashboard or external tools) in the first two weeks.**
+4. Apply List Detective to every new import: Admin → List Detective → run before activating any new send list. → **gate: List Detective report shows 0 known spam-trap or role-address hits in the audience.**
+5. Monitor bounce handling post-send: query SFMC Bounce Summary report or SQL `SELECT * FROM _Bounce WHERE EventDate > DATEADD(day,-1,GETDATE())`. Confirm hard-bounce addresses are suppressed (status = Bounced), soft-bounce addresses show retry logic. → **gate: hard-bounce rate < 2% on warm lists; any spike triggers a list-hygiene review before the next send.**
 
 ---
 
@@ -425,56 +417,27 @@ for that contact (distinct journey entry ID) in the new cycle.
 
 ---
 
-### Scenario 4 — Triggered Send Definition left paused after edit
-
-**Situation:** A developer updates the copy in a transactional order-confirmation email (fixing a typo
-in the footer). They save the email in Content Builder and mark the ticket done. The next day, the
-support team reports no confirmation emails have gone out since the edit.
-
-**Competent move:** After editing any email used by a Triggered Send Definition, the TSD must be
-**stopped, then republished (restarted)** to pick up the new email version. The TSD holds a reference
-to the published email at the time it was last started. Editing the email in Content Builder does not
-automatically propagate into an active TSD. The developer should have stopped the TSD, confirmed the
-updated email is associated, then restarted it.
-
-**Tempting-but-wrong:** Assuming that saving the email in Content Builder automatically updates the
-live TSD. It does not. The TSD keeps sending the pre-edit version of the email until it is republished.
-Some developers also try pausing (not stopping) the TSD — messages queue during pause and flush when
-resumed, but the email version is still not refreshed until a full stop-and-restart cycle.
-
-**Verify:** In Email Studio → Triggered Sends, open the TSD and confirm its status is *Active* and the
-associated email reflects the current version. Send a test trigger via the API or a test script and
-confirm the received email contains the updated copy.
-
----
-
-### Scenario 5 — AMPscript Lookup() returning blank without error
-
-**Situation:** A welcome email uses AMPscript to look up a "gift tier" label from a reference DE
-(`GiftTiers`) based on the subscriber's most recent gift amount. Some recipients receive an email
-where the gift tier line is completely blank, but no error bounce or send failure is logged.
-
-**Competent move:** `Lookup()` returns an empty string when the lookup key finds no matching row — it
-does not halt rendering or produce an error. Add an `IF Empty()` guard: if the lookup returns empty,
-render a safe fallback string (e.g. "supporter") instead of a blank line. Investigate why those
-subscribers have no matching row in `GiftTiers` — they may have a gift amount that falls outside the
-DE's tier ranges, or a data type mismatch between the subscriber field and the DE's key column.
-
-**Tempting-but-wrong:** Concluding that "no error = the lookup worked" and searching for a rendering
-bug in the HTML instead. The blank is not a rendering bug — the AMPscript ran successfully and
-returned an empty string exactly as designed. Without an `IF Empty()` guard, blank returns are
-invisible in Test Sends when the test subscriber happens to have a matching row.
-
-**Verify:** In Subscriber Preview, select a subscriber who received the blank line and inspect the
-rendered email. Then open the `GiftTiers` DE and query for that subscriber's gift amount value — a
-missing or mismatched row confirms the lookup miss. Add the guard, re-preview with the same subscriber,
-and confirm the fallback renders.
+Scenarios 4–5 (TSD left paused after email edit; AMPscript `Lookup()` blank return without error): [references/scenarios.md](references/scenarios.md) — load for Triggered Send and AMPscript debugging gotchas.
 
 ---
 
 ## Study resources & relevance
 
 Study resources and recommended study plan: [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-marketing-cloud-email-specialist.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09. Section 5 (Insights & Analytics detail) moved to references/analytics-reports.md to keep body within word budget.
 
 ---
 

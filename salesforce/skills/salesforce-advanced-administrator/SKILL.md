@@ -35,6 +35,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** governor limit numbers `[volatile — verify live]`; sandbox refresh intervals and storage quotas `[volatile — verify live]`; Field History retention windows `[volatile — verify live]`; feature availability and retirement dates (e.g. Workflow Rules/Process Builder retirement); any cap or quota cited in this skill.
+- **Live wins:** if any rule or number in this skill conflicts with what the live org or Salesforce release notes show, the live org is authoritative. Log the discrepancy immediately using the Feedback protocol below, then act on what you observed.
+- **Escalate to a human before proceeding:** OWD changes in a production org; any sharing rule addition/removal that broadens access to PII or financial data in production; mass-update or hard-delete on production data (>1k rows); deactivating managed-package automation in production without a sandbox-validated test; any Event Monitoring or Transaction Security policy change that could affect compliance logging.
+- **Confidence taxonomy:** facts in this skill are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. When in doubt, query the org directly before acting.
+
+---
+
 ## Security and Access — Operational Knowledge
 
 **Access is additive-only.** The stack: OWD (baseline) → role hierarchy → sharing rules → manual/Apex sharing. Every layer only *widens* access. To restrict, lower the OWD — sharing rules cannot take access away.
@@ -56,7 +65,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 Salesforce's strategic direction: **permission-set-first** — new grants in permsets, thin profiles.
 
-**Key limits:** Field History Tracking ≤ 20 fields/object. Approval steps ≤ 30.
+**Key limits:** Field History Tracking ≤ 20 fields/object `[volatile — verify live]`. Approval steps ≤ 30 `[volatile — verify live]`.
 
 **Red flags:**
 - New SFDX field with no `<fieldPermissions>` → silently fails every query. Catch in every field-add PR.
@@ -113,7 +122,7 @@ Salesforce's strategic direction: **permission-set-first** — new grants in per
 | Complex branching, bulk loops, callouts, >limits | Apex trigger / invocable | Stacked flows that blow CPU/SOQL limits |
 | Multi-user, long-running, multi-stage | Flow Orchestration | A single mega-flow |
 
-**Bulkify.** Never put SOQL/DML inside a loop (Get/Update inside a Flow loop = same problem). Query once into a collection, work in memory, one DML after the loop. **Limits:** 100 SOQL, 50k rows, 150 DML, 10k DML rows, 10s CPU (60s async), 6 MB heap, 100 callouts.
+**Bulkify.** Never put SOQL/DML inside a loop (Get/Update inside a Flow loop = same problem). Query once into a collection, work in memory, one DML after the loop. **Limits:** 100 SOQL, 50k rows, 150 DML, 10k DML rows, 10s CPU (60s async), 6 MB heap, 100 callouts `[volatile — verify live]`.
 
 - **Approval processes do NOT run validation rules on submission.** Gate entry with approval entry criteria, not validation rules.
 - **Before-save flows = cheapest same-record update** — no extra DML, runs before commit.
@@ -173,7 +182,7 @@ Some managed packages provide a purpose-built import tool that enforces their da
 
 | Question | Tool | Retention |
 |---|---|---|
-| Who changed a setup/metadata setting? | Setup Audit Trail (downloadable CSV) | 6 months (180 days) |
+| Who changed a setup/metadata setting? | Setup Audit Trail (downloadable CSV) | 6 months (180 days) `[volatile — verify live]` |
 | Who logged in / from where / failed logins? | Login History | 6 months |
 | What changed on this record's fields? | Field History Tracking (≤20 fields/object) | 18 months in UI; archive to FieldHistoryArchive Big Object beyond |
 | What did this Apex/flow transaction do? | Debug Logs (trace flag) | ~24h or until 1,000 entries / size cap |
@@ -207,8 +216,8 @@ Some managed packages provide a purpose-built import tool that enforces their da
 |---|---|---|---|
 | Developer | Metadata only | 1 day | Dev/unit work |
 | Developer Pro | Metadata only, larger storage | 1 day | Bigger dev datasets |
-| Partial Copy | Metadata + sample data (template) | 5 days | Integration/UAT with representative data |
-| Full | Metadata + ALL data | 29 days | Staging, perf, final pre-prod validation |
+| Partial Copy | Metadata + sample data (template) | 5 days `[volatile — verify live]` | Integration/UAT with representative data |
+| Full | Metadata + ALL data | 29 days `[volatile — verify live]` | Staging, perf, final pre-prod validation |
 
 **Deployment-tool decision:**
 - **SFDX / SF CLI** — source-driven, version-controlled, scriptable, can delete. `sf project deploy start`. **Run from the SFDX project root** — running from the repo root gives *InvalidProjectWorkspaceError*.
@@ -231,18 +240,54 @@ Some managed packages provide a purpose-built import tool that enforces their da
 
 ## Cloud Applications — Operational Knowledge
 
-Know the shape of each Cloud — many orgs focus on one, but the exam covers all:
-- **Sales Cloud:** Products → Price Books → Price Book Entries; revenue/quantity schedules;
-  Opportunity splits; Collaborative Forecasting; quote-to-opportunity sync; lead conversion
-  field mapping.
-- **Service Cloud:** Knowledge (article types, data categories, Lightning Knowledge),
-  Entitlements/Milestones, case assignment/escalation rules, Omni-Channel routing, Service
-  Console.
-- **Experience Cloud:** the relevant one for any externally-facing portal (volunteer / donor /
-  applicant). Site types (Customer, Partner, LWR), Experience Builder, member profiles,
-  Audience Targeting. (Note: a portal does not *have* to be Experience-Cloud-gated — a
-  tokenized link on external infrastructure is a valid alternative when login friction is the
-  concern.)
+Sales Cloud (Price Books, schedules, Opportunity splits, Collaborative Forecasting), Service Cloud (Knowledge, Entitlements/Milestones, Omni-Channel), and Experience Cloud (site types, Experience Builder, member profiles, Audience Targeting) shape: [references/cloud-applications.md](references/cloud-applications.md) — load when configuring multi-cloud features or Experience Cloud portals.
+
+---
+
+## Executable Workflows
+
+### 1. Change a sharing model safely (OWD → role hierarchy → sharing rules → verify row visibility per persona)
+
+1. In a sandbox, document the current OWD for the object and the personas (roles/groups) that need access.
+   → **gate:** run `SELECT SobjectType, DefaultAccess FROM OrgWideDefault` (or Setup → Sharing Settings) to capture the baseline before any change.
+2. Tighten or loosen the OWD under Setup → Sharing Settings for the target object.
+   → **gate:** sharing recalculation may take minutes; confirm the sharing job completed (Setup → Sharing Settings → Recalculate if needed).
+3. Add or adjust sharing rules to re-open access for the correct groups/roles above the new OWD floor.
+   → **gate:** as a test user in each affected persona, run `SELECT Id FROM <Object__c>` and confirm the expected rows are returned.
+4. Verify no unintended access: as a user who should be excluded, run the same query and confirm they cannot see restricted records.
+   → **gate:** zero rows (or only owned records) returned for excluded persona.
+5. If results look correct in sandbox, promote the change to production. Monitor Setup Audit Trail for the OWD change event.
+   → **gate:** Setup Audit Trail shows the OWD change; re-run persona spot-checks in production.
+
+---
+
+### 2. Bulk data load with automation/TDTM disabled → load → re-enable → recalculate rollups
+
+1. Identify which automation (flows, workflow rules, NPSP TDTM triggers) fires on the target object. In a sandbox, disable each: deactivate flows/workflow rules; for NPSP, use NPSP Settings → disable TDTM triggers or set a custom setting flag.
+   → **gate:** test-insert one record in the sandbox and confirm no automation fires (no field changes, no child records created).
+2. Run the bulk load (Data Loader upsert with External ID, or NPSP Data Importer for NPSP objects). Use `--serial` mode if DML lock contention is expected.
+   → **gate:** Data Loader success file shows expected row count; error file is empty or contains only expected failures.
+3. Spot-check a sample of loaded records: `SELECT Id, <key fields> FROM <Object__c> WHERE ExternalId__c IN (:sampleIds)` — confirm field values landed correctly.
+   → **gate:** no truncation, no blank required fields, parent lookups resolved.
+4. Re-enable automation in reverse order (TDTM first if NPSP, then flows, then workflow rules).
+   → **gate:** test-insert one more record and confirm automation fires as expected.
+5. Recalculate rollup summaries: for DLRS rollups, run the DLRS recalculate batch; for master-detail roll-up summary fields, they recalculate on the next save; trigger a batch update if immediate recalc is needed.
+   → **gate:** sample parent records show correct SUM/COUNT values matching the loaded children.
+
+---
+
+### 3. Promote metadata sandbox → prod with a validation-only deploy first
+
+1. From the SFDX project root, run `sf project deploy start --dry-run --target-org <prod alias>` (validation-only deploy).
+   → **gate:** validation completes with `Deploy Succeeded (Validation Only)` — no component errors; coverage gate (≥75%) passes.
+2. Review the validation output for any warnings (missing dependencies, FLS gaps). Resolve in the source branch before proceeding.
+   → **gate:** zero errors and zero unexpected warnings in the validation report.
+3. Run the actual deploy: `sf project deploy start --target-org <prod alias>`.
+   → **gate:** `Deploy Succeeded`; confirm component count matches the validation run.
+4. Post-deploy, describe the object for a key new/changed field: `sf sobject describe --sobject <object> --target-org <prod alias>` and confirm the field is API-visible (proves FLS landed).
+   → **gate:** field appears in describe output with `updateable: true` (or `nillable: true` for optional fields).
+5. Run a SOQL smoke test against a known prod record: `SELECT <newField__c> FROM <Object__c> LIMIT 1`.
+   → **gate:** no `INVALID_FIELD` error; field returns a value or null (not an exception).
 
 ---
 
@@ -326,8 +371,21 @@ Read this first. Each is imperative and concrete.
 - [references/study-resources.md](references/study-resources.md) — credential logistics, exam weights, study path, official links.
 - [references/scenarios.md](references/scenarios.md) — Scenarios 3–5 (sharing model tightening, DLRS vs. rollup summary on a Lookup, Flow recursion).
 - [references/approval-territory.md](references/approval-territory.md) — deep dive on Approval Process quirks (record locking, delegated approvers, step ordering) and Enterprise Territory Management (model states, assignment rules, forecasting integration).
+- [references/cloud-applications.md](references/cloud-applications.md) — Sales Cloud, Service Cloud, and Experience Cloud operational detail (Price Books, Entitlements, Omni-Channel, Experience Builder).
 
 ---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-advanced-administrator.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ## Disclaimer
 

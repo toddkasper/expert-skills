@@ -15,9 +15,9 @@ metadata:
 
 ## Overview
 
-The Salesforce Certified Business Analyst credential (exam code BA-201) validates that a practitioner can act as the liaison between business stakeholders and the technical team implementing a Salesforce solution. Certified BAs elicit and document business needs, translate them into well-formed requirements and user stories, map current and future-state processes, facilitate collaboration across stakeholder groups, and guide user acceptance testing through to a go-live decision.
+**This file is an operational playbook, not an exam outline.** Each section states the rules a BA applies at decision time — requirements vs. user stories, story sizing, testable acceptance criteria, UAT go/no-go — plus the anti-patterns to catch in review and the way to verify against the live org before trusting any assumption. The recurring discipline is to confirm org reality (objects, fields, picklists, active automations) before committing to a requirement or estimate.
 
-**This file is an operational playbook, not an exam outline.** Each section below states the rules a BA actually applies at decision time — when to write a requirement vs. a user story, how to size a story, what makes acceptance criteria testable, how to run UAT to a defensible go/no-go — plus the anti-patterns to catch in review and the way to verify against the live org before trusting any assumption. The recurring discipline throughout is to confirm org reality (objects, fields, picklists, active automations) before committing to a requirement or estimate.
+Credential background and study path: [references/study-resources.md](references/study-resources.md).
 
 > **Load this skill when…** eliciting or documenting requirements for a Salesforce project; writing or reviewing user stories and acceptance criteria; facilitating a discovery or UAT session; mapping as-is/to-be processes including automation implications.
 > **Not this skill:** building the declarative config (fields, flows, layouts) → see `salesforce-administrator`; writing Apex, LWC, or integration code → see `salesforce-platform-developer-1` / `salesforce-platform-developer-2`.
@@ -29,6 +29,20 @@ The Salesforce Certified Business Analyst credential (exam code BA-201) validate
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Uncertainty & Escalation
+
+- **Always re-verify live:** `[volatile — verify live]` items include: BA-201 blueprint topic weights and question counts, Salesforce automation tooling retirement dates (Workflow Rules / Process Builder deprecation timeline), specific org edition/license feature availability, and managed-package automation behavior (NPSP, Nonprofit Cloud) across package versions.
+- **Live wins:** when this file and the live org, current exam guide, or official Salesforce release notes disagree — for example, a new Salesforce automation tool introduced in a recent release — trust the live system and flag this skill as stale via the Feedback protocol below.
+- **Escalate to a human:** surface — never silently decide — any action that constitutes a sign-off or go-live decision (go/no-go for production deployment, sponsor approval to defer a Must requirement, acceptance of a residual defect risk). These decisions belong to the named human Accountable in the RACI; the BA facilitates and documents, not decides.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+Inline volatile tags applied:
+- BA-201 blueprint topic weights (24% / 18% / 17% / 17% / 16% / 8%) `[volatile — verify live]` — Salesforce updates exam blueprints; verify against the current official exam guide before studying or quoting weights.
+- Workflow Rules and Process Builder "retired for new work" status `[volatile — verify live]` — Salesforce has announced deprecation; verify the current enforcement date and any grace periods in the latest release notes.
+- NPSP managed-package automation side effects (Household Account creation, `npe01__PreferredPhone__c` workflow rule) `[volatile — verify live]` — package version-specific; confirm active automations in the target org before writing requirements.
 
 ---
 
@@ -93,18 +107,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 **Do a real current-state assessment of the actual org — don't assume.** Inventory: installed managed packages (note their namespaces), the live data model, active automations (workflow rules, flows, triggers, process builders), integrations, and data quality. **Rule:** enumerate active automations on any object you plan to write to, because side effects are invisible until they bite — a managed-package workflow rule can silently corrupt data on insert, and only a current-state automation audit catches it.
 
-**Categorize every gap so the build path is obvious:**
-
-| Gap type | Resolution | Cost/risk |
-|---|---|---|
-| Config | Point-and-click (field, layout, validation rule, flow) | Low |
-| Customization | Apex / LWC / integration | High; needs dev + tests |
-| Third-party | AppExchange package | License cost + package side effects |
-| Process change | Train people, change behavior | No code; hardest to adopt |
-
-**Decision rule:** prefer config over code over package over custom integration, ascending cost/risk — but only if the lower-cost option meets the *non-functional* requirements too (volume, security, audit). Choose Apex over a flow when record creation has managed-package side effects a flow can't safely orchestrate.
-
-**Know the implementation lifecycle and the BA's job in each phase:** Discovery → Design → Build → Test → Train → Deploy → Operate. The BA owns Discovery and Requirements, co-owns Design (translates), drives UAT in Test, leads Train, advises the go/no-go in Deploy.
+**Categorize every gap** (Config / Customization / Third-party / Process change) and prefer config over code over package over custom integration, ascending cost/risk — only escalate when the lower-cost option fails non-functional requirements (volume, security, audit). Choose Apex over Flow when managed-package side effects require it. Full gap-type table and implementation lifecycle phase map (Discovery → Design → Build → Test → Train → Deploy → Operate) with BA ownership per phase: [references/change-management.md](references/change-management.md) — load when sizing a discovery or scoping build paths.
 
 **Scope discipline:** write down what is explicitly *out*. A scope statement without an out-of-scope list invites scope creep.
 
@@ -208,6 +211,59 @@ A solution can pass verification and fail validation — a feature built exactly
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Elicit → write → size a user story to UAT-ready (INVEST + Given/When/Then)
+
+1. Conduct the elicitation session (interview or workshop). Capture the raw need — do not propose a solution during elicitation.
+   → gate: a documented need statement with a named stakeholder source, not a solution description.
+2. Draft the story in canonical form: "As a [persona], I want [capability] so that [business value]." Confirm the "so that" is a real business outcome, not a restatement of the want.
+   → gate: story passes the INVEST gate (Independent, Negotiable, Valuable, Estimable, Small, Testable).
+3. Describe the target Salesforce object(s) in the live org to confirm field types, lengths, and whether required fields already exist. Adjust the story scope to reflect reality (don't write a story to "add" a field that already exists).
+   → gate: story references actual field API names and confirmed data types; no mismatched type assumptions.
+4. Write acceptance criteria in Given/When/Then form — one criterion per testable outcome, covering happy path, sad path, and at least one edge case (boundary value, missing data, restricted picklist value).
+   → gate: every criterion can be answered pass/fail with no ambiguity; team confirms criteria are testable.
+5. Size the story with the delivery team. If the team can't estimate, the story is too vague or too large — split by workflow step, data variation, or user role.
+   → gate: story has a point estimate; no "too big to estimate" verdict remains unresolved.
+6. Confirm the story has a traceability link: requirement ID → story → at least one acceptance criterion that becomes a UAT test case.
+   → gate: traceability row exists in the tracking artifact before the story enters a sprint.
+
+---
+
+### Workflow 2 — Run UAT to a go/no-go decision
+
+1. Before UAT begins, confirm entry criteria are met: build is feature-complete in the sandbox, test data loaded (boundary data included, no production PII), testers trained, exit criteria written and agreed.
+   → gate: all entry criteria checked off and signed by the BA and project lead.
+2. Derive test cases directly from stories' acceptance criteria (Given/When/Then → precondition/steps/expected result/actual result/pass-fail). Assign each test case to a named tester.
+   → gate: one test case per acceptance criterion; happy path, sad path, and edge cases all have cases.
+3. Execute UAT. For every failed case, log a defect with: repro steps, severity (blocker/critical/major/minor/cosmetic), and priority (business urgency). Classify tester "also do Y" requests as change requests — not defects.
+   → gate: every open item is classified as defect or change request; no unclassified findings remain open.
+4. After each fix, rerun impacted test cases (regression check). Do not close a defect until the retest passes.
+   → gate: retest result recorded for every defect marked resolved.
+5. At exit gate: aggregate open defects by severity. Apply the go/no-go rule: no open blockers or criticals; all Must-have scenarios pass; any remaining known issues have agreed workarounds documented and accepted in writing by the business Accountable.
+   → gate: go/no-go decision recorded with named decision-maker, residual risks list, and date.
+6. After go-live, query the sandbox or production records to confirm data actually landed with correct field values — don't rely solely on the UI screen testers saw.
+   → gate: SOQL confirms records have correct status, role flags, and field values as expected.
+
+---
+
+### Workflow 3 — Map current → future-state process (swimlane + RACI)
+
+1. Schedule a current-state walkthrough with SMEs. Use observation/shadowing, not just interview — people describe the ideal process, not what they actually do.
+   → gate: as-is map reflects observed reality, not the SOP document; exception paths are included.
+2. Draw the as-is swimlane: lanes = actors (end user, staff, system/Salesforce, external system). Capture every handoff, manual workaround, bottleneck, and data-entry step.
+   → gate: at least two exception paths (e.g. incomplete submission, missing data) are on the map.
+3. Run an automation audit on every Salesforce object the process touches: list active workflow rules, record-triggered flows, process builders, and triggers. Document side effects.
+   → gate: automation audit complete; no active automation on the relevant objects is unaccounted for in the map.
+4. Build the to-be swimlane at the business level (what changes and who benefits — not a click-by-click Salesforce walkthrough). Align each decision diamond → validation rule or flow decision; each handoff → automation trigger; each data-entry step → field + layout requirement.
+   → gate: to-be map is readable by a non-technical stakeholder; each difference from as-is maps to at least one backlog item.
+5. Build the RACI for the to-be process: exactly one Accountable per decision. Flag any row with two Accountables as a defect — escalate before proceeding.
+   → gate: RACI has no duplicate Accountables; every new automation step has an owner for monitoring and break-fix.
+6. Version-control the to-be map alongside the requirements that drove it; update both when scope changes.
+   → gate: map file is committed to the repo with a link to the relevant requirements in the traceability doc.
+
+---
+
 ## Decision Scenarios
 
 Five original scenarios. Scenarios 3–5 are in [references/scenarios.md](references/scenarios.md) — load them for UAT defect-vs.-new-requirement classification, requirement phrased-as-solution rewrites, or to-be process verification examples.
@@ -281,6 +337,22 @@ Read this first. Each rule is imperative and concrete.
 - [references/change-management.md](references/change-management.md) — extended change management and scope escalation operational guidance; load when advising on go-live change planning, training design, or conflicting-stakeholder escalation paths.
 
 For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-business-analyst.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

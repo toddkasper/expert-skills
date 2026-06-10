@@ -37,6 +37,15 @@ a legacy path — do not build new features there.
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** Next.js caching semantics, middleware conventions, and PPR defaults changed materially between v14, v15, and v16. Always check the project's installed version (`package.json`) before applying any caching, rendering, or middleware guidance from this file. `[volatile — verify live]` marks apply to: `cacheLife` built-in profile values (stale/revalidate/expire times — `[volatile — verify live]`); PPR default enablement (`cacheComponents: true` default in v15+ — `[volatile — verify live]`, confirm in `next.config.ts`); `middleware.ts` → `proxy.ts` rename (v16 — `[volatile — verify live]`, check your installed version before renaming); `updateTag` vs `revalidateTag` callable contexts (Server Actions only vs Route Handlers — confirm in the installed version's docs); App Store SDK requirements for iOS (advances annually — `[volatile — verify live]` for the nextjs skill's mobile references).
+- **Live wins:** the installed Next.js version's actual behavior and [nextjs.org/docs](https://nextjs.org/docs) for that version are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** Next.js major version upgrades in production (breaking caching, middleware, and Server Action semantics); production deploys of cache invalidation changes (`revalidateTag` on a high-traffic route); `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` rotation; store submissions (iOS/Android).
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+---
+
 ## 1. App Router & Component Model
 
 ### File-System Conventions
@@ -116,7 +125,7 @@ server; they just cannot be *imported* inside the client module graph.
 
 ### Rendering Model (PPR + Cache Components, v15+)
 
-With `cacheComponents: true` in `next.config.ts` (the recommended default in v15+), Next.js
+With `cacheComponents: true` in `next.config.ts` (the recommended default in v15+) `[volatile — verify live]`, Next.js
 uses **Partial Prerendering (PPR)** as the default:
 
 - Components marked `"use cache"` → rendered at build time and included in the static shell.
@@ -138,7 +147,7 @@ cacheLife(profile)    — sets stale/revalidate/expire (call inside "use cache" 
 cacheTag('name')      — tags the cache entry for on-demand invalidation
 ```
 
-**Built-in `cacheLife` profiles:**
+**Built-in `cacheLife` profiles:** `[volatile — verify live]`
 
 | Profile | Stale | Revalidate | Expire |
 |---|---|---|---|
@@ -263,7 +272,7 @@ These are non-negotiable. Every Server Action is a reachable POST endpoint:
 
 ### Proxy (formerly Middleware)
 
-> `middleware.ts` was renamed to `proxy.ts` in Next.js v16. The `npx @next/codemod@canary
+> `middleware.ts` was renamed to `proxy.ts` in Next.js v16 `[volatile — verify live]`. The `npx @next/codemod@canary
 > middleware-to-proxy .` codemod migrates the file and the export name. Proxy now defaults to
 > the **Node.js runtime** (previously required Edge).
 
@@ -290,6 +299,34 @@ this. Proxy is a UX layer (redirect to login), not the security enforcement laye
 - Auth enforcement only in `proxy.ts` with no check inside the Server Action or Route Handler.
 - Missing matcher exclusions causing Proxy to run on static file requests.
 - Importing a full ORM or database client in proxy.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Add a cached data route (use cache → cacheTag → revalidate on mutation → verify)
+
+1. Create (or identify) the async helper function that fetches the data. Do not place `'use cache'` inside a Route Handler body — extract to a standalone async function. → gate: the function is not defined inline inside `export async function GET(…)`.
+2. Add `'use cache'` as the first line of the helper. Immediately below it, add `cacheTag('my-tag')` and `cacheLife('hours')` (or the appropriate profile). → gate: `NEXT_PRIVATE_DEBUG_CACHE=1 next dev` — first request logs a cache miss; subsequent requests within the revalidate window log cache hits.
+3. In the Server Action (not a Route Handler) that mutates the related data, call `updateTag('my-tag')` after the mutation succeeds. Use `revalidateTag` instead only if a slight delay to other users is acceptable. → gate: submit the mutation; confirm the next request to the cached helper shows a cache miss in the debug log, not a hit.
+4. In the Route Handler or Server Component, call the helper normally: `const data = await fetchMyData()`. Wrap the consuming component in `<Suspense fallback={<Skeleton />}>` if it accesses runtime data alongside cached data. → gate: `next build` exits without "Uncached data was accessed outside of Suspense" errors.
+5. Verify end-to-end in a production build (`next start`): measure TTFB before and after caching; confirm the mutation + `updateTag` produces a fresh response on the next request.
+
+### Workflow 2 — Ship a secure Server Action (auth check → validate input → mutate → revalidatePath/Tag)
+
+1. At the very top of the Server Action body, call your auth helper (e.g., `const session = await auth(); if (!session) throw new Error('Unauthenticated')`). This must be inside the action itself — a page-level auth check does not protect the action from direct POST requests. → gate: call the action's endpoint directly with `curl -X POST …` without a session cookie; confirm it returns an error, not a success.
+2. Check authorization — confirm the caller owns the resource: `if (post.authorId !== session.user.id) throw new Error('Forbidden')`. → gate: log in as a different user and attempt to mutate another user's record via the action; confirm it throws.
+3. Parse and validate all inputs using Zod (or equivalent): `const parsed = InputSchema.safeParse(formData); if (!parsed.success) return { error: parsed.error.flatten() }`. Never trust raw `formData` values. → gate: submit a form with a missing required field; confirm the action returns a validation error, not a DB error.
+4. Execute the mutation. Return only the fields the UI needs — not the raw DB record. → gate: inspect the return value; it must not include password hashes, tokens, or full user rows.
+5. Call `revalidatePath('/affected-path')` or `revalidateTag('related-tag')` after a successful mutation, then return a success indicator. → gate: after mutation, reload the page; confirm the UI reflects the change without a manual refresh.
+
+### Workflow 3 — Split server/client correctly (push 'use client' to leaves, keep secrets server-only)
+
+1. Audit every `"use client"` directive in the codebase: it should appear on leaf components that need interactivity (event handlers, `useState`, browser APIs), not on pages, layouts, or data-fetching wrapper components. → gate: no `page.tsx` or `layout.tsx` begins with `"use client"` unless the entire route is a pure client-rendered island.
+2. For any module that accesses secrets, DB queries, or auth/authz logic, add `import 'server-only'` as the first line. → gate: `next build` — deliberately import that module from a `"use client"` component; confirm the build fails with "You're importing a component that needs 'server-only'."
+3. Check env var names: any variable read in the client bundle must be prefixed `NEXT_PUBLIC_`. Any variable without that prefix is stripped to `""` in the client build. → gate: add `console.log(process.env.MY_SECRET)` inside a `"use client"` component; run `next build` and inspect the client bundle — the value must not appear.
+4. Verify props passed from Server to Client Components are serializable: no `Date` objects (use ISO strings), no functions, no class instances, no `undefined` (use `null`). → gate: `next build` emits no "Only plain objects, and a few built-ins, can be passed to Client Components from Server Components" errors.
+5. For third-party components that use client-only APIs but lack `"use client"`, wrap them in a thin client boundary file that adds the directive — do not modify `node_modules`. → gate: the wrapper file is the only file with `"use client"`; the third-party import resolves without "window is not defined" during SSR.
 
 ---
 
@@ -397,6 +434,20 @@ this. Proxy is a UX layer (redirect to login), not the security enforcement laye
 ---
 
 > Study resources live in [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/nextjs.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 

@@ -37,6 +37,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** volatile facts in this skill include channel caps (Web-to-Case 500/day `[volatile — verify live]`), case merge limits, sandbox refresh intervals, SMS/10DLC registration requirements, Knowledge license names, and any feature-availability detail — verify against official Salesforce documentation and your live org before acting.
+- **Live wins:** when the live org or official documentation contradicts a statement in this file, trust the live source and log the discrepancy via the Feedback protocol below.
+- **Escalate to a human before proceeding on:** OWD or sharing-model changes in production; adding or widening guest-user sharing; any destructive operation on production data (hard delete, mass status update); deactivating managed-package automation in a production org; enabling or reconfiguring SMS/messaging channels (10DLC compliance implications).
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. If you act on an untagged fact and the live system disagrees, file feedback — do not silently trust this file over the live org.
+
+---
+
 ## 1. Service Cloud Solution Design — operational rules
 
 **Pick the channel by volume, latency tolerance, and audience, not by what's fashionable.** Use this table at design time:
@@ -77,7 +86,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **Auto-response rules:** one per record origin; first matching entry wins, same as assignment.
 - **Record Types** differentiate per-type fields, picklists, and layouts. A single object with a type discriminator picklist plus Record Types for per-type page layouts is often preferable to spawning multiple custom objects.
 - **Entitlements & milestones** model the SLA: milestone criteria → actions on **success / warning / violation**, integrated with Business Hours. A "review within N days" milestone is the natural fit for an intake-review SLA.
-- **Case merge:** max **3 at a time**; pick the master deliberately — related records re-parent to the master and field values follow master-selection rules.
+- **Case merge:** max **3 at a time** `[volatile — verify live]`; pick the master deliberately — related records re-parent to the master and field values follow master-selection rules.
 - **Macros / Quick Text:** prefer for repetitive agent actions over training memory. Macros can set fields, send email, apply templates, run a flow. Quick Text snippets are channel-scoped (email/chat/call).
 - **Queues vs. Omni-Channel:** list-view queues = manual pull; Omni = push/capacity routing. Low volume → a queue list view suffices; don't over-engineer Omni.
 - **Verify** record types / picklist values before assuming they exist: describe the target object (MCP / `sf sobject describe` / Object Manager) to see record types and picklist entries; run a SOQL query (MCP / `sf data query` / Developer Console) to confirm status-value distribution in the live org.
@@ -117,7 +126,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 
 ## 5. Intake & Interaction Channels — operational rules
 
-- **Web-to-Case hard cap: 500 cases/day** — exceed it and cases are dropped/queued. A custom web app POSTing to your own API (rather than native Web-to-Case) is not bound by this cap.
+- **Web-to-Case hard cap: 500 cases/day** `[volatile — verify live]` — exceed it and cases are dropped/queued. A custom web app POSTing to your own API (rather than native Web-to-Case) is not bound by this cap.
 - **Email-to-Case:** prefer **On-Demand** (no Email Service Agent appliance) over the legacy on-premise agent. Thread-ID in subject/body stitches replies to the same case — don't strip it.
 - **Omni-Channel routing model:** Most Available (by configured capacity) vs. Least Active. Push routing with a capacity model prevents agent overload; queue-based is simpler. For low volume, a queue list view is sufficient.
 - **Messaging consent is mandatory** for SMS/WhatsApp (10DLC registration for US SMS). Any SMS link-delivery feature requires 10DLC — flag this as a prerequisite, not a quick toggle.
@@ -134,14 +143,14 @@ CTI/Voice depth (Open CTI vs. Service Cloud Voice, screen pop, supervisor featur
 - **Article lifecycle:** Draft → In Review → Published → Archived. Gate publish behind an approval process if non-admins author. Editing a published article creates a new draft version; the published version stays live until you publish the new one.
 - **Data Categories control visibility,** mapped to roles / channel audiences (public Site, customer community, internal). Guest-user access to public articles requires the guest user profile + category visibility — a common miss.
 - **KCS loop:** link articles to cases, promote resolutions into articles, capture "Was this helpful?", and run the Search Activity Gaps report to find missing content.
-- **Permissions:** publishing requires the Knowledge User license **plus** the "Manage Salesforce Knowledge" / "Publish Articles" perms — license alone is not enough.
+- **Permissions:** publishing requires the Knowledge User license `[volatile — verify live]` **plus** the "Manage Salesforce Knowledge" / "Publish Articles" perms — license alone is not enough.
 - Start small: a handful of high-traffic FAQ articles, public visibility, surfaced on the public site.
 
 ---
 
 ## 7. Industry Knowledge — operational rules
 
-- **Know the cost-per-contact gradient and design to deflect down it:** self-service ≈ $0.10, chat ≈ $5, phone ≈ $15–25 per contact. Industry self-service deflection target is **60–80%** before an agent touch.
+- **Know the cost-per-contact gradient and design to deflect down it:** self-service ≈ $0.10, chat ≈ $5, phone ≈ $15–25 per contact `[volatile — verify live]`. Industry self-service deflection target is **60–80%** `[volatile — verify live]` before an agent touch.
 - **Know the KPIs by name and what moves them:** AHT, FCR, ASA, Abandonment, Occupancy, Utilization, CSAT, NPS, CES. When asked to "improve service," tie the recommendation to a specific KPI.
 - **True omni-channel = unified context across channels**, not just multiple channels (multi-channel siloed). Don't claim omni-channel for a setup that can't carry context between channels.
 - **Regulatory awareness that bites:** HIPAA (PHI in cases/knowledge), GDPR/CCPA (right to erasure, consent, residency), PCI DSS (never record card numbers via voice), WCAG 2.1 AA + Section 508 for public self-service. When a workflow handles PII or sensitive documents, treat those fields as sensitive: never in logs, never echoed behind a tokenized bearer link.
@@ -183,6 +192,36 @@ Entitlement Processes are the template that governs which milestones apply and w
 - **Business Hours on the Entitlement overrides org-default Business Hours.** If a VIP account SLA should use 24/7 hours, set a separate Business Hours record on that Entitlement.
 - **On-Hold pause:** the standard Entitlement clock does NOT automatically pause when a case status is "On Hold." You must set the Entitlement Process's "Stop milestone timing when case status equals" option, or the clock runs through on-hold periods.
 - **Verify:** after creating a test case, query `CaseMilestone` records via SOQL to confirm the expected milestones were inserted, their `TargetDate` is correct given the Business Hours, and the timeline aligns with the Entitlement Process configuration.
+
+---
+
+## Executable Workflows
+
+### 1. Stand up Email-to-Case + assignment rules + escalation
+
+1. Enable Email-to-Case: Setup → Email-to-Case → Enable. Choose **On-Demand** (no appliance). → **gate: Email-to-Case setting shows "Enabled" in Setup.**
+2. Create a routing address (support@yourdomain.com forwarded to the Salesforce-generated address). Verify the thread token setting is ON. → **gate: send a test email and confirm a Case is created with the correct Subject and thread ID in body.**
+3. Create the Active Case Assignment Rule: Setup → Case Assignment Rules → New. Add entries ordered most-specific → most-general. → **gate: insert a test case matching the top entry; SOQL `SELECT OwnerId FROM Case WHERE Id = '<id>'` confirms correct owner.**
+4. Confirm assignment fires on Email-to-Case: Email-to-Case bypasses manual "Assign using active rule" — it fires automatically. Verify by querying the OwnerId on the email-created case. → **gate: OwnerId matches the expected queue, not the system user.**
+5. Create an Escalation Rule: Setup → Escalation Rules. Set clock-start basis (creation vs. last modification) and Business Hours. Wire at minimum a Warning action before the Violation action. → **gate: create a test case that meets the escalation criteria; confirm the escalation email or action fires at the expected elapsed time.**
+
+### 2. Configure entitlements + milestones (SLA clock, business hours)
+
+1. Create a Business Hours record: Setup → Business Hours → New. Set hours per day and time zone. → **gate: Business Hours record is Active.**
+2. Create an Entitlement Process: Setup → Entitlement Processes → New. Assign the Business Hours record. Add Milestones (e.g. "First Response — 4 hours," "Resolution — 3 days"). Set clock-start basis per milestone. → **gate: at least one milestone appears in the process with correct target time.**
+3. Add milestone criteria so the milestone applies only to the right cases (e.g. Case Priority = High). → **gate: create a test case without matching criteria — the milestone should NOT be inserted.**
+4. Wire milestone actions: Success, Warning (at ~75% of target time), and Violation. → **gate: confirm a Warning action email is configured — do not rely on Violation alone.**
+5. Create an Entitlement record linked to an Account and the Entitlement Process. Associate it to a test Case. → **gate: query `SELECT Id, TargetDate, CompletionDate FROM CaseMilestone WHERE CaseId = '<id>'` — expected milestones present with correct TargetDate.**
+6. Test On-Hold pause: set the case to On-Hold, wait, reopen, query `CaseMilestone.TargetDate` — confirm it shifted forward if the process has "Stop timing on On-Hold" enabled. → **gate: TargetDate delta matches the paused duration.**
+
+### 3. Set up Omni-Channel routing (presence, capacity, skills)
+
+1. Enable Omni-Channel: Setup → Omni-Channel Settings → Enable. → **gate: Omni-Channel appears in App Manager.**
+2. Create a Service Channel for Cases (or your intake object). → **gate: channel appears in Setup → Service Channels.**
+3. Create Routing Configurations: set routing model (Most Available or Least Active), capacity, and priority. → **gate: routing config is saved with non-zero capacity.**
+4. Create a Queue and associate it with the Routing Configuration and the Service Channel. → **gate: queue appears in Omni-Channel queue list.**
+5. Create Presence Statuses (Online, Busy, Away) and assign to profiles. → **gate: a test agent logs into the Service Console and sees Omni-Channel widget with presence status options.**
+6. Assign agents to the queue. Route a test case to the queue. → **gate: Omni-Channel widget rings for the test agent; agent accepts; `AgentWork` record created in SOQL confirming the work item assignment.**
 
 ---
 
@@ -266,6 +305,20 @@ Five original scenarios. Scenarios 4–5 are in [references/scenarios.md](refere
 - [references/cti-voice.md](references/cti-voice.md) — CTI and Voice depth: Open CTI vs. Service Cloud Voice, screen pop, supervisor features (barge-in/whisper), and PBX integration considerations.
 
 For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-service-cloud-consultant.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

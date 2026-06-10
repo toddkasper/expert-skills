@@ -33,6 +33,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** governor limit numbers `[volatile — verify live]`; API/platform version and feature availability `[volatile — verify live]`; org-specific settings (OWD, active flows, installed packages, sandbox types); any cap or quota cited in this skill.
+- **Live wins:** if any rule or number in this skill conflicts with what the live org shows, the live org is authoritative. Log the discrepancy immediately using the Feedback protocol below, then act on what you observed.
+- **Escalate to a human before proceeding:** OWD changes in production; deactivating managed-package automation in production; mass-update or hard-delete operations on production data; any sharing change that could expose PII or financial records; enabling or disabling multi-currency (irreversible).
+- **Confidence taxonomy:** facts in this skill are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. When in doubt, describe the object or run a SOQL query rather than trusting a tag.
+
+---
+
 ## 1. Security & Access Model — the rule that governs everything
 
 Access is computed by **layering** — reason about the whole stack, not one layer.
@@ -135,7 +144,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 ## 4. Automation — Flow first, and the managed-package trap
 
-**Workflow Rules and Process Builder were retired Dec 31, 2025 — build all new automation in Flow.** Still recognize them — managed packages and legacy configs still contain them and they still fire.
+**Workflow Rules and Process Builder were retired Dec 31, 2025 `[volatile — verify live]` — build all new automation in Flow.** Still recognize them — managed packages and legacy configs still contain them and they still fire.
 
 **Pick the flow type by trigger:**
 
@@ -150,7 +159,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 **Before-save vs after-save is the key automation choice:** before-save sets fields on the triggering record with **zero added DML** (fastest, no recursion); after-save runs post-commit and is required for related records, email, or Apex. Same-record field sets → before-save. Rolls-ups, child records, emails → after-save.
 
-**Governor limits (all flows + Apex + triggers share one transaction):** 100 SOQL, 150 DML statements, 50k rows, 10k DML rows, 6 MB heap (sync), 10s CPU. Flows batch in **200s**.
+**Governor limits (all flows + Apex + triggers share one transaction):** 100 SOQL, 150 DML statements, 50k rows, 10k DML rows, 6 MB heap (sync), 10s CPU `[volatile — verify live]`. Flows batch in **200s**.
 
 **Bulkify.** Never put Get/Create/Update/Delete (or SOQL/DML) **inside a Loop** — collect once, work in memory, one DML after the loop.
 
@@ -170,7 +179,7 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 | | Data Import Wizard | Data Loader |
 |---|---|---|
-| Max records | 50,000 | 5,000,000 |
+| Max records | 50,000 `[volatile — verify live]` | 5,000,000 `[volatile — verify live]` |
 | Objects | Accounts, Contacts, Leads, Campaign Members, Person Accounts, custom objects | All objects incl. custom |
 | Upsert by external ID | Limited | ✅ full |
 | Hard delete | ❌ | ✅ |
@@ -197,17 +206,15 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 ## 6. Sales, Service & Productivity — key rules
 
-Rules and red flags for Sales Cloud, Service Cloud, and productivity features. Deep detail and worked examples: [references/sales-service-detail.md](references/sales-service-detail.md) — load when configuring lead assignment, case queues, entitlements, Omni-Channel, or Knowledge.
+Rules and red flags for Sales Cloud, Service Cloud, and productivity features. Full detail for lead assignment, case queues, entitlements, Omni-Channel, AppExchange, and key caps: [references/sales-service-detail.md](references/sales-service-detail.md) — load that file when configuring any of those features.
 
-**Sales Cloud:** Lead assignment rules route by criteria; web-to-lead default cap is **500/day**; lead conversion maps Lead fields → Account/Contact/Opportunity. Confirm the active **account model** (Business Accounts vs Person Accounts vs package Household) before reporting on relationships — it determines how Contacts roll up. Opportunity stages carry probability; a managed package may repurpose Opportunities for a non-sales process.
+**Quick operational callouts (load references for anything deeper):**
+- Confirm the active **account model** (Business Accounts / Person Accounts / package Household) before any Contact-roll-up report — wrong model, wrong counts.
+- **On-Demand Email-to-Case** over Standard — avoids requiring an open firewall port.
+- Quick Actions are subject to the **QA cache trap in §3** — apply the cache-bust after any field-list change.
+- Install AppExchange packages in **sandbox first**; never edit managed-package metadata directly.
 
-**Service Cloud:** Case queues + assignment rules route work; **escalation rules are business-hours-aware** — the same mechanism underlies any "awaiting action" reminder. **On-Demand Email-to-Case** routes through Salesforce servers and avoids a firewall port requirement — prefer it over Standard Email-to-Case. Web-to-Case cap is **5,000 cases/24 hours**. Entitlements + Milestones enforce SLAs; milestones require an entitlement process on the account/product — they do not activate on all cases automatically.
-
-**Productivity:** Quick Actions (object-specific vs global) are subject to the **QA cache trap in §3** — apply the cache-bust after editing field lists. Group tasks assign to up to 200 users (creates a copy per user). Shared activities link one activity to multiple contacts.
-
-**AppExchange:** install in **sandbox first**, look for the security-review badge, manage managed-package updates centrally. Never edit managed-package metadata directly — extend alongside it.
-
-**Red flags:** treating a repurposed Opportunity as a sales pipeline; ignoring the active account model when counting Contacts; editing managed-package metadata directly; adding Quick Action fields without cache-busting; expecting Standard Email-to-Case to work without an open firewall port.
+**Red flags:** treating a repurposed Opportunity as a sales pipeline; editing managed-package metadata directly; adding Quick Action fields without cache-busting; expecting Standard Email-to-Case to work without an open firewall port.
 
 ---
 
@@ -222,6 +229,54 @@ Rules and red flags for Sales Cloud, Service Cloud, and productivity features. D
 - **Einstein (not Agentforce):** Opportunity Scoring, Lead Scoring, Next Best Action, Einstein Activity Capture — predictive/generative features on standard objects; configured separately from Agent Builder; no topics/actions model.
 
 **Red flag:** assuming an agent bypasses sharing/FLS (it does not); an action that exists but is not linked to a topic (agent can't reach it); pointing an agent at PII without checking the running user's data scope; confusing Einstein feature configuration with Agentforce Agent Builder.
+
+---
+
+## Executable Workflows
+
+### 1. Add a custom field end-to-end (create → FLS → layout → deploy → cache-bust → verify)
+
+1. In Object Manager (or SFDX `field-meta.xml`), create the field with the correct type/length.
+   → **gate:** describe the object (`sf sobject describe --sobject <object>` / Object Manager) — confirm the field appears in the schema output before proceeding.
+2. Add `<fieldPermissions>` (readable + editable) to the target permission set XML. Omit if the field is `<required>true</required>`.
+   → **gate:** open the permset XML and confirm the entry is present; confirm the field is *not* marked required (required fields fail deploy).
+3. Add the field to the relevant page layout and Quick Action layout. If updating a QA field list, also edit `<description>` or `<label>` on the QA to trigger a cache-bust (see §3).
+   → **gate:** open the layout XML and confirm the field reference appears.
+4. Deploy via `sf project deploy start` from the SFDX project root.
+   → **gate:** deploy log must show `Deploy Succeeded`; no partial-success warnings.
+5. QA cache-bust check: if the field was added to a Quick Action, confirm the field now renders on the Lightning contextual tab after a hard reload. If absent, re-deploy with the QA `<description>` changed.
+6. Verify FLS landed: `SELECT Field, PermissionsRead FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')` (MCP / `sf data query` / Developer Console).
+   → **gate:** field row present with `PermissionsRead = true`.
+7. Smoke-test with a SOQL SELECT: `SELECT <Field__c> FROM <Object__c> LIMIT 1` as a non-admin user with the permset assigned.
+   → **gate:** no `"Invalid field"` error; value returns (even if null).
+
+---
+
+### 2. Diagnose a record-access failure (object CRUD → FLS → sharing, in that order)
+
+1. Identify the running user and the record in question.
+   → **gate:** confirm user Id and record Id are known.
+2. Check object CRUD: does the user's profile/permset grant Read on the object?
+   → **gate:** describe the object for the user's session — if the object doesn't appear, CRUD is the blocker; grant object Read on the permset.
+3. Check FLS: does the user's profile/permset grant Read on the specific field(s) returning errors?
+   → **gate:** `SELECT Field, PermissionsRead FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>') AND SobjectType='<object>'` — missing rows mean no FLS. Add `<fieldPermissions>` and redeploy.
+4. Check record sharing: can the user see this specific row?
+   → **gate:** `SELECT Id FROM <Object__c> WHERE Id = '<recordId>'` as the user — zero rows means a sharing gap. Check OWD, role hierarchy, and sharing rules; grant access at the appropriate layer.
+5. Confirm fix end-to-end: repeat the user's original action (report, UI field, SOQL query) and confirm no error.
+   → **gate:** field returns a value; no CRUD/FLS/sharing error messages.
+
+---
+
+### 3. Safely deactivate managed-package automation in a sandbox first
+
+1. Reproduce the mystery field change in a sandbox: trigger the DML that causes it, then check Setup Audit Trail and active Workflow Rules/Flows filtered by the package namespace.
+   → **gate:** confirm the package automation is identified (namespace + rule/flow name visible in Setup).
+2. In the sandbox, deactivate the automation (Workflow Rule: Deactivate button; Flow: Deactivate version).
+   → **gate:** re-run the DML and confirm the field change no longer occurs; run affected test classes to confirm no regressions.
+3. Check downstream dependencies: reports, other flows, or integrations that relied on the automated value.
+   → **gate:** list of dependent components reviewed; no critical downstream failures in sandbox.
+4. Create a change set or SFDX metadata snapshot of the deactivation (for documentation); then deactivate in production.
+   → **gate:** Setup Audit Trail in production shows the deactivation event; re-run the DML and confirm behavior matches sandbox.
 
 ---
 
@@ -292,6 +347,18 @@ Read this first. Each rule is concrete and imperative.
 - [references/sales-service-detail.md](references/sales-service-detail.md) — deep detail for Sales Cloud (lead assignment, account models, campaigns), Service Cloud (entitlements, milestones, Omni-Channel, Knowledge), and AppExchange.
 
 ---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-administrator.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ## Disclaimer
 

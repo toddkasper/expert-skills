@@ -18,7 +18,7 @@ React Native lets you build iOS and Android apps in JavaScript/TypeScript using 
 Key shifts from the web:
 - No DOM, no CSS — layout is Flexbox-only via `StyleSheet`, components are `View`/`Text`/`Image`, not `div`/`span`/`img`
 - Two threads that must stay unblocked — the JS thread and the UI/main thread; dropped frames come from overloading either
-- New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory from Expo SDK 55+)
+- New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory from Expo SDK 55+) `[volatile — verify live]`
 - Ship cycle is different — JS-only changes can be pushed OTA via EAS Update; anything touching native code requires a new store binary
 
 > **Load this skill when…** building or reviewing a React Native or Expo mobile app; debugging dropped frames, list performance, or native module integration; working with EAS Build/Submit/Update or the New Architecture; handling iOS/Android platform differences or permissions.
@@ -27,6 +27,15 @@ Key shifts from the web:
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md). Load that file when looking up official docs or library links.
 
 > **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
+---
+
+## Uncertainty & Escalation
+
+- **Always re-verify live:** Expo SDK versions and React Native releases change frequently — New Architecture defaults, SDK-required library minimum versions, and EAS Update behavior evolve each cycle. `[volatile — verify live]` marks apply to: New Architecture mandatory adoption (default RN 0.76+, mandatory Expo SDK 55+ — `[volatile — verify live]`, check `expo` version in `package.json`); Expo SDK version-specific library minimums (React Navigation, Reanimated, Gesture Handler version gates — `[volatile — verify live]`); `runtimeVersion` behavior for EAS Update (match semantics may change — `[volatile — verify live]`); iOS App Store SDK requirement (currently iOS 26 SDK from April 2026 — `[volatile — verify live]`, advances annually); Android target API level floor (`[volatile — verify live]`, check Google Play policy for current minimum). Always run `npx expo-doctor@latest` after any SDK upgrade to catch compatibility issues.
+- **Live wins:** the installed Expo SDK / RN version's actual behavior, [docs.expo.dev](https://docs.expo.dev), and [reactnative.dev](https://reactnative.dev) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** production store submissions (iOS App Store, Google Play); EAS Update pushes to a production channel (irreversible reach); major Expo SDK upgrades on a live app; Android keystore rotation or loss; permission message changes (require new binary — cannot be OTA'd).
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
 ---
 
@@ -255,14 +264,14 @@ eas update --branch production --message "Fix login crash"
 
 ### App store requirements (as of 2026)
 
-- **iOS:** requires building with the iOS 26 SDK or later (Apple updated this requirement for apps submitted from April 2026). Privacy manifest required. Account deletion required if the app has account creation. AI transparency disclosure required if the app uses external AI services.
+- **iOS:** requires building with the iOS 26 SDK or later (Apple updated this requirement for apps submitted from April 2026) `[volatile — verify live]`. Privacy manifest required. Account deletion required if the app has account creation. AI transparency disclosure required if the app uses external AI services.
 - **Android:** target API level must meet Google Play's minimum (verify the current floor at Google Play policy — it advances annually).
 
 ---
 
 ## 5. New Architecture — JSI, Fabric, TurboModules
 
-The New Architecture is the default from React Native 0.76+ and mandatory from Expo SDK 55+ (cannot be disabled).
+The New Architecture is the default from React Native 0.76+ and mandatory from Expo SDK 55+ (cannot be disabled). `[volatile — verify live]`
 
 ### The three components
 
@@ -320,6 +329,34 @@ Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Ship an OTA update safely (match runtimeVersion → EAS Update → verify reach, know what needs a new build)
+
+1. Before publishing, confirm the change is OTA-safe: JS/TS logic changes, React component updates, and bundled asset changes are OTA-safe. Any change to native modules, `ios/` or `android/` directories, `Info.plist` values, `AndroidManifest.xml` permissions, or Expo SDK modules with native code requires a new binary. → gate: run `git diff --name-only HEAD~1` — if any file under `ios/`, `android/`, or `app.json`'s `plugins`/`android`/`ios` arrays changed, this update needs a new build.
+2. Confirm the `runtimeVersion` in `app.json` matches the production binary. If native code changed since the last binary, bump `runtimeVersion` first and publish a new binary before sending an update. → gate: `eas build:list` shows the production channel build's runtime version equals `app.json`'s `runtimeVersion`.
+3. Publish the update: `eas update --branch production --message "description of change"`. → gate: the command completes without errors and prints an update ID.
+4. Monitor rollout: `eas update:list --branch production` shows the new update. Check Expo Dashboard for "reached" count — allow 15–30 min for users to pick up the update on app foreground. → gate: reached count is growing; no new crash reports in the monitoring tool.
+5. If a bad update ships, immediately publish a rollback: republish the previous known-good JS bundle (`eas update --branch production --message "rollback" --republish --group <previous-group-id>`). Do not wait for a new binary for JS-level bugs.
+
+### Workflow 2 — Add a native permission (config plugin → request flow → rebuild)
+
+1. Install the Expo SDK module that requires the permission (e.g., `npx expo install expo-camera`). The module's config plugin auto-adds the required entries to `Info.plist` and `AndroidManifest.xml` at prebuild time. → gate: check `app.json`'s `plugins` array — the module should be listed (some auto-register, some require explicit addition).
+2. For custom permission messages (required on iOS), add to `app.json`: `"ios": { "infoPlist": { "NSCameraUsageDescription": "Used to scan barcodes." } }`. iOS will reject App Store submissions without descriptive usage strings. → gate: the string is present in `app.json`; it is descriptive (not "needed for the app").
+3. Run `npx expo prebuild --clean` to regenerate native directories from the updated `app.json`. → gate: `ios/YourApp/Info.plist` contains the usage description key; `android/app/src/main/AndroidManifest.xml` contains the permission.
+4. Build a new binary: `eas build --platform all --profile preview` (for testing) or `--profile production`. This step is mandatory — permission changes cannot be shipped OTA. → gate: build completes; install on a physical device (not simulator) to test permission prompts.
+5. In the JS code, request the permission at the appropriate moment (before first use, not at app launch). Handle all three status outcomes: `granted` → proceed; `denied` → show a message with a button to `Linking.openSettings()`; `undetermined` → call the request API. → gate: on a fresh install, the system permission dialog appears at the correct moment; denying it shows the in-app guidance without a crash.
+
+### Workflow 3 — Optimize a long list (FlatList/FlashList: keyExtractor, getItemLayout, windowSize)
+
+1. Identify whether items are homogeneous (same component type, same approximate height) or heterogeneous. Homogeneous lists > ~100 items: use FlashList (`@shopify/flash-list`). Heterogeneous or shorter lists: use FlatList. → gate: FlashList requires New Architecture (SDK 55+ has it mandatory — verify).
+2. Provide `keyExtractor` returning a unique stable string from the item's data (e.g., `item.id.toString()`), never the array index. → gate: change the data order in state; confirm no unexpected component unmounting/remounting in React DevTools.
+3. If all items have the same height, provide `getItemLayout`: `(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })`. This enables instant `scrollToIndex` and removes layout-measuring overhead. → gate: `flatListRef.current.scrollToIndex({ index: 50 })` completes without "cannot scroll to index" warning.
+4. Tune `windowSize` (default 21 — 10 screens above + 10 below + 1 visible). For heavy items (images, complex layouts), lower to 5–11 to reduce memory. For fast-scroll lists, keep it higher. → gate: profile in a release build with Hermes; JS thread stays under 16ms per frame while scrolling.
+5. Extract `renderItem` to a stable function outside the render body or use `useCallback`. Wrap the item component in `React.memo`. → gate: React DevTools Profiler shows items that leave the viewport as "Did not render" when parent state changes unrelated to the list data.
+
+---
+
 ## Decision Scenarios
 
 **Scenario 1 — Inline arrow in `renderItem` defeats `React.memo` on list items**
@@ -356,6 +393,20 @@ Further scenarios: [references/scenarios.md](references/scenarios.md)
 - **DO** plan iOS permission messages before the first production release — they cannot be changed OTA
 - **DON'T** lose the Android keystore — it is tied to the Play Store listing and unrecoverable
 - **DO** verify library compatibility with `npx expo-doctor@latest` before upgrading Expo SDK versions
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/react-native.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 

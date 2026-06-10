@@ -26,6 +26,15 @@ No vendor certification exists for React. This playbook encodes the working comp
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** React evolves rapidly — hooks, concurrent features, and the React Compiler change behavior across minor versions. `[volatile — verify live]` marks apply to: React Compiler availability and defaults (production-ready late 2025 — check the project's `babel-plugin-react-compiler` or `eslint-plugin-react-compiler` version before assuming it is active); `useActionState` and `useOptimistic` (React 19+ only — `[volatile — verify live]`); React 18 batching behavior in non-React-managed event handlers (verify with React 18+); TanStack Query and SWR API surface (major-version breaking changes — always check installed version). Check `react` in `package.json` — React 18 and 19 differ on form actions, optimistic updates, and compiler support.
+- **Live wins:** the installed React version's actual behavior and [react.dev](https://react.dev) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** upgrading from React 17→18 or 18→19 in a production app (concurrent mode and batching changes can surface latent bugs); removing `StrictMode` from a production app; major data-fetching library upgrades (TanStack Query v4→v5 API changes); production deploys.
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+---
+
 ## 1. Components, Hooks & State
 
 ### Component fundamentals
@@ -110,7 +119,7 @@ Rendering = calling your component function to produce a new JSX tree. React com
 
 ### When to memoize — and when not to
 
-Default: don't. Re-renders are cheap unless profiling shows otherwise. The React Compiler (stable as of late 2025, production-ready) automatically inserts the equivalent of `React.memo`, `useMemo`, and `useCallback` where they're beneficial — in compiler-enabled projects, manual memoization is usually redundant.
+Default: don't. Re-renders are cheap unless profiling shows otherwise. The React Compiler (stable as of late 2025, production-ready) `[volatile — verify live]` automatically inserts the equivalent of `React.memo`, `useMemo`, and `useCallback` where they're beneficial — in compiler-enabled projects, manual memoization is usually redundant.
 
 Without the compiler, apply the trio only after measuring:
 
@@ -160,8 +169,8 @@ React itself has no built-in data-fetching — use a library that handles cachin
 | Need | Tool |
 |---|---|
 | Server state (remote data, REST/GraphQL) | TanStack Query (React Query) or SWR |
-| Optimistic updates before server confirmation | `useOptimistic` (React 19) or TanStack Query's `optimisticUpdate` |
-| Form submission with loading/error state | `useActionState` (React 19) replaces the `useState` + `onSubmit` + loading flag pattern |
+| Optimistic updates before server confirmation | `useOptimistic` (React 19) `[volatile — verify live]` or TanStack Query's `optimisticUpdate` |
+| Form submission with loading/error state | `useActionState` (React 19) `[volatile — verify live]` replaces the `useState` + `onSubmit` + loading flag pattern |
 | Client/global UI state | `useState` / `useReducer` + context, or Zustand |
 | Complex cross-component state | Redux Toolkit or Zustand |
 
@@ -266,6 +275,34 @@ React renders to the DOM — all standard HTML accessibility rules apply. React-
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Place state correctly (compute-during-render vs lift vs key-reset — avoid effect-sync)
+
+1. Ask: "Can this value be derived from existing state or props?" If yes, compute it during render — no `useState`, no `useEffect`. → gate: removing the derived state and computing inline produces identical UI with no console warnings.
+2. Ask: "Does only one component need this value?" If yes, keep it local with `useState` in that component. Move on.
+3. Ask: "Do two sibling components need the same value?" Lift state to their closest common ancestor. Pass as props. → gate: both siblings render the same value; changing it in one sibling updates the other.
+4. Ask: "Should a child reset all its state when a controlling prop changes?" Give the child a `key` equal to the controlling prop: `<Form key={userId} />`. Do not write `useEffect(() => { setState(prop) }, [prop])`. → gate: change the controlling prop; confirm the child's internal state resets cleanly (React DevTools Components tab shows the instance unmounted and remounted).
+5. Ask: "Is this server/remote data?" Use TanStack Query or SWR — not `useEffect + fetch + useState`. → gate: remove the `useEffect` + `fetch`; queries deduplicate, cache, and handle loading/error states automatically.
+
+### Workflow 2 — Diagnose an extra/infinite re-render (profiler → identity/deps → memo decision)
+
+1. Open React DevTools Profiler. Record a session covering the unexpected re-render. Click the component that re-renders unexpectedly — the "Why did this render?" panel lists the prop or state that changed. → gate: you can name the specific prop/state/context value that triggered the render.
+2. If the triggering value is an object or function, check whether its reference is stable. Inline `{}` and `() => {}` in render produce a new reference every render. → gate: `console.log(Object.is(prev, next))` (or React DevTools) confirms the reference is changing.
+3. If the reference instability is in a context value, wrap with `useMemo(() => ({ … }), [deps])` at the provider. If it is a callback prop, wrap with `useCallback(fn, deps)` at the parent. → gate: re-record in Profiler; the component should no longer appear in the flame chart for unrelated parent renders.
+4. For infinite render loops: check whether a `useEffect` sets state unconditionally (no condition before `setState`) or whether its deps array contains an unstable object that it also updates. → gate: enable `eslint-plugin-react-hooks` — `exhaustive-deps` warns on missing/extra deps; fix the root cause, not the warning.
+5. Only add `React.memo` after confirming the re-render is measurably slow (Profiler "render duration" > 2ms under real load). In React Compiler projects, skip manual memo entirely. → gate: Profiler shows reduced render count without introducing stale prop bugs.
+
+### Workflow 3 — Test a component's behavior with React Testing Library
+
+1. Render the component with `render(<MyComponent …/>)`. Import from `@testing-library/react`.
+2. Query for elements with the highest-confidence query first: `getByRole('button', { name: /submit/i })`, then `getByLabelText`, then `getByText`, never `getByClassName`. → gate: the query finds exactly one element; if it throws "Unable to find…", run `screen.debug()` to inspect the rendered tree.
+3. Interact using `@testing-library/user-event`: `await userEvent.click(button)`, `await userEvent.type(input, 'hello')`. Do not use `fireEvent` unless you need low-level synthetic events. → gate: `userEvent.setup()` is called once per test (v14+ API); all interactions are awaited.
+4. For async outcomes (data loaded, UI updated after an API call), use `await screen.findByText('Expected text')` or `await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())`. Never query synchronously for async results. → gate: the test passes consistently without artificial `setTimeout` or `sleep` calls.
+5. Assert on what the user sees, not on internal state. `expect(screen.getByRole('status')).toHaveTextContent('Saved')` — not `expect(component.state.saved).toBe(true)`. → gate: refactoring the component's state shape without changing visible behavior does not break the test.
+
+---
+
 ## Decision Scenarios
 
 **Scenario 1 — Context provider value object recreated every render causes all consumers to re-render**
@@ -307,6 +344,20 @@ Read this before writing or reviewing any React code.
 - **DO** use `findBy*` or `waitFor` for anything that renders after an async operation.
 - **DO** use `userEvent` (not `fireEvent`) for interaction in tests.
 - **DO** verify against official react.dev documentation before treating any of the above as ground truth — React evolves.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/react.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 

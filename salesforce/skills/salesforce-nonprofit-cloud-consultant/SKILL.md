@@ -25,7 +25,7 @@ This file covers **two related but distinct** Salesforce certifications for nonp
 
 Both exams once shared a single Trailhead credential page and are still discussed interchangeably in the community, which causes confusion. Read the official exam guide carefully to confirm which version you are registering for.
 
-**Picking the right model at decision time:** an org running the **NPSP managed package** maps to **NP-Con-101**; an org running **Industries-based Nonprofit Cloud** maps to **NP-Con-102**. NPSP is the legacy model Salesforce is sunsetting in favor of Nonprofit Cloud over the coming years. **Default all operational decisions to the NPSP (101) model unless someone has confirmed Nonprofit Cloud / Industries is enabled** — verify by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager): NPSP objects carry `npe01__` / `npo02__` / `npsp__` / `npe4__` / `npe5__` namespaces, while NPC objects are namespace-free Industries standard objects like `Gift`, `Program`, and `ProgramEnrollment`.
+**Picking the right model at decision time:** an org running the **NPSP managed package** maps to **NP-Con-101**; an org running **Industries-based Nonprofit Cloud** maps to **NP-Con-102**. NPSP is the legacy model Salesforce is sunsetting in favor of Nonprofit Cloud over the coming years `[volatile — verify live]`. **Default all operational decisions to the NPSP (101) model unless someone has confirmed Nonprofit Cloud / Industries is enabled** — verify by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager): NPSP objects carry `npe01__` / `npo02__` / `npsp__` / `npe4__` / `npe5__` namespaces `[volatile — verify live]`, while NPC objects are namespace-free Industries standard objects like `Gift`, `Program`, and `ProgramEnrollment`.
 
 > **Deeper context:** Study resources (official Salesforce + community, hands-on environments), the Relevance map, and full deep-dive operational detail live in:
 > - [references/study-resources.md](references/study-resources.md) — study paths, links, certification sequence recommendation, exam-topic ↔ operational-rule relevance table
@@ -42,6 +42,15 @@ Both exams once shared a single Trailhead credential page and are still discusse
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Uncertainty & Escalation
+
+- **Always re-verify live:** volatile facts in this skill include NPSP namespace versions (`npe01__`, `npo02__`, `npsp__` namespaces may shift across managed package upgrades `[volatile — verify live]`), TDTM handler names and activation fields, CRLP rollup field names, NPC Permission Set License names and required permsets `[volatile — verify live]`, and whether the July 2025 credential split is reflected in a given org's contract — confirm all against the live org's installed package version and current Salesforce Help.
+- **Live wins:** when the live org or official documentation contradicts a statement in this file, trust the live source and log the discrepancy via the Feedback protocol below.
+- **Escalate to a human before proceeding on:** disabling or permanently deactivating TDTM handlers in a production org; any bulk delete or hard delete of Opportunity, Contact, or Account records in production; mass re-parenting Contacts to different Households; recalculating rollups on a production org with > 100k records without a maintenance window plan.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. If you act on an untagged fact and the live system disagrees, file feedback — do not silently trust this file over the live org.
 
 ---
 
@@ -168,6 +177,33 @@ Read this first. Each rule is imperative and concrete.
 
 ---
 
+## Executable Workflows
+
+### 1. Configure an Enhanced Recurring Donation end-to-end
+
+1. Verify ERD is enabled: NPSP Settings → Recurring Donations → Recurring Donations Enhancement. → **gate: `npe03__Recurring_Donation__c` describe includes `RecurringType__c` field (MCP / `sf sobject describe --sobject npe03__Recurring_Donation__c` / Object Manager).**
+2. Create or confirm the Recurring Donation record: set `RecurringType__c` (Open vs Fixed), `npe03__Amount__c`, `npe03__Installment_Period__c`, and `npe03__Date_Established__c`. Link to a Contact with a valid Household Account. → **gate: save succeeds with no validation errors; `npe03__Next_Payment_Date__c` is populated automatically.**
+3. Confirm the first Opportunity installment was created: `SELECT Id, Amount, CloseDate, StageName FROM Opportunity WHERE npe03__Recurring_Donation__c = '<RD Id>'`. → **gate: at least one installment Opportunity exists with the expected amount and close date.**
+4. Update the gift amount (simulate a donor upgrade): edit the RD Amount field → choose to apply to all open installments. → **gate: query the open Opportunities — all show the updated amount.**
+5. Verify rollups: check `npo02__TotalOppAmount__c` on the donor's Contact record matches the sum of their Closed Won Opportunities. → **gate: totals match; if not, run NPSP Settings → Bulk Data Processes → Recalculate Rollups.**
+
+### 2. Bulk-load gifts with TDTM disabled → load → re-enable → recalculate rollups
+
+1. In sandbox, identify the TDTM handlers to disable: query `SELECT Name, npsp__Active__c, npsp__Object__c FROM npsp__Trigger_Handler__c WHERE npsp__Active__c = true AND npsp__Object__c IN ('Opportunity','Contact','Account')`. → **gate: list of active handlers noted; you will re-enable all of them after the load.**
+2. Disable the relevant handlers: update `npsp__Active__c = false` on each handler row (via Data Loader or SOQL in Developer Console). → **gate: query confirms `npsp__Active__c = false` for all targeted handlers.**
+3. Run the bulk load (Data Loader upsert on External ID). → **gate: load log shows 0 failures; row count in target object matches source file.**
+4. Re-enable all handlers: update `npsp__Active__c = true`. → **gate: query `SELECT Name FROM npsp__Trigger_Handler__c WHERE npsp__Active__c = false` returns 0 rows.**
+5. Run NPSP rollup recalculation: NPSP Settings → Bulk Data Processes → Recalculate Rollups. → **gate: spot-check 3–5 donor Contacts — `npo02__TotalOppAmount__c` matches the sum of their Closed Won Opportunities.**
+
+### 3. Set up hard/soft credit and verify giving totals don't double-count
+
+1. Confirm the primary OCR role is set correctly on each Opportunity: `SELECT Role, IsPrimary, ContactId FROM OpportunityContactRole WHERE OpportunityId = '<id>'`. → **gate: exactly one OCR has `IsPrimary = true` and `Role = 'Donor'` (or your org's configured hard-credit role).**
+2. Enable Household Soft Credits: NPSP Settings → Contacts → Household Soft Credit → configure the Soft Credit Roles. → **gate: household members of the primary donor appear as soft-credit OCRs after NPSP processes the gift.**
+3. Verify soft-credit rollup is separate: on the donor's Contact, confirm `npo02__TotalOppAmount__c` (hard credit) does NOT include soft-credit amounts — compare against `npo02__Soft_Credit_Total__c`. → **gate: hard total = sum of primary OCR Opportunities only; soft total = recognition-only; no double-count.**
+4. Build the "total raised" report using hard-credit Opportunities only: report type "Opportunities with Contact Roles," filter `IsPrimary = true`, sum Amount. → **gate: report total matches the sum computed in step 3; excludes soft-credit rows.**
+
+---
+
 ## Decision scenarios
 
 These scenarios test judgment in the highest-consequence operational situations. Each covers a specific gotcha where the competent move and the tempting-but-wrong move look nearly identical on the surface.
@@ -237,6 +273,20 @@ These scenarios test judgment in the highest-consequence operational situations.
 ## Study resources & relevance
 
 Study resources (official Salesforce + community), the exam-topic → operational-rule relevance table, and the certification sequence recommendation are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-nonprofit-cloud-consultant.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

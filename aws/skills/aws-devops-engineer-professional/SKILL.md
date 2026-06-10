@@ -33,6 +33,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live — volatile facts:** service quotas (e.g., default CodePipeline pipelines per region `[volatile — verify live]`, CodeBuild concurrent builds per account `[volatile — verify live]`), EC2 instance type availability by region `[volatile — verify live]`, CloudWatch high-resolution metric pricing `[volatile — verify live]`, CodeDeploy deployment config names and timeout defaults `[volatile — verify live]`, and any feature announced after the `last-reviewed` date in this file's frontmatter.
+- **Live wins:** when the live AWS account, CLI output, or official AWS docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
+- **Escalate to a human — do not silently execute:** deleting CloudFormation stacks or stack sets; IAM role/SCP/permission-boundary changes; KMS key policy modifications; enabling or disabling GuardDuty or CloudTrail; any action that incurs significant cost (large Snowball order, Reserved Instance purchase, EC2 fleet scaling); opening security-group or network-boundary rules; force-merging or runner policy changes in enterprise settings.
+- **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with AWS service updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
+
+---
+
 ## 1. SDLC Automation (22%)
 
 The heaviest domain. Master the pipeline services, deployment strategies, and how they compose differently for EC2, ECS/EKS, Lambda, and multi-account environments.
@@ -301,6 +310,54 @@ Security is automated or it is not done consistently. Every security control tha
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Ship a Blue/Green Deploy with Automated CloudWatch-Alarm Rollback
+
+1. Create a CodeDeploy application (type `ECS` or `Lambda`) and deployment group with `BlueGreenDeploymentConfiguration` pointing to the ALB listener and target groups.
+   → gate: `aws codedeploy get-deployment-group --application-name <app> --deployment-group-name <dg> --query 'deploymentGroupInfo.blueGreenDeploymentConfiguration'` confirms hook timeouts and termination settings.
+2. Create (or update) a CloudWatch alarm on the error-rate or latency metric you want to guard (e.g., `HTTPCode_Target_5XX_Count > 10 for 1 datapoint`). Note the alarm ARN.
+   → gate: `aws cloudwatch describe-alarms --alarm-names <alarm>` — confirm state is `OK` before deploying; deploying into an already-`ALARM` state causes immediate rollback.
+3. Wire the alarm ARN into the CodeDeploy deployment group as a rollback alarm: `aws codedeploy update-deployment-group ... --alarm-configuration alarms=[{name=<alarm-name>}],enabled=true,ignorePollAlarmFailure=false`.
+   → gate: re-check `get-deployment-group` to confirm `alarmConfiguration.enabled: true`.
+4. Trigger the deployment (from CodePipeline or directly via `aws codedeploy create-deployment`). Monitor `aws codedeploy get-deployment --deployment-id <id>` — watch lifecycle events progress through `BeforeInstallHook` → `AfterInstallHook` → `AfterAllowTestTraffic` → `BeforeAllowTraffic` → `AfterAllowTraffic`.
+   → gate: confirm new task set / Lambda version is receiving test traffic at the ALB test port before `AfterAllowTestTraffic` hook completes.
+5. Once traffic shifts to 100%, verify the alarm remains in `OK` state for the configured evaluation period. If it fires, CodeDeploy automatically rolls traffic back to the previous version.
+   → gate: `aws codedeploy get-deployment --deployment-id <id> --query 'deploymentInfo.status'` — `Succeeded` confirms completion; `Stopped` with `autoRollbackConfiguration` message confirms alarm-triggered rollback.
+6. After successful cutover, confirm old (blue) instances or task sets are terminated per the `terminateBlueInstancesOnDeploymentSuccess` configuration — stale blue capacity is a cost leak.
+
+---
+
+### Workflow 2 — Stand Up a CodePipeline with Test/Approval Gates
+
+1. Create an S3 artifact bucket (SSE-KMS if cross-account) and a pipeline service role with least-privilege: separate source-read, build, and deploy actions; no role gets all three.
+   → gate: `aws s3api get-bucket-encryption --bucket <bucket>` confirms KMS encryption; `aws iam simulate-principal-policy` confirms the build role cannot invoke CodeDeploy.
+2. Define the pipeline stages in order: **Source** (CodeConnections/CodeCommit/S3) → **Build** (CodeBuild) → **Test** (separate CodeBuild project targeting staging) → **ManualApproval** → **Deploy** (CodeDeploy/ECS/CFN).
+   → gate: `aws codepipeline get-pipeline --name <pipeline>` returns all stages; confirm `actionTypeId.category: Approval` is present between Test and Deploy.
+3. Configure the CodeBuild test stage buildspec to exit non-zero on test failure (any test framework's non-zero exit propagates as a pipeline failure, blocking the approval gate).
+   → gate: run `aws codepipeline start-pipeline-execution --name <pipeline>`, then deliberately fail a test — confirm the pipeline stops at the Build/Test stage with `Failed` status and does not reach Approval.
+4. Set up SNS notification for the ManualApproval action so approvers receive an email/Slack notification with the approval URL.
+   → gate: `aws codepipeline get-pipeline-state --name <pipeline> --query 'stageStates[?stageName==`ManualApproval`]'` shows `InProgress` with the approval token when awaiting review.
+5. Approve via console or CLI (`aws codepipeline put-approval-result`) and confirm the Deploy stage executes successfully.
+   → gate: `aws codedeploy list-deployments --application-name <app> --query 'deployments[0]'` then `get-deployment` to confirm `Succeeded`.
+
+---
+
+### Workflow 3 — Wire Automated Remediation (Config Rule → EventBridge → SSM Automation)
+
+1. Enable the desired AWS Config managed rule (e.g., `s3-bucket-public-read-prohibited`) in the account/region. Confirm the rule evaluates existing resources: `aws configservice get-compliance-details-by-config-rule --config-rule-name s3-bucket-public-read-prohibited`.
+   → gate: at least one resource must appear as `COMPLIANT` or `NON_COMPLIANT`; `NO_RESULTS` means Config is not recording that resource type.
+2. Author an SSM Automation document (or use the managed `AWS-DisableS3BucketPublicReadWrite`) that remediates the non-compliant state. Test it manually against a non-production bucket first.
+   → gate: `aws ssm start-automation-execution --document-name <doc> --parameters BucketName=<test-bucket>` — confirm execution completes with `Success` and the bucket policy is updated.
+3. Create an EventBridge rule matching `{"source": ["aws.config"], "detail-type": ["Config Rules Compliance Change"], "detail": {"configRuleName": ["s3-bucket-public-read-prohibited"], "newEvaluationResult": {"complianceType": ["NON_COMPLIANT"]}}}`, targeting the SSM Automation document as the target (via the SSM Automation EventBridge target type) with an IAM role that allows `ssm:StartAutomationExecution`.
+   → gate: `aws events describe-rule --name <rule>` confirms the rule is `ENABLED`; `aws events list-targets-by-rule --rule <rule>` confirms the SSM Automation ARN is the target.
+4. Trigger a non-compliance event (temporarily make a test bucket public) and confirm the EventBridge rule fires and the SSM Automation execution starts.
+   → gate: `aws ssm list-automation-executions --filters Key=StartTimeBefore,Values=<now>` — most recent execution should reference the test bucket and show `InProgress` → `Success`.
+5. Verify the Config rule now shows the resource as `COMPLIANT` within the next evaluation cycle (typically within a few minutes of the remediation completing).
+   → gate: `aws configservice get-compliance-details-by-config-rule --config-rule-name s3-bucket-public-read-prohibited` — test bucket moves from `NON_COMPLIANT` to `COMPLIANT`.
+
+---
+
 ## Decision Scenarios
 
 **Scenario 1 — ECS blue/green stuck: traffic never cuts over**
@@ -340,6 +397,22 @@ Each rule is concrete and imperative.
 ---
 
 > **Study resources** — official exam guide, Skill Builder, whitepapers, and community guides are in [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/aws-devops-engineer-professional.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

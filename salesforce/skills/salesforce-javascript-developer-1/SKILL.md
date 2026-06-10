@@ -47,6 +47,21 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** `[volatile — verify live]` items include: the Node.js runtime version pinned by a given Lambda/CDK toolchain, Jest/Vitest/LWC-Jest version compatibility, LWC Lightning Web Security vs. Locker Service behavior per release, and `@wire` adapter API names across Salesforce API versions.
+- **Live wins:** when this file and the live org or official docs disagree (e.g. a decorator behavior changed in a recent release), trust the live system and flag this skill as stale via the Feedback protocol below.
+- **Escalate to a human:** surface — don't silently decide — any operation that is irreversible or has security/spend implications: rendering untrusted input to the DOM in a way that bypasses LWS sandboxing, writing PII to browser storage or logs, publishing a component to a production org with unhandled Promise rejections or an XSS vector, or making changes to production dependencies that could break other consumers.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` (changes across releases or environments) or `[opinion — house style]` (defensible but not universal).
+
+Inline volatile tags applied:
+- The Node.js runtime version your environment pins `[volatile — verify live]` — Lambda, CDK, and Salesforce Functions runtimes update independently; check the platform's current runtime docs.
+- LWC Lightning Web Security (LWS) vs. Lightning Locker behavior `[volatile — verify live]` — sandbox enforcement model has evolved across releases; verify in your org's current API version.
+- `@track` deep-reactivity behavior since Spring '20 `[volatile — verify live]` — verify against your org's current API version if on an older release.
+- Jest/LWC-Jest version compatibility `[volatile — verify live]` — `@salesforce/sfdx-lwc-jest` version requirements change with SFDX CLI and API version updates; check the current package README.
+
+---
+
 ## Operational Knowledge by Topic
 
 ### Variables, Types, and Collections (23%)
@@ -376,6 +391,51 @@ holds a strong reference and prevents GC of detached components.
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Wire an LWC to Apex with `@wire` (handle error + loading states) + a Jest test
+
+1. Confirm the Apex method exists and is `@AuraEnabled(cacheable=true)`; describe the object to verify field API names before coding.
+   → gate: Apex method is visible in the org; field names match describe output.
+2. In the LWC JS, import the method: `import getItems from '@salesforce/apex/MyController.getItems';` and decorate the property: `@wire(getItems, { recordId: '$recordId' }) wiredResult;`.
+   → gate: `wiredResult` has both `.data` and `.error` branches handled in the template and controller.
+3. In the template, guard on `wiredResult.data` for content and `wiredResult.error` for an error message; add a loading spinner while neither is populated.
+   → gate: template compiles; all three states (loading, data, error) are visible in the LWC Jest test.
+4. Write the LWC Jest test: mock `@salesforce/apex/MyController.getItems` with `jest.mock`; emit a success value with `mockResolvedValue` and an error with `mockRejectedValue`; assert both branches render correctly.
+   → gate: `npm run test` passes with assertions on rendered content — not just "no error thrown."
+5. Deploy to a sandbox and describe the object to confirm the `@wire` field names resolve before pushing to production.
+   → gate: no `INVALID_FIELD` in the browser console; component renders data in the sandbox.
+
+---
+
+### Workflow 2 — Debug a reactivity / `this`-binding bug (reassign new reference / arrow handler)
+
+1. Reproduce the symptom: identify whether the component fails to re-render (reactivity) or throws a TypeError referencing `undefined` on `this` (binding).
+   → gate: browser console or LWC Jest output confirms which class of failure.
+2. For **reactivity**: locate every mutation of the reactive property (`push`, `splice`, direct property set on a nested object). Replace each mutation with a new-reference assignment (`this.items = [...this.items, x]` or spread for objects).
+   → gate: LWC Jest test that asserts item count before/after the handler now passes.
+3. For **`this`-binding**: locate the method passed as a bare callback (e.g. `addEventListener('click', this.handleClick)`). Convert to an arrow class field (`handleClick = () => { … }`) or add `.bind(this)` at registration time. Keep a stable reference so `removeEventListener` can deregister it.
+   → gate: the TypeError is gone; the LWC Jest test confirms the handler fires with the correct `this` context.
+4. Verify the fix does not leak: confirm `removeEventListener` / `disconnectedCallback` still references the same function object.
+   → gate: DevTools Memory panel shows no growth in detached listeners after repeated mount/unmount.
+
+---
+
+### Workflow 3 — Add a field and surface it in an LWC end-to-end
+
+1. Add the field in SFDX metadata (`field-meta.xml`); add it to the target permset's `<fieldPermissions>` (`readable: true`, `editable: true`). Do NOT add it to a required field.
+   → gate: `sf project deploy` succeeds; SOQL `SELECT NewField__c FROM Object__c LIMIT 1` returns without `INVALID_FIELD`.
+2. Add the field to the page layout or Quick Action. If using a Quick Action, also change a non-field attribute (`<label>` or `<description>`) in the same deploy to bust the QA cache.
+   → gate: field appears in the Quick Action / layout in the sandbox UI.
+3. Import the field into the LWC: `import NEW_FIELD from '@salesforce/schema/Object__c.NewField__c';` and include it in `getRecord` fields or wire the Apex method.
+   → gate: describe the object to confirm the field API name before importing; wrong names fail silently.
+4. Write or update the LWC Jest test to cover the new field value in both the populated and empty states.
+   → gate: test suite passes; branch coverage includes the empty/null field path.
+5. Confirm FLS and rendering in the sandbox as the target user profile before deploying to production.
+   → gate: SOQL as the integration/agent user returns the field without error.
+
+---
+
 ## Decision scenarios
 
 ### Scenario 1 — LWC reactive array mutation
@@ -434,6 +494,22 @@ Two additional scenarios (fetch status-check omission, parallel vs. sequential A
 ## Study resources & relevance
 
 Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-javascript-developer-1.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

@@ -29,6 +29,21 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** `[volatile — verify live]` items include: Salesforce governor limit values (they are updated between releases), Bulk API 2.0 daily API allocation formulas, OAuth flow support in External Client Apps vs. Connected Apps, and Data Cloud / MuleSoft feature availability per license edition.
+- **Live wins:** when this file and the live org, release notes, or official docs disagree — for example, a governor limit that has changed in a recent release — trust the live system and flag this skill as stale via the Feedback protocol below.
+- **Escalate to a human:** surface — never silently execute — any operation that is irreversible, crosses a security boundary, or has compliance or spend implications: production data-model or sharing changes (object deletion, field removal, OWD tightening), security-boundary modifications (JWT key rotation, ECA policy changes, permission escalation for an integration user), destructive deploys, and any architecture decision that trades off the Trusted axis of Well-Architected.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+Inline volatile tags applied:
+- Synchronous governor limits table `[volatile — verify live]` — Salesforce adjusts limits between major releases; verify against the current Apex Developer Guide before using these numbers in a capacity design.
+- Daily API allocation formula `[volatile — verify live]` — Bulk API daily limits scale with license count per a formula Salesforce updates; check the current limits documentation.
+- External Client App (ECA) UI workflow `[volatile — verify live]` — ECA Policies tab path and Connected App migration behavior change with each release; confirm in your org's current Setup UI.
+- Data Cloud identity resolution and Calculated Insights behavior `[volatile — verify live]` — Data Cloud feature set evolves rapidly; verify feature availability and configuration steps in the current Data Cloud documentation.
+
+---
+
 ## System Architecture — operational rules
 
 **Stay single-org unless you have a hard reason to split.** Split into multiple orgs ONLY for: legal/data-residency separation, distinct business units with zero shared data, or M&A integration timelines. For a small single-entity org, a single Salesforce org is correct and any "let's add an org" instinct is wrong. Splitting costs you cross-org reporting, duplicated security-model maintenance, and middleware to sync shared Contacts.
@@ -204,21 +219,59 @@ OAuth flow decision table:
 
 ## Well-Architected & Multi-Cloud — operational rules
 
-**Score every proposal against Trusted / Easy / Adaptable.** The Salesforce Well-Architected framework is the explicit rubric the board uses. Every design choice should be defensible on all three axes: Trusted (secure, compliant, reliable), Easy (usable, supportable, low friction), and Adaptable (scalable, extensible, future-proof). When a trade-off sacrifices one axis, name it.
+**Score every proposal against Trusted / Easy / Adaptable** — every design choice is defensible on all three axes; when a trade-off sacrifices one, name it. **MuleSoft** is enterprise API mesh, not point-to-point glue. **Data Cloud** owns the Unified Profile when a 360 view across clouds is required. **Marketing Cloud** sees synchronized CRM copies, not live data — never assume otherwise.
 
-**MuleSoft is a managed middleware layer, not glue code.** Use MuleSoft (Anypoint) when you need an enterprise API mesh: multi-protocol transformation, centralized auth enforcement, reusable APIs across systems. Avoid when the integration is a single point-to-point SF→system sync — Named Credentials + Queueable or a simple Lambda covers that with far less overhead.
+Key one-liners (check Quick Reference below): score Trusted/Easy/Adaptable on every design; no MuleSoft for simple one-to-one SF↔system syncs; Marketing Cloud sees synchronized copies, not live CRM data.
 
-**Data Cloud (formerly CDP) owns the Unified Profile.** When the requirement is a 360 customer profile across Marketing Cloud, Commerce Cloud, and CRM, Data Cloud is the architectural answer, not custom ETL. Data Streams ingest, Identity Resolution merges, Calculated Insights publish back to CRM. For an AI use-case, Agentforce Agents consume Data Cloud Unified Profiles via grounding.
+Full worked examples — Well-Architected trade-off framing, MuleSoft vs. Named Credentials decision criteria, Data Cloud Identity Resolution, Marketing Cloud integration patterns, and stakeholder-facing defense communication: [references/communication-well-architected.md](references/communication-well-architected.md) — load when designing multi-cloud architecture or preparing an architectural defense presentation.
 
-**Marketing Cloud integration pattern:** Marketing Cloud Connect links a single Business Unit to a single SF org. Synchronized Data Extensions mirror standard CRM objects. For custom objects, use Automation Studio + API or Data Cloud as the bridge. Never assume Marketing Cloud SQL queries run in real-time against CRM data — they run on synchronized copies.
+---
 
-**Anti-patterns / red flags:**
-- Proposing MuleSoft for a simple one-to-one SF↔system sync.
-- Custom ETL pipeline where Data Cloud + Identity Resolution is the correct answer.
-- Assuming Marketing Cloud sees live CRM data — it sees synchronized copies.
-- A Well-Architected presentation that ignores the Easy or Adaptable axes.
+## Executable Workflows
 
-Deep dive with worked examples on Well-Architected framing, communication patterns, and stakeholder-facing trade-off presentation: [references/communication-well-architected.md](references/communication-well-architected.md) — load when preparing architectural defense presentations or stakeholder communication plans.
+### Workflow 1 — Design a cross-cloud integration (pick pattern → Named Credential → bulk-safe → verify)
+
+1. Identify the latency and reliability requirement: does the caller need an answer now (sync/request-reply), or can it wait (async/fire-and-forget)? Does data move in bulk (>1,000 rows) or record-by-record?
+   → gate: one row of the integration pattern table selected; rationale documented.
+2. Create a Named Credential + External Credential in the target org for the external endpoint. Store any secret in the credential store — never in Apex code or env vars.
+   → gate: a test callout from Apex `Http.send` using the Named Credential returns HTTP 200 without hard-coded URL.
+3. Design the write path to be idempotent: every SF write keyed on a stable External ID. For >1,000 rows, use Bulk API 2.0.
+   → gate: re-run the job twice; SOQL count of records for that External ID = 1 both times.
+4. Add a durable failure fallback: on SF write error, persist the payload and alert staff; implement 3-try exponential backoff.
+   → gate: simulate a write failure; confirm the payload lands in durable storage and an alert fires.
+5. Verify governor-limit headroom: confirm the integration path (including any trigger/Flow on the target object) stays under 150 DML / 100 SOQL / 10k DML rows per transaction. Use async (Queueable/Batch) if sync limits are at risk.
+   → gate: Apex debug log shows no governor-limit warnings on a representative batch size.
+
+---
+
+### Workflow 2 — Stand up secure cross-org access (JWT Bearer flow)
+
+1. Generate an RSA key pair. Store the private key in a secrets store (e.g. AWS SSM SecureString, Azure Key Vault). Never store it in an env var or commit it to source control.
+   → gate: private key retrievable only via the secrets store API; not present in any repo or CI variable.
+2. Create a Connected App (or External Client App) in the target Salesforce org: upload the certificate (public key), enable OAuth scopes, and restrict to the integration user's profile.
+   → gate: Connected App Consumer Key is captured (UI-only in ECA — do it now); App is saved.
+3. Assign the integration user to the Connected App / ECA via the Policies tab (ECA) or permset "Assigned Connected Apps" (Connected App). Confirm via `SetupEntityAccess` query — do not trust the UI "success."
+   → gate: `SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityId = '<AppId>' AND AssigneeId = '<UserId>'` returns a row.
+4. Test the JWT token exchange: sign a JWT assertion with the private key, POST to `https://<instance>/services/oauth2/token`, receive an access token.
+   → gate: access token returned with no `invalid_grant` or `unauthorized_client` error.
+5. Smoke-test the integration user's access: use the access token to run a describe + idempotent upsert + cleanup in the target org. Confirm FLS, object access, and no governor-limit errors.
+   → gate: describe returns the expected object; upsert creates exactly one record; cleanup removes it.
+6. Schedule annual key rotation; document the rotation runbook now, before you need it under pressure.
+
+---
+
+### Workflow 3 — Size an LDV data model (selectivity, skew, indexes)
+
+1. Estimate the record count for the object at 5-year growth. If projected count exceeds ~2M rows, classify as LDV and apply LDV design rules throughout.
+   → gate: documented record-count estimate with growth assumption.
+2. Identify every filter used in SOQL queries against this object. Confirm each filter column is indexed (standard indexed fields, External IDs, or custom indexes via Salesforce support request).
+   → gate: at least one leading indexed field in every production SOQL WHERE clause; no non-selective query paths remain.
+3. Check for ownership skew: if a single user or queue will own >10,000 records, that OWD + sharing model will produce a "fat node" in the sharing tree. Redesign OWD to Private + Sharing Rules, or use org-wide-default Public Read/Write if sharing is not sensitive, to avoid the skew calculation penalty.
+   → gate: no single owner accounts for >10% of the total row count, OR a Salesforce architect review has confirmed the sharing design is skew-safe.
+4. Verify query selectivity: run candidate SOQL with `EXPLAIN` (via Tooling API or Developer Console). Confirm the query uses an index (cost < 1); a table scan on an LDV object will trigger the *"non-selective query against large object"* error in production.
+   → gate: EXPLAIN returns `leadingOperationType: Index` for every production query path.
+5. Plan archival or soft-delete strategy before the object reaches LDV scale — retrofitting indexes or archival to a live LDV object is expensive.
+   → gate: archival policy documented and scheduled.
 
 ---
 
@@ -295,6 +348,22 @@ Five original scenarios covering the highest-value operational gotchas across CT
 - [references/communication-well-architected.md](references/communication-well-architected.md) — stakeholder communication patterns, architectural defense framing, and extended Well-Architected trade-off examples.
 
 For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-technical-architect.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

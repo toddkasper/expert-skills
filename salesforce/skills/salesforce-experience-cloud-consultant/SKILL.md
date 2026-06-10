@@ -41,6 +41,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** volatile facts in this skill include external license names and pricing tiers `[volatile — verify live]`, which OOTB components are available on LWR vs Aura (the list grows each release) `[volatile — verify live]`, ARO enablement restrictions, Spring '21+ guest-user hardening changes, and Account Role Optimization behavior at scale — confirm against current Salesforce release notes and your org.
+- **Live wins:** when the live org or official documentation contradicts a statement in this file, trust the live source and log the discrepancy via the Feedback protocol below.
+- **Escalate to a human before proceeding on:** guest-user profile CRUD/FLS changes in production (blast-radius risk); widening OWD or sharing rules for external users; enabling public self-registration on a production org; ARO enablement on an org with existing portal users; any change that affects PII or document visibility for unauthenticated users.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. If you act on an untagged fact and the live system disagrees, file feedback — do not silently trust this file over the live org.
+
+---
+
 ## 1. Scoping the Experience — Pick the Right Model First
 
 **Rule: decide the *user model* before anything else, because it locks your license,
@@ -140,11 +149,11 @@ users:
 ### External license cheat values
 
 - **Customer Community:** own records only, no peer sharing, no role hierarchy,
-  cheapest. Self-service support.
+  cheapest. Self-service support. `[volatile — verify live]`
 - **Customer Community Plus:** + role hierarchy, + reports/dashboards, + sharing
-  rules. Authenticated portals needing cross-visibility.
-- **Partner Community:** + Leads/Opps/Campaigns, role hierarchy. Resellers/channel.
-- **External Apps:** high object count, custom apps.
+  rules. Authenticated portals needing cross-visibility. `[volatile — verify live]`
+- **Partner Community:** + Leads/Opps/Campaigns, role hierarchy. Resellers/channel. `[volatile — verify live]`
+- **External Apps:** high object count, custom apps. `[volatile — verify live]`
 
 ---
 
@@ -396,6 +405,35 @@ load the relevant Trailhead trail alongside this skill.
 
 ---
 
+## Executable Workflows
+
+### 1. Stand up an external portal (license → template → sharing set → guest-user hardening → verify external access)
+
+1. Confirm My Domain is deployed to all users. → **gate: Setup → My Domain shows "Deployed to All Users."**
+2. Select the external license type (Customer Community / Plus / Partner / External Apps) based on the user model decision table in §1. → **gate: license type confirmed with business owner before proceeding.**
+3. Create the site: Setup → All Sites → New. Select a template (decision criteria: §4). → **gate: site is created in Inactive state; no public access yet.**
+4. Configure the guest profile: restrict CRUD/FLS to the minimum objects and fields the public flow needs. Remove any broad Read, Modify All, or PII FLS. → **gate: run Setup → Guest User Profile and confirm no object has more access than needed.**
+5. Add the sharing set: Setup → Sharing Sets → New. Link to the site, pick the profile, add the lookup-match rule (e.g. `Case.Contact = portal user's Contact`). → **gate: create a test Contact-linked record; log in as a test external user; confirm the record is visible.**
+6. Set the site to Published (Active). → **gate: visit the site URL as an incognito browser session and confirm the public home page loads; authenticated users can log in.**
+
+### 2. Provision + authenticate external users (SSO / self-registration / JIT)
+
+1. Decide the provisioning method (manual / bulk API / self-reg / JIT) using the volume/scenario decision table in §5. → **gate: method agreed before any user creation.**
+2. For **SSO (SAML):** configure an Identity Provider record in Setup → Identity → Identity Providers. Map assertion attributes to Salesforce User fields. Choose SP-initiated vs IdP-initiated flow. → **gate: test login from IdP; SAML assertion is received; user record created/linked.**
+3. For **self-registration:** deploy the self-reg Apex handler (standard or custom). Set the default profile and account in the site's Administration → Registration settings. → **gate: register a test user end-to-end in sandbox; confirm Contact + User record created; confirm managed-package automation did not mutate unexpected fields (check sandbox debug log).**
+4. Ensure every user's profile (or permission set) is added as a site member: Setup → All Sites → [site] → Administration → Members. → **gate: test user can log in; no "site not found" or "member not authorized" error.**
+5. For **JIT:** configure the SAML JIT handler class in the SSO settings. Map assertion fields to User fields for create and update. → **gate: first login creates the User record with expected field values; repeat login updates fields without creating a duplicate.**
+
+### 3. Debug an external-user access failure (CRUD → FLS → OWD → sharing, in order)
+
+1. Reproduce the error as the external user (log in as the portal user or use "Log In As" from Setup). Note the exact error: *Insufficient Privileges*, *Invalid field*, record not visible, or blank page. → **gate: error confirmed firsthand, not assumed from a user report.**
+2. Check CRUD: describe the object for the user's profile/permset (Setup → Object Manager or SOQL against `ObjectPermissions`). → **gate: if Read is false on the object, add it — that is the root cause; stop here.**
+3. Check FLS: `SELECT Id, SObjectType, Field, PermissionsRead FROM FieldPermissions WHERE SobjectType = '<Object>' AND ParentId IN (SELECT Id FROM PermissionSet WHERE Name = '<permset>')`. → **gate: if the field is missing, add it to the profile/permset — root cause found; stop here.**
+4. Check OWD: Setup → Sharing Settings → [object] OWD. For external users, "Private" is the default for most objects. → **gate: if OWD is Private and no sharing mechanism exists, proceed to step 5.**
+5. Check sharing set / sharing rule: confirm the sharing set's lookup path resolves to the user's Contact/Account for this record. Test with SOQL on the `UserRecordAccess` object: `SELECT RecordId, HasReadAccess FROM UserRecordAccess WHERE UserId = '<userId>' AND RecordId = '<recordId>'`. → **gate: `HasReadAccess = true` after any sharing fix confirms the layer is resolved.**
+
+---
+
 ## Decision Scenarios
 
 Five original teaching scenarios covering the highest-consequence operational gotchas —
@@ -417,6 +455,18 @@ are in [references/scenarios.md](references/scenarios.md).
 Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-experience-cloud-consultant.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ## Disclaimer
 

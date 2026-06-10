@@ -32,23 +32,32 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** all governor limit numbers (SOQL/DML/CPU/heap/callout/Queueable chain depth) `[volatile — verify live]`; Platform Event retention windows and replay behavior `[volatile — verify live]`; SOQL selectivity thresholds `[volatile — verify live]`; Batch API and Bulk API 2.0 limits and behaviors; any quota or cap cited in this skill.
+- **Live wins:** if this skill's numbers or rules conflict with Apex runtime behavior, Query Plan output, or official Salesforce release notes, the live system is authoritative. Log the discrepancy immediately using the Feedback protocol below.
+- **Escalate to a human before proceeding:** production deploys of async chaining patterns (Queueable/Batch) not validated in a sandbox; any code that writes to setup objects (User, PermissionSetAssignment) in a non-test context; adding `without sharing` to a class processing PII or financial data; deploying a Platform Event subscriber that could duplicate-write production records if CDC events replay.
+- **Confidence taxonomy:** facts in this skill are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. When in doubt, use Query Plan or run a test transaction in a sandbox before assuming a limit applies.
+
+---
+
 ## Governor Limits — Memorize These Numbers
 
 These are the hard ceilings every decision below is measured against. Per-transaction unless noted; "async" = future/queueable/batch-execute/schedulable context.
 
 | Limit | Synchronous | Asynchronous |
 |---|---|---|
-| SOQL queries | 100 | 200 |
+| SOQL queries | 100 `[volatile — verify live]` | 200 |
 | SOQL rows retrieved | 50,000 | 50,000 |
-| DML statements | 150 | 150 |
+| DML statements | 150 `[volatile — verify live]` | 150 |
 | DML rows | 10,000 | 10,000 |
 | SOSL queries | 20 | 20 |
 | HTTP callouts | 100 | 100 |
-| CPU time | 10,000 ms | 60,000 ms |
-| Heap size | 6 MB | 12 MB |
+| CPU time | 10,000 ms `[volatile — verify live]` | 60,000 ms |
+| Heap size | 6 MB `[volatile — verify live]` | 12 MB |
 | Future calls | 50 | n/a (can't call future from future) |
-| Queueable jobs enqueued | 50 (sync) / 1 (from queueable) | 1 from within execute |
-| Batch QueryLocator rows | n/a | 50,000,000 |
+| Queueable jobs enqueued | 50 (sync) / 1 (from queueable) `[volatile — verify live]` | 1 from within execute |
+| Batch QueryLocator rows | n/a | 50,000,000 `[volatile — verify live]` |
 | Aggregate query rows | 2,000 grouped rows | same |
 
 **Decision rule:** if a transaction could touch more than ~10k records, it must be Batch Apex (QueryLocator, 50M ceiling), never a single synchronous transaction.
@@ -139,7 +148,7 @@ The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-patt
 
 ### Write selective queries
 
-A query is **selective** when its `WHERE` filters on an indexed field returning under the threshold: **<10% of rows (first 1M) for standard fields, <33% for custom-indexed fields**, capped at 1M rows examined. Non-selective queries on large objects throw `QueryException: Non-selective query against large object type`.
+A query is **selective** when its `WHERE` filters on an indexed field returning under the threshold: **<10% of rows (first 1M) for standard fields, <33% for custom-indexed fields** `[volatile — verify live]`, capped at 1M rows examined. Non-selective queries on large objects throw `QueryException: Non-selective query against large object type`.
 
 **Indexed by default:** `Id`, `Name`, `CreatedDate`, `SystemModstamp`, lookup/master-detail fields, External Id fields, Unique fields. Custom indexes are requested via Salesforce Support.
 
@@ -191,7 +200,7 @@ Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' I
 
 - Define as `MyEvent__e`; publish with `EventBus.publish(events)`; subscribe via an **after-insert trigger on the event** (only after-insert is valid), a Flow, or CometD/external subscriber.
 - `publish-after-commit` (default): suppressed on rollback. `publish-immediately`: delivered regardless of transaction outcome.
-- `ReplayId` enables durable replay. 72-hour retention (24h standard-volume).
+- `ReplayId` enables durable replay. 72-hour retention (24h standard-volume) `[volatile — verify live]`.
 - Use for decoupled, fire-and-forget integration.
 
 **Change Data Capture (CDC):** publishes change events (`AccountChangeEvent`, `MyObject__ChangeEvent`, etc.) on record changes; subscribe via after-insert trigger on the change-event object. Key payload: `ChangeEventHeader.changeType` (CREATE/UPDATE/DELETE/UNDELETE), `changedFields`, `recordIds`. CDC events are NOT suppressed on transaction rollback — design consumers to be idempotent. Deep dive with enabling, payload, and testing: [references/cdc.md](references/cdc.md) — load when implementing CDC-based integration or debugging delivery behavior.
@@ -243,24 +252,13 @@ LWC (default) > Aura (only for platform features still requiring it; Aura can ho
 
 ## Testing, Debugging & Deployment
 
-### Tests
+Fundamentals (75% coverage gate, `Test.startTest()/stopTest()`, `seeAllData=false`, `HttpCalloutMock`) are in `salesforce-platform-developer-1`. PD2-specific additions:
 
-- **75% org-wide coverage required to deploy to production**, every trigger must have *some* coverage. Coverage must be **meaningful — assert outcomes, not just lines**.
-- `Test.startTest()/stopTest()` — fresh governor limits; **flushes async jobs** synchronously at `stopTest()` so you can assert results.
-- **`seeAllData=false` is the rule.** Create your own data. `seeAllData=true` only for unavoidable org-config dependencies.
-- **Mock all callouts:** `Test.setMock(HttpCalloutMock.class, new MyMock())` / `WebServiceMock`. `StubProvider` for dynamic mocks.
-- **LWC Jest:** `createElement` + `appendChild`, `shadowRoot.querySelector`, mock `@wire` with `@salesforce/wire-service-jest-util`.
-
-### Debugging
-
-Developer Console (logs, Query Plan, checkpoints) · VS Code + Apex Replay Debugger (needs `FINEST` log level) · `System.debug(LoggingLevel.X, msg)` · query stored `ApexLog`. **Never `System.debug` PII** — sensitive data must not land in logs.
-
-### Deployment
-
-- `sf project deploy start` / `retrieve start`. **Run from the SFDX project root** (directory containing `sfdx-project.json`) or get `InvalidProjectWorkspaceError`.
-- Deploy order: objects before fields, fields before the permsets that reference them.
-- Sandboxes: Developer < Developer Pro < Partial Copy < Full (prod-clone). Scratch orgs for feature dev.
-- **Quick Action cache:** adding fields via SFDX does NOT invalidate the runtime QA cache — even after logout/login. Cache-bust by editing non-field-list metadata (`<description>`) and redeploying.
+- **Meaningful coverage:** assert concrete outcomes and async state — coverage that only executes lines without asserting results does not catch regressions.
+- **`StubProvider`:** dynamic mocking without a hand-rolled mock class. Use when the mock logic varies per test or when mocking a service interface.
+- **LWC Jest:** `createElement` + `appendChild`, `shadowRoot.querySelector`, mock `@wire` with `@salesforce/wire-service-jest-util`. Apex Replay Debugger requires `FINEST` log level; never log PII via `System.debug`.
+- **Deploy order:** objects → fields → permsets that reference them. Run `sf project deploy start` from the SFDX project root (`sfdx-project.json` directory) or get `InvalidProjectWorkspaceError`.
+- **Quick Action cache:** cache-bust by editing non-field-list metadata (`<description>`) and redeploying.
 
 ---
 
@@ -277,12 +275,59 @@ Developer Console (logs, Query Plan, checkpoints) · VS Code + Apex Replay Debug
 
 ## Advanced Fundamentals
 
-- **Custom Metadata Types vs Custom Settings:**
-  - **CMT (`__mdt`):** deployable, packageable, SOQL-queryable **without consuming the SOQL governor limit** (cached). Use for configuration that ships with the app.
-  - **Custom Settings:** `List` (global constants) or `Hierarchy` (per-profile/per-user). In-memory via `getInstance()/getValues()`, no SOQL cost.
-  - **Decision:** needs deployment/packaging/relationships → CMT. Per-user/profile runtime toggle → Hierarchy Custom Setting.
-- **Multi-currency:** `CurrencyIsoCode` on records; `DatedConversionRate` for historical rates; guard logic with `UserInfo.isMultiCurrencyOrganization()`; never hardcode currency math.
-- **Design patterns:** Singleton (one instance/transaction), Strategy (swap algorithm at runtime), Decorator (wrap sObject for UI), Bulk State Transition (act only on changed records via old/new maps), Facade, and enterprise **Service / Selector / Domain** layering (fflib).
+CMT vs Custom Settings decision, multi-currency handling, and enterprise design patterns (Singleton, Strategy, fflib Service/Selector/Domain): [references/advanced-fundamentals.md](references/advanced-fundamentals.md) — load when choosing a config storage mechanism or implementing an enterprise-layer architecture.
+
+**One-line decision rules (load references for full detail):**
+- Config ships with app / needs deployment → **Custom Metadata Type (`__mdt`)** (free SOQL, packageable).
+- Per-user/profile runtime toggle → **Hierarchy Custom Setting** (in-memory, no SOQL cost).
+- Multi-currency: guard with `UserInfo.isMultiCurrencyOrganization()`; never hardcode currency math.
+
+---
+
+## Executable Workflows
+
+### 1. Build a Queueable chain safely (one child per execute, depth/limits)
+
+1. Define the first Queueable class with its state (Ids, parameters) passed via constructor. Implement `Queueable` (and `Database.AllowsCallouts` if making HTTP calls).
+   → **gate:** class compiles; constructor stores only serializable state (avoid holding live SObject lists if heap is a concern).
+2. In the `execute()` method, do the work (query once outside loops, DML once after loops). At the end of `execute()`, enqueue exactly one child: `System.enqueueJob(new NextStepQueueable(state))`.
+   → **gate:** code review confirms exactly one `System.enqueueJob` call per `execute()` path; never enqueue inside a loop.
+3. Add a depth guard: pass a `depth` integer via constructor and abort if `depth > maxDepth` (typically keep chains ≤ 5 levels for safety).
+   → **gate:** unit test with `depth = maxDepth + 1` confirms the chain stops and logs a meaningful message.
+4. Test: wrap in `Test.startTest()/stopTest()` to flush the first job synchronously. Assert state after the first step; test each step class independently.
+   → **gate:** all test methods pass; no `System.LimitException`; assertions on final state are concrete (not just "no exception").
+5. Deploy and monitor via `SELECT Id, Status, JobType FROM AsyncApexJob WHERE JobType='Queueable' ORDER BY CreatedDate DESC`.
+   → **gate:** each enqueued job shows `Status = Completed`; no `Failed` rows for the chain.
+
+---
+
+### 2. Stand up a Platform Event producer + subscriber
+
+1. Define the Platform Event object (`MyEvent__e`) in Object Manager with the required fields. Set `Publish Behavior` to `Publish After Commit` (default) unless immediate delivery on rollback is required.
+   → **gate:** `MyEvent__e` appears in `sf sobject list` output; describe confirms expected fields.
+2. Write the producer: `EventBus.publish(new MyEvent__e(Field__c = value))` inside an `after insert/update` trigger or invocable method. Capture and log publish results.
+   → **gate:** in a sandbox, trigger the producer and confirm `EventBus.publish` returns `isSuccess = true`; verify the event appears in Event Monitoring or a debug log.
+3. Write the subscriber trigger: `trigger MyEventSub on MyEvent__e (after insert)`. Process `Trigger.new` as a collection (bulkify). Avoid SOQL/DML inside loops.
+   → **gate:** subscriber trigger compiles; query `EventBusSubscriber` or check Setup → Platform Events to confirm the subscriber is registered.
+4. Write test: mock the event in a test method (`Test.startTest(); EventBus.publish(...); Test.stopTest();`). Assert subscriber side effects.
+   → **gate:** test passes; subscriber logic assertions are on concrete field values, not just "no error."
+5. Deploy producer and subscriber together. Smoke-test end-to-end in the sandbox: trigger the produce action and confirm subscriber side effects (e.g. related record created/updated).
+   → **gate:** side-effect record exists with expected values; no debug-log errors.
+
+---
+
+### 3. Make a slow SOQL query selective (Query Plan → index/selective filter → re-check)
+
+1. Open Developer Console → Query Plan tool (or REST API `EXPLAIN` endpoint). Paste the slow SOQL query and run the plan.
+   → **gate:** note the `Leading Operation Type`; a result of `TableScan` means the query is non-selective.
+2. Identify the filter condition causing the table scan: leading wildcard (`LIKE '%...'`), negation (`!=`, `NOT IN`), non-indexed field, or `OR` across mixed indexed/non-indexed.
+   → **gate:** locate the specific clause in the WHERE that produces the scan.
+3. Rewrite the filter to use an indexed field (Id, Name, External Id, lookup, audit fields like `CreatedDate`) and an equality or range predicate. If no native index exists, request a custom index via Salesforce Support.
+   → **gate:** re-run Query Plan on the rewritten query — `Leading Operation Type` must change to `Index`.
+4. If a custom index was requested, confirm it is active: describe the field and check `filterable` + `sortable` attributes, or run the Query Plan again after Salesforce confirms the index is built.
+   → **gate:** Query Plan shows `Index` as leading operation; estimated row count is within the selectivity threshold.
+5. Load-test the rewritten query with production-scale data (use a Full sandbox): confirm query returns in under 5 seconds and does not throw `QueryException: Non-selective query`.
+   → **gate:** query executes without error; response time acceptable under peak load in Full sandbox.
 
 ---
 
@@ -350,7 +395,20 @@ Read this first. Each is imperative and concrete.
 - [references/invocable-apex.md](references/invocable-apex.md) — `@InvocableMethod` signature rules, callout paths, bulkification, testing patterns.
 - [references/cdc.md](references/cdc.md) — Change Data Capture: enabling, payload structure, rollback behavior, Apex testing.
 - [references/scenarios.md](references/scenarios.md) — additional decision scenarios (platform event rollback, Flow/trigger recursion, dynamic SOQL injection).
+- [references/advanced-fundamentals.md](references/advanced-fundamentals.md) — CMT vs Custom Settings decision, multi-currency handling, and enterprise design patterns (Singleton, Strategy, fflib).
 
 ---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-platform-developer-2.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; "Salesforce," "Apex," "Lightning," and all related marks are trademarks of Salesforce, Inc., used here solely to identify the subject matter. All trademarks belong to their respective owners. Guidance only — verify against official Salesforce documentation and live orgs before acting. No certification outcome is implied or guaranteed.*

@@ -33,6 +33,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live — volatile facts:** Transit Gateway per-attachment and per-GB pricing `[volatile — verify live]`, Direct Connect port speeds and availability by location `[volatile — verify live]`, Lambda default concurrent executions per account per region `[volatile — verify live]`, Shield Advanced monthly pricing `[volatile — verify live]`, Snow family device capacity and lead times `[volatile — verify live]`, and service quota defaults for any critical-path service before a scaling event.
+- **Live wins:** when the live AWS account, CLI output, or official AWS docs (especially the Pricing Calculator and Service Quotas console) contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
+- **Escalate to a human — do not silently execute:** multi-account Organization changes (OU moves, SCP attachments); Transit Gateway or Direct Connect provisioning; Reserved Instance or Savings Plan purchases (significant spend commitment); cross-account IAM trust policy changes; any DR failover or failback; deleting S3 buckets, RDS instances, or VPCs; Control Tower account vending that modifies org-level SCPs.
+- **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with AWS service updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
+
+---
+
 ## 1. Design Solutions for Organizational Complexity (26%)
 
 ### 1.1 Multi-Account Strategy
@@ -260,28 +269,15 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 
 ### 4.2 Migration Tooling
 
-**Discover first:**
-- **AWS Application Discovery Service (ADS):** agentless (VMware vCenter integration) or agent-based discovery; collects server config, performance, and process data; feeds Migration Hub.
-- **AWS Migration Hub:** single pane of glass for tracking all migration activities across tools.
+> Full tool-by-tool reference (ADS, MGN, DataSync, Snow Family, DMS, SCT, Transfer Family, Directory Service) lives in [references/migration-tooling.md](references/migration-tooling.md). Load that file when selecting a specific migration tool. Key decision rules inline below.
 
-**Move servers:**
-- **AWS Application Migration Service (MGN):** block-level continuous replication to AWS (replaces CloudEndure Migration); primary tool for Rehost; supports cutover testing without impacting source.
+**Core decision rules (always loaded):**
+- Use **MGN** for server Rehost (block-level replication; test launch before cutover).
+- Use **DMS** for database migration; always run **SCT first** for heterogeneous migrations (Oracle/SQL Server → Aurora/PostgreSQL) — schema incompatibilities discovered mid-migration are expensive.
+- Use **DataSync** for file-share sync (NFS/SMB → S3/EFS/FSx) when network bandwidth is sufficient. Use **Snow family** when online transfer is impractical (rule of thumb: >10 TB with <1 Gbps link) `[volatile — verify live]`.
+- Use **AD Connector** (proxy) when on-premises AD must remain authoritative; use **AWS Managed Microsoft AD** when you need a full AD in AWS for domain-join and trust relationships.
 
-**Move data:**
-- **AWS DataSync:** scheduled, agent-based sync for NFS/SMB shares to S3/EFS/FSx; good for ongoing sync before cutover.
-- **AWS Snow Family:** offline bulk data transfer — Snowcone (8 TB usable, edge compute), Snowball Edge (80 TB usable, storage + compute), Snowmobile (100 PB, truck) — when network bandwidth makes online transfer impractical (rule of thumb: >10 TB with <1 Gbps link).
-- **S3 Transfer Acceleration:** speeds up S3 PUT/GET over the public internet using CloudFront edge locations; useful when online transfer is acceptable but latency is high.
-- **AWS Transfer Family:** managed SFTP/FTPS/FTP endpoint backed by S3 or EFS; for partners or systems that require file-protocol interfaces.
-
-**Move databases:**
-- **AWS Database Migration Service (DMS):** heterogeneous and homogeneous DB migrations; supports ongoing replication for near-zero-downtime cutovers.
-- **AWS Schema Conversion Tool (SCT):** converts schema and application code from Oracle/SQL Server/etc. to Aurora/PostgreSQL/MySQL; run SCT before DMS for heterogeneous migrations.
-
-**Identity for hybrid:**
-- **IAM Identity Center + Active Directory:** AWS Managed Microsoft AD or AD Connector links on-premises AD to IAM Identity Center; users authenticate with existing credentials.
-- **AWS Directory Service:** choose AD Connector (proxy to on-premises, no directory data in AWS) vs AWS Managed Microsoft AD (full AD in AWS, needed for trust relationships and domain-join of EC2).
-
-**Red flag:** using DMS for a schema conversion without running SCT first (leaves incompatible objects); choosing Snow family for a 500 GB dataset with a 1 Gbps link (DataSync is faster and cheaper); forgetting to re-point DNS during cutover (causes post-migration connectivity failures).
+**Red flag:** using DMS without running SCT first on heterogeneous migrations; choosing Snow family for a 500 GB dataset with a 1 Gbps link (DataSync is faster); forgetting to re-point DNS during cutover.
 
 ### 4.3 New Architecture for Existing Workloads (Replatform/Refactor)
 
@@ -318,6 +314,53 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 - Full-text search → OpenSearch
 
 **Red flag:** migrating a stateful monolith to Lambda without externalizing state; using RDS MySQL for a workload that is clearly key-value (DynamoDB is cheaper and scales better); refactoring to microservices without first establishing service contracts and observability.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Choose and Build Cross-Account/VPC Connectivity (Peering vs Transit Gateway Decision → Build → Verify Routes)
+
+1. **Make the decision:** count the VPCs that need to communicate. ≤3 VPCs with no future growth → VPC Peering (cheaper, no per-attachment charge). 4+ VPCs, any transitive routing needed, or hybrid (VPN/DX) attachment required → Transit Gateway. Document the choice in the architecture record before provisioning.
+   → gate: confirm there are no overlapping CIDRs between any VPC pair (peering and TGW both reject overlapping CIDRs at attachment time); `aws ec2 describe-vpcs --query 'Vpcs[].CidrBlock'` in each account.
+2. **TGW path — create the Transit Gateway** in the hub account (or the account that will own it): `aws ec2 create-transit-gateway --description "<name>" --options AmazonSideAsn=64512,AutoAcceptSharedAttachments=disable,DefaultRouteTableAssociation=enable,DefaultRouteTablePropagation=enable`.
+   → gate: `aws ec2 describe-transit-gateways --query 'TransitGateways[?State==\`available\`]'` — TGW must reach `available` before creating attachments.
+3. Share the TGW to spoke accounts via AWS RAM: `aws ram create-resource-share --name <name> --resource-arns <tgw-arn> --principals <spoke-account-id>`. Accept the share in each spoke account.
+   → gate: in the spoke account, `aws ec2 describe-transit-gateways` should list the shared TGW; `aws ram get-resource-share-invitations` shows `PENDING` if not yet accepted.
+4. Create VPC attachments from each spoke VPC: `aws ec2 create-transit-gateway-vpc-attachment --transit-gateway-id <tgw-id> --vpc-id <vpc-id> --subnet-ids <subnet-ids>`. Repeat for each spoke.
+   → gate: `aws ec2 describe-transit-gateway-vpc-attachments --filters Name=state,Values=available` — each attachment must be `available`.
+5. Update VPC route tables in each spoke to route traffic destined for other VPCs' CIDRs via the TGW: `aws ec2 create-route --route-table-id <rtb> --destination-cidr-block <peer-cidr> --transit-gateway-id <tgw-id>`.
+   → gate: `aws ec2 describe-route-tables --route-table-ids <rtb>` confirms the route; then `traceroute` from an instance in one VPC to a private IP in another — confirm packets traverse the TGW (not the internet gateway).
+
+---
+
+### Workflow 2 — Select and Execute a Migration R (The 7 Rs)
+
+1. **Classify each workload:** apply the 7 Rs in elimination order — Retire (no users? decommission) → Retain (regulatory hold or recent CapEx?) → Rehost → Relocate → Replatform → Repurchase → Refactor. Never default to Refactor without a business case that justifies the higher cost and effort.
+   → gate: each workload gets a documented R classification with the rationale; any Refactor must have an approved business case before wave planning proceeds.
+2. **Discover dependencies:** run AWS Application Discovery Service (agent or agentless) against the source environment. Export the dependency map from Migration Hub.
+   → gate: `aws discovery describe-agents` (agent-based) or connect vCenter integration; wait for `HEALTHY` agent status before trusting discovery data. No wave plan is valid without a dependency map.
+3. **For Rehost workloads — provision MGN:** install the AWS Replication Agent on each source server; confirm replication is in `Healthy` state in the MGN console.
+   → gate: `aws mgn describe-source-servers --filters filters=[{name=isArchived,values=[false]}]` — each server should show `dataReplicationInfo.dataReplicationState: Replicating` before scheduling a test launch.
+4. **Test launch (non-disruptive):** launch a test instance in AWS without cutting over the source. Validate application behavior, licensing, and networking.
+   → gate: `aws mgn start-test` for selected source servers; confirm the test instance passes all acceptance checks; document test-launch results before scheduling the cutover window.
+5. **Cutover:** schedule a maintenance window; finalize replication (`aws mgn finalize-cutover`); update DNS (Route 53 or on-premises) to point to the new AWS endpoint; monitor for 24–48 hours before decommissioning the source.
+   → gate: `aws route53 list-resource-record-sets --hosted-zone-id <zone>` confirms the new record points to the AWS IP/ALB; application health checks pass.
+
+---
+
+### Workflow 3 — Design a DR Pattern to a Stated RTO/RPO (Backup-Restore vs Pilot Light vs Warm Standby vs Active-Active)
+
+1. **Map RTO/RPO to pattern:** RTO > 1 hr / RPO > 1 hr → Backup & Restore. RTO 10–60 min / RPO minutes → Pilot Light. RTO 1–10 min / RPO near-zero → Warm Standby. RTO < 1 min / RPO near-zero → Multi-site Active-Active. Document the chosen pattern and the business requirements that drive it before any infrastructure work.
+   → gate: confirm cost envelope with the AWS Pricing Calculator for the chosen pattern; over-engineering to active-active when warm standby satisfies the SLA is a budget red flag.
+2. **For Warm Standby — establish data replication:** enable RDS cross-region read replica or Aurora Global Database in the DR region; enable S3 Cross-Region Replication (CRR) for critical buckets; enable DynamoDB Global Tables if applicable.
+   → gate: `aws rds describe-db-instances --db-instance-identifier <replica> --query 'DBInstances[].ReplicaMode'` confirms replication is `open-read-only`; check replica lag: `aws cloudwatch get-metric-statistics --namespace AWS/RDS --metric-name ReplicaLag` — lag should be < RPO target.
+3. **Stand up the reduced-capacity stack in the DR region** (warm standby = scaled-down but running): deploy the CloudFormation/CDK stack to the DR region; confirm EC2/ECS services are running at minimum capacity (e.g., 1 instance vs. production's 10).
+   → gate: `aws ecs describe-services --cluster <dr-cluster> --services <svc>` shows `runningCount >= 1`; Route 53 health check on the DR endpoint is `Healthy`.
+4. **Configure Route 53 failover routing:** create a primary health check on the production endpoint and a secondary failover record pointing to the DR endpoint. Set TTL low (60s) to reduce DNS propagation delay during failover.
+   → gate: `aws route53 get-health-check-status --health-check-id <primary-hc>` is `Healthy`; simulate a failure by disabling the primary health check and confirm DNS resolves to the DR endpoint within 2× TTL.
+5. **Test the runbook end-to-end** at least quarterly: execute the failover SSM Automation document, promote the RDS read replica (`aws rds promote-read-replica`), and validate the DR environment handles production load.
+   → gate: after promotion, `aws rds describe-db-instances` shows the replica is now a standalone instance (no longer a read replica); application smoke tests pass in the DR region.
 
 ---
 
@@ -363,6 +406,22 @@ Read this first. Each rule is concrete and imperative.
 ---
 
 > **Study resources** (official AWS links, whitepapers, practice exams, community guides) are in [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/aws-solutions-architect-professional.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

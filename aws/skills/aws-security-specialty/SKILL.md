@@ -33,6 +33,15 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live — volatile facts:** KMS automatic-rotation minimum interval `[volatile — verify live]`, Shield Advanced pricing `[volatile — verify live]`, GuardDuty finding type catalog (new finding families added quarterly) `[volatile — verify live]`, IAM Access Analyzer supported resource types `[volatile — verify live]`, RCP (Resource Control Policy) region/service availability `[volatile — verify live]`, and any feature flagged in the `blueprint:` frontmatter as a recent addition.
+- **Live wins:** when the live AWS account, CLI output, or official AWS docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
+- **Escalate to a human — do not silently execute:** modifying KMS key policies or deleting CMKs; changing SCPs or RCPs; revoking IAM sessions or attaching explicit-deny policies to production roles; quarantining or terminating EC2 instances (even as an IR step); disabling GuardDuty or CloudTrail in any account; opening security-group or network-boundary rules; any Secrets Manager rotation that affects a production database.
+- **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with AWS service updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
+
+---
+
 ## 1. Identity and Access Management (20%)
 
 IAM is the heaviest domain in SCS-C03. Errors here compound: a misconfigured policy evaluation or a boundary gap affects everything downstream.
@@ -241,6 +250,57 @@ Firewall Manager lets you centrally deploy WAF rules, Shield Advanced protection
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Stand Up Cross-Account Access (Least-Privilege Role + Trust Policy + External ID)
+
+1. In the **target account** (the account that owns the resource), create an IAM role with a trust policy allowing the source account's principal to assume it, scoped with an external ID condition:
+   ```json
+   "Principal": {"AWS": "arn:aws:iam::<SOURCE_ACCOUNT>:root"},
+   "Condition": {"StringEquals": {"sts:ExternalId": "<UNIQUE_EXTERNAL_ID>"}}
+   ```
+   → gate: `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` in the target account — confirm `sts:ExternalId` condition is present and the principal is scoped to the specific source account (not `*`).
+2. Attach a least-privilege permission policy to the role — grant only the specific actions on specific resources the source account needs; avoid `*` on actions or resources.
+   → gate: `aws iam simulate-principal-policy --policy-source-arn <role-arn> --action-names s3:PutObject --resource-arns arn:aws:s3:::<bucket>/*` — confirm `allowed`; test an action outside scope and confirm `implicitDeny`.
+3. In the **source account**, create an IAM policy that allows `sts:AssumeRole` on the target role ARN and attach it to the source principal (role or user).
+   → gate: `aws iam get-role-policy` or `list-attached-role-policies` on the source principal — confirm `sts:AssumeRole` is present for the exact target role ARN.
+4. Test the assume-role chain: `aws sts assume-role --role-arn <target-role-arn> --role-session-name test --external-id <UNIQUE_EXTERNAL_ID>` from the source account.
+   → gate: command returns `Credentials` with `AccessKeyId`, `SecretAccessKey`, and `SessionToken`; without the external ID or with a wrong value it returns `AccessDenied`.
+5. Confirm the session cannot exceed the role's permission boundary: attempt an action the role's policy does not allow using the temporary credentials — confirm `AccessDenied`.
+
+---
+
+### Workflow 2 — Create/Scope a KMS Key and Grants (Key Policy vs IAM)
+
+1. Create a symmetric CMK with an explicit key policy. The policy must include the account root delegation statement (`"Principal": {"AWS": "arn:aws:iam::<account-id>:root"}`) so that IAM policies in the account can grant access. Add key administrators separately from key users.
+   → gate: `aws kms describe-key --key-id <key-id>` confirms `KeyState: Enabled`; `aws kms get-key-policy --key-id <key-id> --policy-name default` shows the root delegation statement.
+2. Grant the intended user/role key-usage actions (`kms:Decrypt`, `kms:GenerateDataKey`) via either (a) the key policy directly or (b) an IAM identity policy (only works because of the root delegation in step 1).
+   → gate: `aws kms list-key-policies --key-id <key-id>` to inspect; then test with `aws kms generate-data-key --key-id <key-id> --key-spec AES_256` as the intended principal — success confirms the grant chain works.
+3. If a third-party service or Lambda needs time-bounded access without modifying the key policy, create a KMS grant: `aws kms create-grant --key-id <key-id> --grantee-principal <arn> --operations Decrypt,GenerateDataKey`.
+   → gate: `aws kms list-grants --key-id <key-id>` confirms the grant exists; note the `GrantId` for future revocation.
+4. Enable automatic key rotation (symmetric CMKs only, minimum 90-day interval `[volatile — verify live]`): `aws kms enable-key-rotation --key-id <key-id>`.
+   → gate: `aws kms get-key-rotation-status --key-id <key-id>` returns `{"KeyRotationEnabled": true}`.
+5. To clean up a temporary grant, revoke it by ID: `aws kms revoke-grant --key-id <key-id> --grant-id <grant-id>`. Do NOT delete or disable the CMK while encrypted data exists — that data becomes permanently inaccessible.
+   → gate: `aws kms list-grants --key-id <key-id>` no longer shows the revoked grant ID.
+
+---
+
+### Workflow 3 — Respond to a GuardDuty Instance-Credential-Exfiltration Finding (Contain → Revoke STS Sessions → Quarantine SG → Investigate)
+
+1. **Identify scope:** open the GuardDuty finding (`UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS` or similar). Note the instance ID, the IAM role being misused, and the time window of suspicious API calls.
+   → gate: `aws guardduty get-findings --detector-id <id> --finding-ids <finding-id>` returns the full finding JSON including `service.action.awsApiCallAction` details.
+2. **Contain — attach an explicit-deny policy to the role immediately** (fastest revocation; effective within seconds without disrupting the instance's ability to talk to SSM): `aws iam put-role-policy --role-name <role> --policy-name QuarantineExplicitDeny --policy-document '{"Statement":[{"Effect":"Deny","Action":"*","Resource":"*"}]}'`.
+   → gate: test a call using the role's credentials — it should now return `AccessDenied` with `ExplicitDeny`.
+3. **Quarantine the security group:** replace the instance's security group(s) with a forensic SG that allows only SSM endpoint traffic (TCP 443 to the SSM service VPC endpoints) and denies all other inbound and outbound. Do NOT terminate the instance yet.
+   → gate: `aws ec2 describe-instances --instance-ids <id> --query 'Reservations[].Instances[].SecurityGroups'` shows only the forensic SG.
+4. **Preserve evidence:** create an EBS snapshot of the root and data volumes before any further remediation: `aws ec2 create-snapshot --volume-id <vol-id> --description "IR-<finding-id>-<date>"`.
+   → gate: `aws ec2 describe-snapshots --snapshot-ids <snap-id>` reaches `completed` state before proceeding.
+5. **Investigate:** use CloudTrail to enumerate all API calls made with the compromised credentials: `aws cloudtrail lookup-events --lookup-attributes AttributeKey=AccessKeyId,AttributeValue=<ASIA...> --start-time <incident-start>`. Check for resource creation (EC2, S3, IAM users), data exfiltration (S3 GetObject), or lateral movement (AssumeRole).
+   → gate: review every `eventName` in the window; flag any `CreateUser`, `AttachUserPolicy`, `PutBucketPolicy`, or `GetObject` calls for follow-up remediation.
+6. **Eradicate and recover:** rotate or replace the IAM role; remove the explicit-deny quarantine policy only after a clean replacement role is in place; restore instance from a known-good AMI rather than reusing the compromised instance.
+
+---
+
 ## Decision Scenarios
 
 **Scenario 1 — VPC endpoint policy missing: S3 data exfiltration via Gateway endpoint**
@@ -298,6 +358,22 @@ Read this section first. Each rule is concrete and imperative.
 ---
 
 > **Study resources** — official exam guide PDF, service documentation links, and study sequencing by domain weight: [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/aws-security-specialty.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

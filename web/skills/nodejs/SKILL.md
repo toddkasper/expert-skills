@@ -29,6 +29,21 @@ Credential context (retired JSNAD/JSNSD) and study path: see [references/study-r
 
 ---
 
+## Uncertainty & Escalation
+
+- **Always re-verify live:** Node.js LTS release lines and their API stability tier change on a schedule — APIs stable in Node 18 may be deprecated or removed in Node 22/24. `[volatile — verify live]` marks apply to: the `node:test` runner API surface (added Node 18, still gaining features each release); `require(esm)` support for CJS-loading ESM (stable in Node 22 — behavior varies by version); `stream.pipeline()` Promise variant availability (`node:stream/promises` — verify against the project's Node version); `worker_threads` API surface (stable Node 12+, but options evolve). Check `engines` in `package.json` and the [Node.js release schedule](https://nodejs.org/en/about/releases/) before relying on a version-specific API.
+- **Live wins:** the installed Node.js version's actual runtime behavior and the [official Node.js docs](https://nodejs.org/docs/latest/api/) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** production deploys; dependency major-version bumps (especially `express`→`fastify` or Node LTS upgrades); data migrations; deleting or force-pushing git history; infrastructure changes (Redis, load balancer config, rate-limit store).
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+Specific volatile facts in this skill:
+- `require(esm)` in CJS files — `[volatile — verify live]` — stable Node 22+, not available in Node 18/20.
+- `node:test` runner API (e.g., `--test`, `--test-reporter`) — `[volatile — verify live]` — features added each LTS cycle.
+- `stream.pipeline()` from `node:stream/promises` — `[volatile — verify live]` — verify it exists in the project's Node version (Node 15+).
+- Fastify vs Express security default behavior (Helmet bundled, AJV schema validation) — `[volatile — verify live]` — confirm against installed library version.
+
+---
+
 ## 1. Async Node.js and the Event Loop
 
 The event loop is the single most misunderstood aspect of Node.js. Every performance problem traces back to either blocking the loop or failing to handle backpressure.
@@ -99,7 +114,7 @@ await pipeline(readableSource, transformStep, writableDest);
 |---|---|---|
 | File extension | `.js` (default) / `.cjs` | `.mjs` / `.js` with `"type":"module"` |
 | Load | Synchronous, dynamic | Async, static |
-| Interop from CJS | `require('./foo.cjs')` works | `require('esm-only-pkg')` requires dynamic `import()` or Node ≥22 `require(esm)` (stable in Node 22) |
+| Interop from CJS | `require('./foo.cjs')` works | `require('esm-only-pkg')` requires dynamic `import()` or Node ≥22 `require(esm)` (stable in Node 22) `[volatile — verify live]` |
 | Interop from ESM | `import cjsPkg from 'cjs-pkg'` works (default export = `module.exports`) | |
 | Tree-shaking | ❌ (dynamic require) | ✅ (static analysis) |
 | `__dirname` / `__filename` | Available | Not available — use `import.meta.url` + `fileURLToPath` |
@@ -208,7 +223,7 @@ Helmet sets 14+ security headers with safe defaults. Customize CSP per route if 
 
 ## 6. Unit Testing
 
-Node.js has a built-in test runner (`node:test`, stable from Node 18; Assert module for assertions) — no test framework required for simple cases.
+Node.js has a built-in test runner (`node:test`, stable from Node 18; Assert module for assertions) `[volatile — verify live]` — no test framework required for simple cases.
 
 ```js
 import { test } from 'node:test';
@@ -224,6 +239,36 @@ For richer features (mocking, snapshot, coverage): Jest (most popular ecosystem)
 **What to test (and not):** test behavior at module boundaries, not implementation details. Stub I/O (filesystem, network, DB) at the lowest practical layer. Prefer integration tests for stream pipelines — mock streams are error-prone. Mock `child_process.spawn` carefully; it's easier to extract the shell logic into a testable pure function and call the process-boundary once.
 
 **Coverage:** 80% line/branch is a useful floor, not a ceiling. 100% coverage with bad assertions is worse than 70% with precise assertions.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Build a streaming file/transform pipeline with backpressure + error propagation
+
+1. Import `pipeline` from `node:stream/promises` (not the callback form). → gate: `node -e "require('node:stream/promises').pipeline"` prints the function without error; if it fails, check your Node version.
+2. Create the source with `fs.createReadStream(inputPath)` — no `highWaterMark` tuning until a benchmark says otherwise.
+3. Create each transform with `new Transform({ transform(chunk, enc, cb) { … cb(null, processed); } })` or use a built-in like `zlib.createGzip()`.
+4. Create the sink with `fs.createWriteStream(outputPath + '.tmp')`. → gate: confirm the `.tmp` file is created (no "ENOENT" on the directory).
+5. `await pipeline(source, ...transforms, sink)`. The call handles backpressure and propagates errors end-to-end; no manual `.on('error')` wiring needed.
+6. After `await pipeline(...)` resolves, `await fs.promises.rename(outputPath + '.tmp', outputPath)` — atomic move prevents partial reads. → gate: source and `.tmp` files closed (`lsof | grep <pid>` shows no dangling fds after rename).
+7. Wrap the whole function in `try/catch`; on error, `await fs.promises.unlink(outputPath + '.tmp').catch(() => {})` for cleanup.
+
+### Workflow 2 — Ship a safe HTTP handler (validate → map errors → never log PII)
+
+1. Install a schema validator at the project boundary (Fastify uses AJV built-in; for Express add `zod` or `joi`). Define the expected shape of `req.body`, `req.params`, and `req.query`.
+2. At the top of the handler, parse/validate the input. On failure, return `res.status(400).json({ error: 'Invalid input' })` — do not echo back user-supplied values in the message. → gate: send a malformed body; confirm 400 response and that the error message contains no user data.
+3. Map domain/operational errors (DB not found, auth fail) to explicit HTTP status codes in a central error handler — never let a generic `500` reveal a stack trace to the client. → gate: trigger each error type in a test; assert the status code and that the response body contains no stack trace.
+4. Strip sensitive fields before logging. Create a `sanitizeHeaders(headers)` helper that removes `authorization`, `cookie`, and `x-api-key`. Log the sanitized headers object, not `req.headers` directly. → gate: send a request with `Authorization: Bearer TOKEN`; grep structured log output for `Bearer` — it must not appear.
+5. Set `Helmet` on the app once at startup: `app.use(helmet())`. → gate: `curl -I <endpoint>` — response must include `X-Content-Type-Options` and `Strict-Transport-Security` headers.
+
+### Workflow 3 — Package a CLI/lib (deps vs devDeps → lockfile → npm ci in CI)
+
+1. Audit `package.json`: every package used only in tests, builds, or linting goes in `devDependencies`. Packages the consumer needs at runtime stay in `dependencies`. → gate: `npm install --omit=dev` in a clean directory; the app starts without "Cannot find module" errors.
+2. Add an `engines` field: `{ "engines": { "node": ">=20.0.0" } }`. → gate: `node --version` in CI matches the range.
+3. Add a `files` array allowlisting `dist/` (or `lib/`), `README`, and `LICENSE`. Run `npm pack --dry-run` and confirm `src/`, `test/`, and `.env*` are absent from the tarball. → gate: tarball size is reasonable; no source maps or test fixtures included.
+4. Commit `package-lock.json`. In CI, replace `npm install` with `npm ci` — it errors if the lockfile is missing or out of sync, guaranteeing reproducible installs. → gate: CI run uses `npm ci`; deliberately introduce a version mismatch in `package.json` and confirm `npm ci` fails with "npm ci can only install packages when your package.json and package-lock.json are in sync."
+5. Run `npm audit --omit=dev` in the CI pipeline after install; fail the build on critical vulnerabilities. → gate: audit output exits 0 (or a known-OK non-zero when no criticals exist).
 
 ---
 
@@ -324,6 +369,20 @@ For richer features (mocking, snapshot, coverage): Jest (most popular ecosystem)
 - **DO** use `bcrypt` or `argon2` for passwords — never SHA-256 or MD5.
 - **DO** verify JWT signatures and `exp` on every request; never skip verification.
 - **DON'T** log PII, tokens, or passwords — scrub at the log boundary.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/nodejs.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 

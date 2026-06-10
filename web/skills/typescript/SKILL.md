@@ -36,7 +36,16 @@ Next.js server components, Node.js APIs) is deferred to the sibling skills (`rea
 
 ---
 
-## TypeScript 6.0 — Breaking-change release (March 2026)
+## Uncertainty & Escalation
+
+- **Always re-verify live:** TypeScript compiler defaults and strictness options changed materially at 6.0 and will change again at 7.0 — always check the installed TypeScript version (`npm ls typescript`) and compare against the [release notes](https://devblogs.microsoft.com/typescript/). `[volatile — verify live]` marks apply to: `strict` default (was `false` before TS 6.0); `module`/`target` defaults (changed in TS 6.0); `types` default (changed from auto-load all to `[]` in TS 6.0); `--moduleResolution node` deprecation timeline (deprecated 6.0, removal in 7.0 — `[volatile — verify live]`); `const` type parameters (TS 5.0+ only); TypeScript 7.0 Go-native compiler timeline and option removal (expected late 2026 — `[volatile — verify live]`).
+- **Live wins:** the installed TypeScript version's actual compiler behavior and [typescriptlang.org](https://typescriptlang.org) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** major TypeScript version upgrades in production monorepos (breaking defaults can silently change inferred types); removing `strict: false` overrides across a large legacy codebase (compile errors may cascade); dependency major-version bumps; production deploys after tsconfig changes.
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+---
+
+## TypeScript 6.0 — Breaking-change release (March 2026) `[volatile — verify live]`
 
 TypeScript 6.0 shipped March 2026 as the **last release compiled by TypeScript itself**. It
 changed nine defaults at once. Know these before touching a tsconfig in 2026.
@@ -63,7 +72,7 @@ changed nine defaults at once. Know these before touching a tsconfig in 2026.
 { "compilerOptions": { "types": ["node", "jest"] } }
 ```
 
-TypeScript 7.0 (Go-native compiler, ~late 2026) will remove everything deprecated in 6.0 and is
+TypeScript 7.0 (Go-native compiler, ~late 2026) `[volatile — verify live]` will remove everything deprecated in 6.0 and is
 expected to deliver ~10× build speedups. All 6.0-deprecated options must be cleaned up before
 adopting 7.0.
 
@@ -232,7 +241,7 @@ on new code.
 `"moduleResolution": "bundler"` is the right choice for any project that goes through a bundler;
 it does not enforce the `.js` extension requirement that `nodenext` requires.
 
-**`--module node20`** (introduced TS 5.9): stable, non-floating alias for Node 20 behavior with
+**`--module node20`** (introduced TS 5.9) `[volatile — verify live]`: stable, non-floating alias for Node 20 behavior with
 `--target es2023` implied. Prefer over `nodenext` when pinning to Node 20 specifically.
 
 ### Project references
@@ -290,6 +299,34 @@ Rules for `.d.ts` files:
 For data crossing a runtime boundary (API responses, `JSON.parse`, environment variables), use a
 runtime validator (Zod, Valibot, etc.) and let the validator produce the typed output — do not
 cast raw parsed data with `as`.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Type an external/Node API safely (runtime validator at boundary → narrow → honest .d.ts)
+
+1. Identify the trust boundary: any value arriving via `JSON.parse`, `fetch().then(r => r.json())`, `req.body`, `process.env`, or a third-party callback is `unknown` at the boundary.
+2. Define a Zod (or Valibot) schema that matches what the API actually returns — not what you hope it returns. Use `.parse()` to validate; on failure it throws a `ZodError` with field-level diagnostics. → gate: call `.parse()` with a deliberately malformed payload; confirm it throws `ZodError`, not a silent `undefined`.
+3. Let the validator infer the TypeScript type: `type MyPayload = z.infer<typeof MyPayloadSchema>`. Do not write the `type` separately and then cast — the schema is the single source of truth.
+4. If you must author a `.d.ts` for a plain-JS library, load the library in a Node.js REPL and inspect `Object.keys(require('the-lib'))` and the prototype chain before declaring anything. → gate: `node -e "const lib = require('the-lib'); console.log(typeof lib.method)"` — only declare methods that return `'function'`.
+5. Publish the `.d.ts` alongside the JS output by setting `"declaration": true` and `"declarationMap": true` in `tsconfig.json`. → gate: `tsc --build` produces `.d.ts` and `.d.ts.map` files in `dist/`; consumers can jump-to-source across the package boundary.
+
+### Workflow 2 — Tighten strictness incrementally on a JS→TS codebase
+
+1. Check the installed TypeScript version (`npm ls typescript`). If on TS 6.0+, `strict: true` is already the default — confirm the project's `tsconfig.json` is not explicitly setting `"strict": false`. → gate: `tsc --showConfig | grep strict` reflects the actual effective value.
+2. If `strict: false` is set and the codebase is large, enable sub-flags one at a time in order of value/effort ratio: `strictNullChecks` first (highest yield — catches most real bugs), then `noImplicitAny`, then the rest of the strict family.
+3. After enabling each flag, run `tsc --noEmit 2>&1 | wc -l` to count new errors. Fix or explicitly type-assert with a `// TODO: type this` comment — never add `// @ts-ignore` without a ticket. → gate: error count decreases monotonically across commits; no `// @ts-ignore` without a linked tracking note.
+4. Add `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` after the strict family is clean — these are the highest-value non-strict additions. → gate: `tsc --noEmit` exits 0 with both flags enabled.
+5. Add `"noUnusedLocals": true` and `"noUnusedParameters": true` in a CI-only `tsconfig.ci.json` that extends the base. Run it in CI to catch dead code before review without blocking local development. → gate: CI `tsc -p tsconfig.ci.json --noEmit` exits 0.
+
+### Workflow 3 — Model a discriminated union with exhaustiveness checking
+
+1. Define a shared literal-typed discriminant field (`kind`, `type`, or `tag`) on every variant: `{ kind: 'circle'; radius: number }`, `{ kind: 'rect'; w: number; h: number }`. The discriminant must be a string literal, not a general `string`. → gate: `tsc` narrows correctly in a `switch (shape.kind)` block without type assertions.
+2. Combine variants into a union type: `type Shape = Circle | Rect | Triangle`.
+3. Write a switch over the discriminant. In the `default` branch, assign to `never`: `const _exhaustive: never = shape`. → gate: add a new union member (`Square`) without adding a case — `tsc` reports "Type 'Square' is not assignable to type 'never'" immediately.
+4. If the switch is in a function that must return a value, throw in the default: `throw new Error('Unhandled shape: ' + (shape as any).kind)`. This satisfies `noImplicitReturns` and provides a runtime safety net for values that enter the union after a bad cast.
+5. Use `satisfies` (not `as`) when constructing union members to validate the literal shape while preserving the inferred specific type. → gate: attempting `const s = { kind: 'circle' } satisfies Shape` with a missing `radius` field produces a compile error, not a runtime one.
 
 ---
 
@@ -404,6 +441,20 @@ cast raw parsed data with `as`.
 - A `tsconfig.json` that still has `"moduleResolution": "node"` (node10) or `--baseUrl` — both
   deprecated in 6.0, removed in 7.0.
 - `JSON.parse(rawInput) as SomeType` without a runtime validation step.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/typescript.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 
