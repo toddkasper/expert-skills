@@ -16,12 +16,13 @@ when in doubt about depth, tone, or structure, match it.
 ```yaml
 ---
 name: vendor-role                      # MUST equal the folder name exactly — never rename
-description: >                         # The only always-loaded text. ≤ ~600 chars. Three beats:
-  <Capability in task vocabulary — the words an agent doing the real work would have in
-  context; mine the section headings>. Use when <explicit trigger conditions —
-  writing/reviewing/debugging X, configuring Y, designing Z>. <Scope boundary — what this does
-  NOT cover and which sibling skill owns it (see <sibling>)>. Scoped and benchmarked by the
-  <cert> blueprint.                    # ← cert framing appears ONLY here, as the last clause
+# description: ONE physical line (do NOT use YAML folded ">" — the tooling reads a single line).
+# The only always-loaded text. ≤ ~750 chars. Three beats: (1) capability in task vocabulary —
+# the words an agent doing the real work has in context (mine the section headings); (2) "Use
+# when <writing/reviewing/debugging X, configuring Y, designing Z>"; (3) scope boundary naming
+# the sibling skill that owns adjacent work ("Not <X> (see <sibling>)"). Cert framing appears
+# ONLY as the final clause: "Scoped and benchmarked by the <cert> blueprint."
+description: <capability in task vocabulary>. Use when <explicit triggers>. Not <out-of-scope> (see <sibling>). Scoped and benchmarked by the <cert> blueprint.
 metadata:
   anchor-credential: <Credential the skill is scaffolded/benchmarked against, or "None — competence skill (no first-party cert)">  # the skill imparts competence; it does NOT confer this credential
   exam-code: <CODE>                    # omit if none; use exam-codes: A, B for multi-cert
@@ -69,6 +70,15 @@ One blockquote, near the top:
 ### Credential-logistics pointer (cert skills)
 One line: `Credential logistics and study path: see references/study-resources.md.`
 
+### Uncertainty & Escalation (required)
+A short `## Uncertainty & Escalation` section near the top (after the logistics pointer, before
+section 1) with four beats: **Always re-verify live** (the domain's volatile fact classes);
+**Live wins** (trust the live system over this file when they disagree → then log via the
+feedback protocol); **Escalate to a human** (the domain's irreversible/destructive/security/spend
+operations to surface, not execute); **Confidence taxonomy** (facts are stable unless tagged
+`[volatile — verify live]` or `[opinion — house style]`). Apply a few inline `[volatile]` marks
+to the most drift-prone facts in the body.
+
 ### Numbered domain sections
 Mirror the blueprint domains (so the section list doubles as a coverage map). Each section
 uses the **four-part rhythm**:
@@ -81,11 +91,17 @@ uses the **four-part rhythm**:
 4. **Verify** — how to confirm against the live system, tool-agnostic (MCP → CLI → UI), with
    the actual query/command preserved.
 
+### Executable Workflows (required)
+A `## Executable Workflows` section with 2–4 numbered end-to-end checklists for the domain's
+highest-frequency multi-step operations, each fail-prone step carrying a verify **gate**
+(`→ gate: <how you confirm before proceeding>`). These convert knowledge into procedure.
+
 ### Decision Scenarios (≥ 4)
 Original scenarios in POLICY format — **Situation → Competent move → Tempting-but-wrong →
 Verify**. They target the skill's highest-lift judgment calls (where a smart generalist takes
 the wrong fork). They MUST NOT duplicate or mirror the held-out `evals/<skill>/situations.md`.
-Place in the body if it stays within budget, else in `references/scenarios.md` with a pointer.
+**Keep ≥ 4 in the body** (overflow may go to `references/scenarios.md` with a pointer, but a
+body-only load must surface at least 4 — the rubric's D9 scores in-body scenarios).
 
 ### Operational Rules Quick Reference
 A DO/DON'T imperative list. **Dedupe:** each rule's *explanation* lives in its section once;
@@ -95,8 +111,19 @@ the full DO/DON'T substance.
 ### References pointer
 One line pointing at `references/` and what's there.
 
+### Feedback protocol (required)
+A `## Feedback protocol` section (above the disclaimer) telling the using agent to log
+contradictions/gaps, in the moment, to a project-local `.skill-feedback/<skill-name>.md` in the
+pipe-delimited format (`date | last-reviewed | claim/gap | observed | evidence | suggested fix`),
+and that the live system wins over this file. This is the field-capture half of the learning loop.
+
+### Changelog (required)
+A `## Changelog` section recording dated, one-line entries of what changed and why —
+field-feedback-driven changes cite the inbox item.
+
 ### Disclaimer
-The POLICY disclaimer, naming the vendor marks used.
+The POLICY disclaimer, naming the vendor marks used, ending with "No certification outcome is
+implied or guaranteed." (cert skills).
 
 ---
 
@@ -123,11 +150,13 @@ The POLICY disclaimer, naming the vendor marks used.
 
 ## 5. Pre-publish checklist
 
-- [ ] `name` == folder name; `description` ≤ ~600 chars, leads with task vocab, disambiguates.
-- [ ] `status`, `last-reviewed`, and (cert skills) `blueprint-verified` present.
+- [ ] `name` == folder name; single-line `description` ≤ 750 chars, leads with task vocab, disambiguates.
+- [ ] `anchor-credential`, `status`, `last-reviewed`, and (cert skills) `blueprint-verified` present.
 - [ ] Overview + Scope block + tooling-convention line present.
-- [ ] Sections follow rules→table→red-flags→verify; verify steps tool-agnostic.
-- [ ] ≥ 4 Decision Scenarios, zero overlap with `evals/<skill>/situations.md`.
-- [ ] Quick Reference deduped; body ≤ ~3,500 words; no operational rule lost.
-- [ ] Every `references/*.md` linked; disclaimer present.
-- [ ] Passes its eval (≥85% skilled, positive lift) per EVALS.md before publish.
+- [ ] **Uncertainty & Escalation** section present (with inline `[volatile]` marks).
+- [ ] Numbered sections follow rules→table→red-flags→verify; verify steps tool-agnostic.
+- [ ] **Executable Workflows** section present (2–4 checklists with verify gates).
+- [ ] ≥ 4 Decision Scenarios **in the body**, zero overlap with `evals/<skill>/situations.md`.
+- [ ] Quick Reference deduped; body within budget; no operational rule lost.
+- [ ] **Feedback protocol** + **Changelog** sections present; every `references/*.md` linked and carrying a disclaimer; disclaimer present.
+- [ ] `scripts/validate.sh` exits 0; scorecard written; passes its eval (≥85% skilled, positive lift) per EVALS.md before publish.
