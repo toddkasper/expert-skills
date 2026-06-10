@@ -227,6 +227,80 @@ For richer features (mocking, snapshot, coverage): Jest (most popular ecosystem)
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — `.pipe()` leaves a writable stream open after a readable error**
+
+> **Situation:** A service pipes a `ReadStream` to a `WriteStream` to copy uploaded files to disk: `readStream.pipe(writeStream)`. In production, network disruptions occasionally cause the read stream to error mid-transfer. Monitoring shows orphaned file handles accumulating on the server.
+
+> **Competent move:** Replace `.pipe()` with `stream.pipeline()` from `node:stream/promises`. `pipeline()` automatically destroys all streams in the chain and propagates errors end-to-end when any one stream errors. `.pipe()` forwards data but does not propagate errors — the destination stream stays open and the file handle leaks.
+
+> **Tempting-but-wrong:** Adding an `error` listener to the readable and manually calling `writeStream.destroy()` inside it. This closes the gap but is fragile (must be repeated on every new pipeline) and easy to forget. `pipeline()` is the single-call fix that handles it for every stream in the chain.
+
+> **Verify:** Simulate a read error by destroying the readable mid-transfer. With `.pipe()`, confirm the write stream fd remains open (`lsof | grep <pid>`). After switching to `pipeline()`, confirm the fd is closed immediately on error.
+
+---
+
+**Scenario 2 — CPU-bound work deferred with `setImmediate` blocks concurrent requests**
+
+> **Situation:** A developer breaks up a 500ms JSON-transformation loop by inserting `await new Promise(r => setImmediate(r))` every 10,000 iterations so the event loop "can breathe." Under load tests with 20 concurrent requests, response times for all other endpoints still spike dramatically during the transformation.
+
+> **Competent move:** Move the CPU-bound transformation into a `worker_threads` Worker. `setImmediate` defers work to the next event-loop iteration on the **same thread** — it yields briefly but the heavy computation still runs on the main thread and blocks all other I/O while it executes each chunk. Worker threads run on a separate OS thread and never block the event loop.
+
+> **Tempting-but-wrong:** Increasing the chunk size so `setImmediate` is called fewer times, believing this reduces the blocking overhead. Fewer interruptions actually mean longer blocking windows per chunk — the total time spent blocking the main thread is essentially unchanged.
+
+> **Verify:** Benchmark concurrent request latency with `autocannon` while a transformation is running. Compare main-thread deferral vs `worker_threads` — the worker approach should show near-zero latency impact on concurrent requests.
+
+---
+
+**Scenario 3 — In-memory rate limiter does not share state across pods**
+
+> **Situation:** A three-instance Node.js API uses `express-rate-limit` with the default in-memory store. Security testing reveals that an attacker can bypass the 100 req/min limit by distributing requests across the three instances (34 requests per pod per minute — under the per-pod limit).
+
+> **Competent move:** Configure `express-rate-limit` with a Redis-backed store (e.g. `rate-limit-redis`). In-memory stores track counts per process — each pod has its own counter, so the effective limit is `n × per-pod-limit` across a cluster. A shared Redis store means all instances share one counter and the limit is enforced globally.
+
+> **Tempting-but-wrong:** Increasing the per-pod limit to compensate, reasoning that the average distribution will stay under the intended total. This does not enforce the limit reliably — a single attacker who knows the instance count can saturate the service with targeted requests.
+
+> **Verify:** Use a Redis `MONITOR` command during the load test to confirm all instances are incrementing the same key, and verify that a burst from a single client across all pods triggers the limit correctly.
+
+---
+
+**Scenario 4 — Structured log accidentally includes a JWT in the request log**
+
+> **Situation:** A Node.js service logs the full `req.headers` object on every request for debugging: `logger.info({ headers: req.headers }, 'incoming request')`. A security audit finds that `Authorization: Bearer <jwt>` tokens are persisted in the log store.
+
+> **Competent move:** Scrub sensitive headers at the log boundary before calling the logger. Create a helper that strips `authorization`, `cookie`, and `x-api-key` from the headers object (or logs only an allowlist of safe headers). Log the scrubbed object, never the raw `req.headers`.
+
+> **Tempting-but-wrong:** Removing the header-logging line entirely. That's overcorrection — headers like `content-type`, `user-agent`, and `x-request-id` are useful diagnostics. The correct fix is selective scrubbing, not wholesale deletion.
+
+> **Verify:** Send a request with an `Authorization` header and grep the log output for `Bearer`. After scrubbing, the JWT must not appear. Also check `cookie` and `x-api-key` headers as a regression guard.
+
+---
+
+**Scenario 5 — `util.promisify` vs manually wrapping a callback — the `this` binding trap**
+
+> **Situation:** A developer wraps a legacy database client method with `new Promise((resolve, reject) => client.query(sql, (err, rows) => err ? reject(err) : resolve(rows)))`. Code review flags this as a footgun. A teammate instead uses `const query = util.promisify(client.query)` and calls `query(sql)` — it throws "cannot read property 'pool' of undefined."
+
+> **Competent move:** Bind the method when promisifying: `const query = util.promisify(client.query).bind(client)`. `util.promisify` strips the `this` context — calling the promisified function as a plain function loses the object reference the method needs internally. Binding restores the correct receiver.
+
+> **Tempting-but-wrong:** Falling back to the `new Promise` constructor wrapper because "at least it works." The wrapper works, but it's verbose and must be repeated for every method. Binding once on `util.promisify` is the canonical, concise fix.
+
+> **Verify:** Run the promisified query against a live test DB connection. With `.bind(client)`, the call succeeds. Without it, the error references an internal property of the client object — confirming the `this` loss.
+
+---
+
+**Scenario 6 — `exec` with a user-controlled filename enables command injection**
+
+> **Situation:** A file-conversion service accepts a filename from the user and runs: `exec(`convert ${req.body.filename} output.pdf`)`. A penetration tester submits `filename = "input.jpg; rm -rf /tmp/uploads"` and the command executes both parts.
+
+> **Competent move:** Switch to `spawn('convert', [req.body.filename, 'output.pdf'])`. `exec` passes the full string to the shell — shell metacharacters (`; | && $()`) are interpreted. `spawn` with an explicit argument array bypasses the shell entirely; each element is passed as a literal argument to the process and no shell expansion occurs.
+
+> **Tempting-but-wrong:** Sanitizing `req.body.filename` with a regex that strips semicolons and pipes. Regex sanitization is incomplete — there are many shell metacharacter forms (`$()`, `` ` `` , newlines, null bytes, environment variable expansion) and any missed character is a vulnerability. Structural avoidance (no shell) is always safer than filtering.
+
+> **Verify:** Pass `"input.jpg; echo INJECTED > /tmp/proof"` to both the `exec` and `spawn` implementations. The `exec` version creates the file; the `spawn` version passes the entire string as a literal filename argument and the injection fails.
+
+---
+
 ## Operational Rules Quick Reference
 
 - **DO** keep all sync `*Sync` calls out of request handlers and hot paths — they block the event loop for all concurrent clients.

@@ -301,6 +301,22 @@ Security is automated or it is not done consistently. Every security control tha
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — ECS blue/green stuck: traffic never cuts over**
+
+> **Situation:** A team deploys an ECS service update via CodeDeploy using `ECSAllAtOnce` blue/green. The new task set registers with the target group and passes ALB health checks. CodeDeploy shows `IN_PROGRESS: AfterAllowTestTraffic` and stays there indefinitely. No CloudWatch alarm has fired. The on-call engineer re-deploys the same image thinking it is a transient glitch.
+
+> **Competent move:** The `AfterAllowTestTraffic` lifecycle hook has invoked a Lambda validation function and is waiting for that function to call back `codedeploy:PutLifecycleEventHookExecutionStatus` with `status: Succeeded`. If the Lambda times out, errors, or never calls back, CodeDeploy waits until the deployment timeout (default 1 hour) before marking it failed. Check the Lambda function logs for the hook — it almost certainly errored silently. Fix the Lambda, and either wait for the deployment to time out and retry, or call `aws codedeploy put-lifecycle-event-hook-execution-status` manually with the execution ID from the deployment events to unblock it.
+
+> **Tempting-but-wrong:** Re-deploying or rolling back without inspecting the hook Lambda logs. Re-deploying creates another deployment that will hit the same stuck hook. The underlying cause (Lambda error or missing callback) must be resolved first or the new deployment stalls identically.
+
+> **Verify:** `aws codedeploy get-deployment --deployment-id <id> --query 'deploymentInfo.deploymentStatusMessages'` for the lifecycle event execution ID; then `aws lambda get-function --function-name <hook-fn>` and CloudWatch Logs for the function; `aws codedeploy list-deployment-targets --deployment-id <id>` to see per-target hook status.
+
+Further scenarios (StackSet permission models, CDK bootstrap versioning, cross-account ECR pull, Config remediation throttling, EC2 Image Builder + ASG launch template): [references/scenarios.md](references/scenarios.md).
+
+---
+
 ## Operational Rules Quick Reference
 
 Each rule is concrete and imperative.

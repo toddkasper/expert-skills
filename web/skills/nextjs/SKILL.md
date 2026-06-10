@@ -293,6 +293,80 @@ this. Proxy is a UX layer (redirect to login), not the security enforcement laye
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — `use cache` placed directly in a Route Handler body**
+
+> **Situation:** A developer adds `'use cache'` at the top of a `GET` handler in `app/api/products/route.ts` to cache the product list response. The build succeeds but caching has no effect in production.
+
+> **Competent move:** Extract the data-fetching logic into a separate async helper function, place `'use cache'` (and `cacheLife`/`cacheTag` calls) inside that helper, and call the helper from the Route Handler. The `use cache` directive is not valid directly inside a Route Handler body — it must be on a standalone async function or async Server Component.
+
+> **Tempting-but-wrong:** Assuming the build error would surface if the placement were wrong and shipping as-is. The compiler does not error on this misuse; the directive is silently ignored, leaving the endpoint uncached.
+
+> **Verify:** Run `next build` and inspect the `.next/server` output or add `console.log('cache miss')` inside the helper. With a correctly placed `'use cache'` the log fires only once per `cacheLife` window, not on every request.
+
+---
+
+**Scenario 2 — `cacheLife` called outside a `use cache` scope**
+
+> **Situation:** A Server Component function calls `cacheLife('hours')` at the top of its body but does not have `'use cache'` declared. Logs show the function runs on every request with no caching.
+
+> **Competent move:** Add `'use cache'` as the first statement of the function (or as a file-level directive if the whole file should be cached). `cacheLife` is only meaningful inside a `'use cache'` scope; called elsewhere it is silently ignored.
+
+> **Tempting-but-wrong:** Checking the `cacheLife` profile name first, assuming the cache is broken because an unknown profile was used. The profile name is irrelevant when there is no `'use cache'` boundary at all.
+
+> **Verify:** Add `'use cache'` and re-run `next dev`. Use the Next.js debug output (`NEXT_PRIVATE_DEBUG_CACHE=1 next dev`) to confirm the cache entry is created and reused across requests.
+
+---
+
+**Scenario 3 — Sequential `await` chains on independent Server Component fetches**
+
+> **Situation:** A `ProductPage` Server Component `await`s a `fetchProduct(id)` call, then `await`s a `fetchReviews(id)` call, then `await`s a `fetchRelated(id)` call — all three are sequential. Users report the page renders slowly even though each individual fetch is fast (< 50ms).
+
+> **Competent move:** Replace sequential `await` chains with `Promise.all([fetchProduct(id), fetchReviews(id), fetchRelated(id)])` so all three requests fire in parallel. Total wait time drops from sum-of-latencies to max-of-latencies.
+
+> **Tempting-but-wrong:** Wrapping each fetch in a `<Suspense>` boundary and hoping streaming hides the latency. Streaming improves perceived performance by showing partial UI, but the total time to full content is unchanged if the fetches remain serial. The parallel fix actually reduces time; streaming just masks it.
+
+> **Verify:** Add timestamps around the fetch calls in dev mode and compare total elapsed time. Or use the Network tab in Chrome DevTools to confirm the three requests fire simultaneously rather than waterfall.
+
+---
+
+**Scenario 4 — Opting the entire app out of the static shell with a root Suspense wrapping the body**
+
+> **Situation:** A developer wraps the `<body>` contents of the root `layout.tsx` in `<Suspense fallback={null}>` "just to be safe" so async work doesn't block hydration. After deploying, Time to First Byte (TTFB) spikes from ~50ms to ~800ms on every page.
+
+> **Competent move:** Remove the `<Suspense fallback={null}>` wrapper from the root layout body. Wrapping `<body>` in a top-level Suspense with a null fallback collapses the static shell — every request becomes fully dynamic with no prerendered content, serializing the full render on each request. Suspense boundaries should be placed close to the individual components that access runtime data, not at the root.
+
+> **Tempting-but-wrong:** Suspecting a CDN misconfiguration or cache invalidation issue and spending time debugging infrastructure. The root cause is purely structural — the Suspense placement is the problem.
+
+> **Verify:** Remove the wrapping `<Suspense>`, redeploy, and observe TTFB in the browser Network tab. The HTML response should be near-instant and contain the full static shell with streaming holes only around components that actually need runtime data.
+
+---
+
+**Scenario 5 — Captured secret in an inline Server Action closure**
+
+> **Situation:** A developer writes an inline Server Action inside a Server Component that closes over `process.env.STRIPE_SECRET_KEY` to call the Stripe API. A security reviewer flags this even though `STRIPE_SECRET_KEY` is not prefixed `NEXT_PUBLIC_`.
+
+> **Competent move:** Move the Stripe call into a `server-only` Data Access Layer (DAL) function and have the Server Action call that function instead. Closed-over variables in inline Server Actions are encrypted and round-trip through the client. The encryption is best-effort — secrets captured in closures are unnecessarily exposed to the serialization/encryption pathway. DAL isolation with `import 'server-only'` is the correct boundary.
+
+> **Tempting-but-wrong:** Trusting the encryption (set via `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`) as sufficient security and leaving the secret in the closure. Encryption protects the value in transit, but it widens the attack surface compared to never serializing it at all.
+
+> **Verify:** Move the secret access to a `server-only` module. Confirm with `next build` that importing that module from a Client Component produces a build-time error — that's the `'server-only'` guard working correctly.
+
+---
+
+**Scenario 6 — `import 'server-only'` missing from a DAL module — the build doesn't catch it**
+
+> **Situation:** A team adds all DB queries to a `lib/dal.ts` module but omits `import 'server-only'`. A junior developer later imports `dal.ts` directly inside a `"use client"` component. The import silently succeeds — no build error — but the page starts leaking database connection strings in the client bundle.
+
+> **Competent move:** Add `import 'server-only'` as the first line of every module that contains DB access, secret environment variables, or auth/authz logic. This import causes Next.js to throw a **build-time** error if any Client Component (or anything in its module graph) imports the file — a zero-runtime-cost enforcement of the server boundary.
+
+> **Tempting-but-wrong:** Relying on code review alone to catch accidental client imports of server modules. Human review misses this under deadline pressure; `'server-only'` makes the check automated and permanent.
+
+> **Verify:** With `import 'server-only'` in place, add a test import of the DAL from any `"use client"` component and run `next build`. The build should fail with a "You're importing a component that needs 'server-only'" error — that confirms the guard is active.
+
+---
+
 ## Operational Rules Quick Reference
 
 - **DO** treat Server Components as the default; reach for `"use client"` only when hooks,

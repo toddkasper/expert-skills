@@ -293,6 +293,68 @@ cast raw parsed data with `as`.
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — A `.d.ts` declaration file promises a method that the underlying JS library does not export**
+
+> **Situation:** A developer hand-writes a `.d.ts` file for an untyped legacy charting library. They add a `chart.destroy()` method to the declaration because they saw it mentioned in an old README. After shipping, users call `chart.destroy()` and get a runtime `TypeError: chart.destroy is not a function` on the current version of the library.
+
+> **Competent move:** Audit the actual JS runtime export before declaring it. Load the library in a Node.js REPL and inspect its prototype, or read its source, before adding anything to the `.d.ts`. The declaration file must faithfully describe what the JS actually does — phantom declarations give TypeScript false confidence and shift the error from compile time to runtime.
+
+> **Tempting-but-wrong:** Adding the declaration and leaving a `// TODO: verify this method exists` comment, deferring the audit to later. Until the comment is resolved, every caller that uses `chart.destroy()` compiles cleanly but crashes at runtime. "Works in TypeScript" gives no runtime guarantee when the declaration is a lie.
+
+> **Verify:** In a test file, import the library and call the declared method in isolation. Run `node test.js` (not `tsc`) — the runtime will immediately throw if the method doesn't exist. Only after the runtime test passes should the declaration be considered correct.
+
+---
+
+**Scenario 2 — Structural typing allows an `OrderId` to be passed where a `UserId` is expected**
+
+> **Situation:** A codebase uses `type UserId = string` and `type OrderId = string`. Both are aliases for `string`. A function `getOrder(userId: UserId, orderId: OrderId)` is called in one place with the arguments reversed — `getOrder(orderId, userId)`. TypeScript emits no error and the bug reaches production.
+
+> **Competent move:** Use branded (nominal) types for distinct ID domains. A minimal brand: `` type UserId = string & { readonly __brand: 'UserId' } ``. Assign them via constructor functions: `function toUserId(s: string): UserId { return s as UserId }`. Now `UserId` and `OrderId` are structurally distinct and the compiler catches transposed arguments.
+
+> **Tempting-but-wrong:** Adding a code comment like `// first arg must be userId` and relying on review. Comments do not survive refactoring. A structural type alias (`type UserId = string`) provides no compiler protection whatsoever — both types are assignment-compatible with each other and with `string`.
+
+> **Verify:** After branding, swap the arguments intentionally and run `tsc`. The compiler should report "Argument of type 'OrderId' is not assignable to parameter of type 'UserId'." This is the compile-time guarantee the plain type alias could not provide.
+
+---
+
+**Scenario 3 — Overly broad generic constraint lets any object through instead of enforcing a minimum shape**
+
+> **Situation:** A generic utility `function pluck<T, K extends keyof T>(obj: T, key: K): T[K]` is being used correctly. A developer then writes a new utility `function merge<T>(a: T, b: T): T` for merging config objects. Code review flags the `T` constraint as too broad — the function is called with non-plain-object values like arrays and class instances.
+
+> **Competent move:** Add a constraint that matches the intended usage: `function merge<T extends Record<string, unknown>>(a: T, b: T): T`. This narrows `T` to plain object types and prevents accidental calls with arrays, primitives, or class instances, all of which would compile without the constraint. The constraint communicates intent and catches misuse at the callsite.
+
+> **Tempting-but-wrong:** Removing generics entirely and typing the parameters as `object`. `object` excludes primitives but is too broad — it includes arrays and class instances — and the return type loses the specific shape of `T`, forcing callers to cast.
+
+> **Verify:** Attempt to call `merge([1, 2], [3, 4])` with and without the `Record<string, unknown>` constraint. Without it, the call compiles silently. With it, TypeScript reports "Argument of type 'number[]' is not assignable to parameter of type 'Record<string, unknown>'."
+
+---
+
+**Scenario 4 — Runtime boundary: `unknown` API response cast with `as` instead of a runtime validator**
+
+> **Situation:** A service receives a webhook payload, parses it with `JSON.parse`, and immediately casts: `const event = JSON.parse(body) as WebhookPayload`. The type checks pass. In production, a vendor changes the payload schema and omits a required field — the code silently proceeds with `undefined` where a string is expected, causing corrupt database writes.
+
+> **Competent move:** Use a runtime validator (Zod, Valibot, or similar) to parse and validate the payload at the boundary: `const event = WebhookPayloadSchema.parse(JSON.parse(body))`. The validator throws on schema mismatch, turning a silent corruption into an explicit 400/500 error. The TypeScript type of `event` is then inferred from the schema — no `as` cast needed.
+
+> **Tempting-but-wrong:** Adding defensive `if (event.field !== undefined)` checks throughout the business logic downstream. This scatters validation across the codebase and is easy to miss for new fields. Validating at the single entry point (the boundary) catches all failures in one place regardless of how many fields the payload has.
+
+> **Verify:** Define a Zod schema that matches the expected payload. Call `.parse()` with a deliberately malformed payload (missing a required field). Confirm the validator throws a `ZodError` with a clear field-level message. Then confirm the correctly shaped payload parses cleanly and the inferred type matches.
+
+---
+
+**Scenario 5 — `unknown` vs `any` in an error-handling utility at an API edge**
+
+> **Situation:** A shared `handleError(err: any)` utility function is used throughout the codebase to log and format errors. A junior engineer proposes changing `err: any` to `err: unknown` but a teammate objects that doing so will break every call site where `err.message` is accessed directly.
+
+> **Competent move:** Change the parameter to `unknown` and add a type guard at the top of the function: `const message = err instanceof Error ? err.message : String(err)`. This is exactly the right design for a shared error handler — errors from any source (rejected Promises, thrown strings, legacy code) can have any shape. `unknown` forces the narrowing to happen inside the utility, once, rather than spreading unchecked `.message` access across every call site.
+
+> **Tempting-but-wrong:** Keeping `err: any` to avoid touching existing code. `any` propagates upward — every downstream expression derived from `err` also becomes `any`, silently disabling type checking on anything the error touches. A single `unknown` + guard in the utility is a smaller and safer change than `any` left in place indefinitely.
+
+> **Verify:** With `err: unknown` in place, attempt to access `err.message` directly (without a guard) inside the utility. `tsc` should report "Property 'message' does not exist on type 'unknown'." After adding the `instanceof Error` guard, the access compiles and the check is explicit.
+
+---
+
 ## Operational Rules Quick Reference
 
 - **DO** model with discriminated unions (shared `kind` literal field) for mutually exclusive

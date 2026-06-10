@@ -321,6 +321,22 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — Transit Gateway vs VPC Peering: the transitive routing trap**
+
+> **Situation:** An enterprise architect designs connectivity for 8 VPCs across 3 accounts: 1 shared-services VPC and 7 application VPCs. She proposes peering each application VPC to the shared-services VPC (7 peering connections) and declares the design complete. A reviewer says the application VPCs cannot communicate with each other. She responds: "They don't need to — they only talk to shared services." Three months later the team needs two application VPCs to share a message queue and the architecture cannot accommodate it without adding 21 more peering connections to reach a full mesh.
+
+> **Competent move:** Replace the hub-and-spoke peering design with a **Transit Gateway** from the start. TGW supports transitive routing — any VPC attached to the TGW can reach any other attached VPC through a single route table, and adding new VPCs requires only one new attachment rather than N new peering connections. The full-mesh peering count for N VPCs is N×(N-1)÷2 — for 8 VPCs that is 28 connections, each requiring a separate route table entry in every involved VPC. TGW also supports VPN and Direct Connect attachments, making hybrid extension straightforward.
+
+> **Tempting-but-wrong:** Extending the peering design on-demand as new VPC-to-VPC paths are needed. Each new pair requires a dedicated peering connection, dedicated route table entries in both VPCs, and security group updates — the operational overhead grows quadratically. TGW has per-attachment and per-GB charges that are justified once you have more than ~4–5 VPCs that may need to communicate.
+
+> **Verify:** `aws ec2 describe-transit-gateways` to confirm TGW exists; `aws ec2 describe-transit-gateway-attachments --filters Name=state,Values=available` to confirm all VPCs are attached; `aws ec2 describe-transit-gateway-route-tables` to confirm routes propagate correctly; run `traceroute` from an instance in VPC-A to a private IP in VPC-B to confirm routing traverses the TGW.
+
+Further scenarios (Direct Connect encryption gap, Lambda + Aurora connection pool exhaustion, Snow family vs DataSync selection, single NAT Gateway SPOF, SCP vs IAM boundary for region restriction): [references/scenarios.md](references/scenarios.md).
+
+---
+
 ## Operational Rules Quick Reference
 
 Read this first. Each rule is concrete and imperative.

@@ -320,6 +320,22 @@ Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — Inline arrow in `renderItem` defeats `React.memo` on list items**
+
+> **Situation:** A developer wraps a `ProductCard` list item in `React.memo` to prevent re-renders when the parent's state changes. Profiling still shows every `ProductCard` re-rendering whenever the parent updates. The `FlatList` is defined as `renderItem={({ item }) => <ProductCard product={item} onPress={() => handlePress(item.id)} />}`.
+
+> **Competent move:** Extract `renderItem` to a stable function outside the render body (or use `useCallback`), and ensure the `onPress` callback reference is stable (e.g., accepts `item.id` as a parameter rather than closing over a new arrow per item). `React.memo` compares props by reference — a new inline arrow function is a new reference on every render, so the `memo` check always fails.
+
+> **Tempting-but-wrong:** Increasing `windowSize` or lowering `initialNumToRender` to reduce the number of re-renders at the cost of blank flashes. Tuning FlatList window props does not fix the root cause (unstable `renderItem` reference) — it just reduces how many items are in the window at once.
+
+> **Verify:** Use React DevTools Profiler (Hermes mode or Flipper) to confirm which prop triggered the re-render. After stabilizing `renderItem`, the profiler should show "Did not render" for off-screen items when unrelated parent state changes.
+
+Further scenarios: [references/scenarios.md](references/scenarios.md)
+
+---
+
 ## Operational Rules Quick Reference
 
 - **DO** wrap all visible strings in `<Text>` — a bare string inside `<View>` is a runtime error on Android

@@ -266,6 +266,22 @@ React renders to the DOM — all standard HTML accessibility rules apply. React-
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — Context provider value object recreated every render causes all consumers to re-render**
+
+> **Situation:** A `ThemeProvider` component holds `{ theme, setTheme }` as a context value created inline: `<ThemeContext.Provider value={{ theme, setTheme }}>`. Profiling reveals that every component consuming the context re-renders whenever *any* state anywhere in the app changes — even unrelated state that re-renders the `ThemeProvider` parent.
+
+> **Competent move:** Memoize the context value: `const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme])`. The inline `{}` creates a new object reference on every render, and React's context compares values by reference — all subscribers see a "changed" value and re-render. Memoizing the object ensures consumers only re-render when `theme` or `setTheme` actually changes.
+
+> **Tempting-but-wrong:** Wrapping each consumer component in `React.memo`. `React.memo` skips re-renders due to unchanged props, but context changes are not props — `React.memo` does not prevent context-triggered re-renders. The fix must be at the provider, not the consumer.
+
+> **Verify:** Use React DevTools Profiler before and after the fix. Before: every context consumer shows a re-render reason of "context changed" on every unrelated state update. After memoization: consumers only re-render when `theme` itself changes.
+
+Further scenarios: [references/scenarios.md](references/scenarios.md)
+
+---
+
 ## Operational Rules Quick Reference
 
 Read this before writing or reviewing any React code.

@@ -241,6 +241,22 @@ Firewall Manager lets you centrally deploy WAF rules, Shield Advanced protection
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — VPC endpoint policy missing: S3 data exfiltration via Gateway endpoint**
+
+> **Situation:** A financial-services team deploys a VPC Gateway Endpoint for S3 so EC2 instances in private subnets can reach S3 without traversing the internet. Two weeks after go-live, a GuardDuty finding fires: one instance is pushing data to an S3 bucket owned by an external account. The security team assumed the Gateway endpoint kept traffic "internal" and safe. No endpoint policy was configured.
+
+> **Competent move:** A VPC Gateway Endpoint with no endpoint policy uses the default policy — `"Principal": "*", "Action": "s3:*", "Resource": "*"` — which allows any instance in the VPC to reach *any* S3 bucket, including buckets in attacker-controlled accounts. Add an endpoint policy that restricts `Resource` to only the bucket ARNs the workload legitimately needs (e.g., `arn:aws:s3:::my-company-bucket` and `arn:aws:s3:::my-company-bucket/*`), and deny all other S3 access through the endpoint. This prevents the endpoint from becoming an exfiltration channel while keeping legitimate access intact.
+
+> **Tempting-but-wrong:** Relying on the EC2 instance's IAM role permissions alone. The IAM role may correctly restrict `s3:PutObject` to company-owned buckets — but if the instance is compromised and the attacker obtains the instance credentials, they can use those same credentials to call S3 from outside the VPC over the internet (bypassing the endpoint policy entirely). The endpoint policy adds a complementary control that is enforced at the network/endpoint layer regardless of which caller holds the credentials.
+
+> **Verify:** `aws ec2 describe-vpc-endpoints --query 'VpcEndpoints[?ServiceName==\`com.amazonaws.<region>.s3\`].PolicyDocument'` — confirm the policy restricts `Resource` to specific bucket ARNs; attempt `aws s3 cp` from an instance in the VPC to an external bucket through the endpoint — it should be denied.
+
+Further scenarios (IAM Access Analyzer region scope, S3 Object Lock Compliance vs Governance, permission boundary gap, EC2 credential exfiltration containment, Macie discovery job vs continuous monitoring): [references/scenarios.md](references/scenarios.md).
+
+---
+
 ## Operational Rules Quick Reference
 
 Read this section first. Each rule is concrete and imperative.

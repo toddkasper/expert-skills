@@ -301,6 +301,72 @@ Actions now supports generating signed provenance attestations (SLSA Build L2+) 
 
 ---
 
+## Decision Scenarios
+
+**Scenario 1 — Composite action vs reusable workflow: which for a shared build step**
+
+> **Situation:** A platform team wants to share a "build and push Docker image" sequence across 15 repositories. The sequence is 4 steps: log in to ECR, build image, tag image, push image. A senior engineer proposes creating a reusable workflow (`.github/workflows/docker-build.yml`) in a shared `platform` repo and calling it from each app repo. A colleague suggests a composite action (`action.yml`) instead. The senior engineer says "they do the same thing, just pick one."
+
+> **Competent move:** Use a **composite action**, not a reusable workflow, for step-level logic you want to embed as a step inside a calling job. A composite action runs on the *caller's* runner and shares the runner's filesystem — it can access checked-out source code and build artifacts from preceding steps without artifact uploads/downloads. A reusable workflow spawns its own independent runner(s), requires explicit artifact passing, and counts as a full workflow nesting level against the 4-level limit. For "N steps that run in the context of a caller's job," composite action is the right abstraction.
+
+> **Tempting-but-wrong:** Defaulting to a reusable workflow because it is more familiar. Reusable workflows are the right abstraction for full independent jobs or multi-job pipelines (e.g., a complete deploy pipeline) — not for step sequences that need access to the calling job's runner workspace without artifact overhead.
+
+> **Verify:** In the `action.yml`'s `runs` section, confirm `using: composite` and that `steps:` lists the 4 steps directly; in the calling workflow, the action appears as a single `uses:` step within the job (not as a separate `uses:` at job level). `gh workflow list` in the shared repo should NOT show a new workflow file for a composite action.
+
+---
+
+**Scenario 2 — GITHUB_OUTPUT vs GITHUB_ENV for cross-job data**
+
+> **Situation:** A CI workflow has two jobs: `build` and `deploy`. The `build` job produces a Docker image tag that the `deploy` job needs to run `docker pull`. A developer writes `echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV` in a step of the `build` job and references `${{ env.IMAGE_TAG }}` in the `deploy` job. The workflow runs but the `deploy` job cannot find the image tag — `env.IMAGE_TAG` is empty.
+
+> **Competent move:** `GITHUB_ENV` propagates environment variables to subsequent **steps within the same job** only — it does not cross job boundaries. To pass data between jobs, write to `GITHUB_OUTPUT` (`echo "image_tag=$TAG" >> $GITHUB_OUTPUT`), declare a job-level `outputs:` block on the `build` job that maps the output (`image_tag: ${{ steps.<step-id>.outputs.image_tag }}`), and reference it in the `deploy` job via `${{ needs.build.outputs.image_tag }}`. The `deploy` job must also declare `needs: build`.
+
+> **Tempting-but-wrong:** Using an artifact to pass a single string value between jobs. Artifacts work for files, but for small string values like an image tag they add unnecessary `upload-artifact`/`download-artifact` steps and storage. `GITHUB_OUTPUT` + job outputs is the canonical, low-overhead pattern for scalar cross-job data.
+
+> **Verify:** Add `- run: echo "${{ needs.build.outputs.image_tag }}"` as the first step in the `deploy` job and confirm the tag appears in the workflow log. Inspect the `build` job's step log to confirm the `GITHUB_OUTPUT` write: the Actions runner will log `Set output image_tag=<value>`.
+
+---
+
+**Scenario 3 — OIDC trust policy scoped to organization rather than repo+branch**
+
+> **Situation:** A team sets up OIDC federation between GitHub Actions and AWS. The IAM role trust policy condition is:
+> ```json
+> "StringLike": { "token.actions.githubusercontent.com:sub": "repo:my-org/*" }
+> ```
+> Production deployments succeed. A security reviewer flags the condition as dangerously broad but the engineer argues "it's our org, all our repos are trusted."
+
+> **Competent move:** The `sub` claim for GitHub OIDC is `repo:<org>/<repo>:ref:refs/heads/<branch>` (or `environment:<env>`). A wildcard `repo:my-org/*` allows any repository in the org — including forks, experimental repos, and any new repo created in the future — to assume the production IAM role. Scope the condition to the specific repo and the specific branch or environment: `"StringEquals": { "token.actions.githubusercontent.com:sub": "repo:my-org/my-service:ref:refs/heads/main" }` or, better, `repo:my-org/my-service:environment:production` when using a protected environment.
+
+> **Tempting-but-wrong:** Adding the environment condition as an `AND` alongside the broad org wildcard. If the condition uses `StringLike` with `repo:my-org/*` as the sub-claim check, any repo in the org can still assume the role — adding an environment condition only helps if the environment is correctly configured and the calling repo actually targets that environment. The repo restriction must be specific.
+
+> **Verify:** `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — inspect the `Condition` block; confirm `StringEquals` (not `StringLike`) is used and the `sub` value names the exact repo and branch or environment. Test from a different repo in the org — the `AssumeRoleWithWebIdentity` call should return `AccessDenied`.
+
+---
+
+**Scenario 4 — Reusable workflow nesting depth exceeded**
+
+> **Situation:** A platform team builds a layered reusable-workflow architecture: `app-pipeline.yml` calls `build.yml`, which calls `lint.yml`, which calls `security-scan.yml`, which calls `notify.yml`. When a developer triggers the app pipeline, the workflow fails at the `notify.yml` level with an error about the call chain. The team suspects a permissions issue.
+
+> **Competent move:** GitHub Actions limits reusable workflow nesting to **4 levels** (the top-level calling workflow + 3 levels of called reusable workflows). A fifth level causes a runtime failure, not a permissions error. The fix is to restructure: either promote `notify.yml`'s steps into a composite action (step-level reuse, no nesting limit applies) and call it from `security-scan.yml`, or collapse some layers by inlining the notify steps. The 4-level limit is a hard platform constraint, not a configurable policy.
+
+> **Tempting-but-wrong:** Debugging IAM permissions or secrets inheritance, which is the intuitive first guess when a called workflow fails. The nesting-depth limit produces a workflow-level error that is distinct from permission failures; check the workflow run's error message first — it will reference the call depth if that is the cause.
+
+> **Verify:** Count the call chain manually: caller (1) → build.yml (2) → lint.yml (3) → security-scan.yml (4) → notify.yml (5 = over limit). Restructure so notify steps run as a composite action called from within `security-scan.yml` (still level 4) rather than as a fifth reusable workflow. After refactoring, `gh run list --workflow app-pipeline.yml` should show successful runs.
+
+---
+
+**Scenario 5 — Self-hosted runner on a public repository**
+
+> **Situation:** An open-source project hosted in a public GitHub org wants to use GPU instances for ML model tests. A maintainer registers a self-hosted GPU runner to the public repository and enables it. Within a day, a fork PR triggers the workflow on the GPU runner, running attacker-controlled code that mines cryptocurrency. The maintainer is surprised: "The workflow requires approval for first-time contributors."
+
+> **Competent move:** The "require approval for first-time contributors" setting gates the *creation* of a workflow run — it does not prevent a workflow from using a self-hosted runner once approved. More importantly, even approved contributors (anyone who has had a PR merged) can trigger runs without approval. Any code in a PR, including fork PRs, runs on the self-hosted runner once the workflow executes. **Never attach self-hosted runners to public repositories.** For GPU workloads in a public open-source project, use GitHub-hosted larger runners (paid, but isolated) or a separate private mirror repository for sensitive compute, never a self-hosted runner on the public repo.
+
+> **Tempting-but-wrong:** Tightening the approval policy to "require approval for all external contributors." This slows down malicious actors but does not prevent the attack — a motivated attacker can impersonate a legitimate contributor or wait for a maintainer to approve their first benign PR. The only safe posture is no self-hosted runners on public repos.
+
+> **Verify:** `gh api repos/{owner}/{repo}/actions/runners --jq '.runners[].labels'` to list runners and their labels; confirm no self-hosted runners are registered to the public repo. For the private GPU runner, create a separate private repo or use runner groups at the org level restricted to specific private repos only.
+
+---
+
 ## Operational Rules Quick Reference
 
 - **DO** set `permissions:` explicitly at the workflow level; never rely on the org default permissive setting for a workflow that writes or deploys.
