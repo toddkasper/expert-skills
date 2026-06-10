@@ -16,20 +16,14 @@ metadata:
 
 ## Overview
 
-The AWS Certified Solutions Architect – Professional credential validates that a practitioner can design and evaluate complex, enterprise-scale cloud architectures on AWS. Unlike the Associate-level exam, the Professional exam targets candidates with 2+ years of hands-on AWS experience who must reason across organizational boundaries, trade-offs between cost/resilience/performance, and the full migration lifecycle.
+**This file is an operational playbook, not an exam outline.** Each section states the rules an architect applies when reviewing or designing AWS architecture: decision criteria for picking between services, anti-patterns to catch in design reviews. Recurring principle: **verify against the live account** — limits, pricing, and feature availability change frequently. Benchmarked against the AWS Solutions Architect – Professional (SAP-C02) blueprint.
 
-**This file is an operational playbook, not an exam outline.** Each section states the rules an architect actually applies when reviewing or designing AWS architecture, the concrete decision criteria for picking between services, and the anti-patterns to catch in a design review. The recurring principle: **verify against the live account and official docs** — never assume from memory or blog posts, because service limits, pricing, and feature availability change frequently.
+> **Load this skill when…** evaluating or designing complex AWS architectures across multiple accounts or regions; choosing connectivity patterns (Transit Gateway, VPC Peering, Direct Connect, PrivateLink); planning migration strategy (7 Rs, tooling, wave planning); or making cost/resilience/performance trade-offs at enterprise scale.
+> **Not this skill:** pipeline/IaC delivery → see `aws-devops-engineer-professional`; deep security control design → see `aws-security-specialty`.
 
-> **Load this skill when…** evaluating or designing complex AWS architectures across multiple accounts or regions; choosing between connectivity patterns (Transit Gateway, VPC Peering, Direct Connect, PrivateLink); planning a migration strategy (7 Rs, tooling selection, wave planning); or making cost/resilience/performance trade-offs at enterprise scale.
-> **Not this skill:** hands-on pipeline/IaC delivery or deployment strategies → see `aws-devops-engineer-professional`; deep security control design (GuardDuty, KMS, IAM policy evaluation) → see `aws-security-specialty`.
-
-> **Study resources** (official links, whitepapers, practice exams) live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path.
+> **Study resources, whitepapers, practice exams, and credential logistics:** [references/study-resources.md](references/study-resources.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's MCP/automation, the AWS CLI (`aws`) or CloudShell, or the AWS Console, in that order of preference.
-
----
-
-Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 
@@ -113,77 +107,65 @@ Use AWS Cost Explorer for trend analysis and forecasts. Use AWS Budgets to trigg
 
 ### 2.1 Deployment Strategy
 
-**Pick the rollout pattern by risk tolerance:**
-
-| Pattern | Zero downtime | Rollback speed | Cost | Use when |
+| Pattern | Zero downtime | Rollback | Cost | Use when |
 |---|---|---|---|---|
-| All-at-once | No | Slow (redeploy) | Lowest | Dev/test, batch |
+| All-at-once | No | Slow | Lowest | Dev/test, batch |
 | Rolling | Partial | Medium | Low | Tolerates brief mixed-version |
-| Blue/green | Yes | Instant (swap) | 2x capacity during deploy | Production, stateless services |
-| Canary | Yes | Instant (shift traffic back) | Slight overhead | Gradual validation in production |
+| Blue/green | Yes | Instant (swap) | 2× capacity | Production, stateless services |
+| Canary | Yes | Instant (shift back) | Slight overhead | Gradual validation in production |
 
-AWS CodeDeploy, ECS deployment configuration, and Lambda aliases + weighted aliases all support blue/green and canary natively. CloudFormation change sets are the IaC equivalent of a pre-deployment plan view.
+CodeDeploy, ECS deployment config, and Lambda aliases support blue/green and canary natively. CloudFormation change sets are the pre-deploy plan view.
 
-**IaC discipline:** CloudFormation stacks should be parameterized and linted before deploy (cfn-lint, cfn-nag for security checks). Drift detection (`aws cloudformation detect-stack-drift`) catches out-of-band changes that will cause the next update to fail unexpectedly.
-
-**Red flag:** manual console changes in production outside of IaC; blue/green for a stateful service where session state is not externalized (session drain or externalize to ElastiCache first).
+**Red flag:** manual console changes in production outside of IaC; blue/green for a stateful service without externalizing session state first.
 
 ### 2.2 Business Continuity and DR Design
 
-This maps to the same RTO/RPO table in §1.3. For greenfield solutions:
-- Multi-AZ is the baseline for any production workload — it is not a DR strategy, it is the availability floor.
-- Multi-region is required when RTO < ~10 minutes or when a single-region outage is an unacceptable business risk.
-- Route 53 health checks + routing policies (failover, latency, weighted) are the DNS layer for cross-region active/passive or active/active.
-- S3 Cross-Region Replication (CRR) and RDS cross-region read replicas are the data-plane components.
+Maps to the RTO/RPO table in §1.3. For greenfield:
+- Multi-AZ is the availability floor — not a DR strategy.
+- Multi-region required when RTO < ~10 min or single-region failure is unacceptable.
+- Route 53 failover/latency/weighted routing is the DNS layer for cross-region; S3 CRR and RDS cross-region read replicas are the data plane.
 
-**Red flag:** treating Multi-AZ RDS as a DR solution across regions (it is not cross-region); using a single S3 bucket in us-east-1 for DR storage.
+**Red flag:** Multi-AZ RDS presented as cross-region DR; single S3 bucket in one region as DR storage.
 
 ### 2.3 Security Controls for New Architectures
 
-**Principle of least privilege at every layer:**
+- **Network:** security groups (stateful, per-ENI, allow-only) for application-level rules; NACLs (stateless, subnet-level, explicit inbound+outbound) for broad block-lists.
+- **Identity:** IAM roles for all compute (EC2/Lambda/ECS tasks); IAM Roles Anywhere for on-premises; cross-account assume-role with external ID to prevent confused deputy.
+- **Data:** KMS CMKs for data you control or need key-policy audit; AWS-managed keys for lower overhead. Enforce TLS via `aws:SecureTransport` condition in S3 bucket policies.
+- **Detection:** GuardDuty (enable org-wide); Security Hub (aggregates findings); Config (configuration drift); CloudTrail (all API calls, org-level trail).
+- **Secrets:** Secrets Manager for rotating credentials; SSM Parameter Store SecureString for non-rotating config. Shield Standard (free, L3/L4); Shield Advanced ($3,000/mo `[volatile — verify live]`) for L7 DDoS + SRT access.
 
-- **Network layer:** security groups are stateful and default-deny inbound. NACLs are stateless and apply at subnet level — require both inbound and outbound rules. Use NACLs for broad block-lists; use security groups for fine-grained application-level control.
-- **Identity layer:** IAM roles (not access keys) for EC2/Lambda/ECS tasks. Use IAM Roles Anywhere for on-premises workloads. Cross-account: assume role with external ID to prevent confused deputy.
-- **Data layer:** encrypt at rest (KMS CMKs for data you control; AWS-managed keys for lower operational overhead). Enforce encryption in transit via TLS; use `aws:SecureTransport` condition in S3 bucket policies.
-- **Detection layer:** GuardDuty for threat detection (enable org-wide from the delegated admin account); Security Hub aggregates findings across services; Config tracks configuration drift; CloudTrail logs all API calls.
-
-**Secrets management:** Secrets Manager (auto-rotation, costs per secret per month) vs SSM Parameter Store SecureString (KMS-encrypted, lower cost, no auto-rotation built in). Use Secrets Manager when rotation is required; use Parameter Store for non-rotating config values and tokens.
-
-**WAF + Shield:** AWS WAF for Layer 7 rules (attach to CloudFront, ALB, API Gateway, AppSync). Shield Standard is free and protects against common L3/L4 DDoS. Shield Advanced ($3,000/month org-wide) adds response team access, cost protection, and L7 DDoS mitigation at scale.
-
-**Red flag:** long-lived IAM access keys in Lambda environment variables or EC2 userdata; security groups with 0.0.0.0/0 on non-public-facing ports; no CloudTrail org-level trail; no GuardDuty in non-production accounts.
+**Red flag:** long-lived IAM access keys in Lambda/EC2 config; security groups with `0.0.0.0/0` on non-public ports; no org-level CloudTrail; no GuardDuty in non-production accounts.
 
 ### 2.4 Reliability — Compute and Data Stores
 
-**Compute:** Auto Scaling Groups (EC2) with target tracking policies respond to load with minimal lag. For containers, ECS/EKS on Fargate removes capacity management. Lambda scales transparently but has concurrency limits — set reserved concurrency to protect downstream systems.
+**Compute:** ASGs (EC2) with target tracking; ECS/EKS on Fargate for containers; Lambda (set reserved concurrency to protect downstream systems).
 
 **Databases — pick by access pattern:**
 
-| Workload | Service | Why |
-|---|---|---|
-| Relational, OLTP | Amazon Aurora (MySQL/PostgreSQL) or RDS | Multi-AZ, read replicas, automated failover |
-| Key-value / document, variable scale | DynamoDB | Serverless, auto-scaling, global tables for multi-region |
-| In-memory cache / session | ElastiCache (Redis) | Sub-ms latency; Redis supports complex data structures and pub/sub |
-| Search / analytics | OpenSearch Service | Full-text search, log analytics, Kibana dashboards |
-| Data warehouse | Amazon Redshift | Columnar storage, petabyte scale, RA3 nodes with S3-backed storage |
+| Workload | Service |
+|---|---|
+| Relational, OLTP | Aurora (MySQL/PostgreSQL) or RDS — Multi-AZ, read replicas |
+| Key-value / document | DynamoDB — serverless, auto-scaling, Global Tables |
+| In-memory cache | ElastiCache Redis — sub-ms latency |
+| Search / analytics | OpenSearch Service |
+| Data warehouse | Amazon Redshift — columnar, petabyte scale |
 
-**Loose coupling:** SQS decouples producers from consumers (standard for at-least-once; FIFO for exactly-once + ordering). SNS fans out to multiple subscribers. EventBridge routes events by rule to targets (Lambda, SQS, Step Functions) without point-to-point wiring. Step Functions orchestrates multi-step workflows with retry/error handling.
+**Loose coupling:** SQS (standard: at-least-once; FIFO: exactly-once + ordering); SNS fan-out; EventBridge content-based routing; Step Functions for multi-step orchestration with retry/error handling.
 
-**Red flag:** synchronous calls between microservices with no timeout or circuit breaker; DynamoDB with hot partition keys (choose high-cardinality partition keys); single-AZ RDS for production.
+**Red flag:** synchronous microservice calls with no timeout or circuit breaker; DynamoDB hot partition keys; single-AZ RDS for production.
 
-### 2.5 Performance
+### 2.5 Performance and Cost for New Designs
 
-- **Caching:** CloudFront (CDN, edge) → ElastiCache (application-tier, in-memory) → DAX (DynamoDB Accelerator, microsecond reads). Apply caching at the layer closest to the bottleneck.
-- **Instance selection:** Compute-optimized (C family) for CPU-bound; Memory-optimized (R/X family) for in-memory datasets; Storage-optimized (I/D family) for NVMe workloads; Accelerated (P/G/Inf family) for ML.
-- **Global acceleration:** CloudFront reduces latency for static/dynamic content delivery. AWS Global Accelerator provides Anycast IP routing to the nearest AWS edge, improving TCP connection time for non-HTTP workloads.
+**Caching:** CloudFront (edge) → ElastiCache (app-tier) → DAX (DynamoDB microsecond reads). Apply at the layer closest to the bottleneck.
 
-### 2.6 Cost Optimization for New Designs
+**Instance selection:** C family (CPU-bound); R/X (in-memory); I/D (NVMe); P/G/Inf (ML). Use Global Accelerator for Anycast TCP routing to AWS edge for non-HTTP workloads.
 
-- **Purchasing model:** On-Demand for variable/unpredictable. Reserved Instances or Compute Savings Plans (1yr or 3yr, no/partial/all upfront) for steady-state baseline — Compute Savings Plans are more flexible (EC2 + Fargate + Lambda). Spot Instances for fault-tolerant, interruptible workloads (batch, stateless web, ML training) at up to 90% discount.
-- **Storage tiering:** S3 Intelligent-Tiering for objects with unknown access patterns; S3 Glacier Instant/Flexible/Deep Archive for progressively cheaper long-term retention. EBS gp3 is cheaper and more flexible than gp2 — default to gp3.
-- **Data transfer costs are real:** inter-AZ data transfer costs money (significant for chatty microservices). Egress to the internet costs money; S3 Gateway endpoints and Interface endpoints can eliminate internet-facing egress charges for supported services.
+**Purchasing:** On-Demand for variable workloads. Compute Savings Plans (1yr/3yr, covers EC2+Fargate+Lambda) for steady-state. Spot (up to 90% discount) for fault-tolerant batch/ML. Default to EBS gp3 over gp2.
 
-**Red flag:** On-Demand for all compute in a 24/7 production environment (missing Savings Plan opportunity); gp2 EBS volumes (migrate to gp3 for lower cost); not accounting for inter-AZ transfer in a multi-AZ microservices cost model.
+**Data transfer:** inter-AZ transfer costs money for chatty microservices. Use S3/DynamoDB Gateway endpoints (free) to eliminate NAT Gateway egress.
+
+**Red flag:** On-Demand for 24/7 production (no Savings Plan); gp2 EBS; ignoring inter-AZ transfer in cost model.
 
 ---
 
@@ -191,57 +173,39 @@ This maps to the same RTO/RPO table in §1.3. For greenfield solutions:
 
 ### 3.1 Operational Excellence
 
-**Observability stack:**
-- **Metrics:** CloudWatch metrics with custom namespaces for application-level signals; set alarms on P99 latency, error rate, and queue depth — not just average.
-- **Logs:** CloudWatch Logs Insights for ad-hoc log queries. Use structured (JSON) logging for queryable log events. Set log retention policies — uncapped log groups are a silent cost leak.
-- **Traces:** AWS X-Ray for distributed tracing across Lambda, ECS, EC2, API Gateway; find bottlenecks in call chains without log diving.
-- **Dashboards:** CloudWatch dashboards or Amazon Managed Grafana for unified operational views.
+**Observability:** CloudWatch metrics (alarm on P99, not average); structured JSON logs with retention policies (uncapped = silent cost leak); X-Ray distributed traces; CloudWatch dashboards or Managed Grafana. Move console deployments to CodePipeline; schedule `aws cloudformation detect-stack-drift` to catch manual changes.
 
-**Deployment improvement:** move console-based deployments to CodePipeline. Add pre-production integration tests as a pipeline gate. Use `aws cloudformation detect-stack-drift` on a schedule to catch manual changes.
-
-**Red flag:** alarms only on Average latency (misses tail latency problems); no log retention policy (uncapped storage cost); no runbooks for common failure modes.
+**Red flag:** alarms only on Average latency; no log retention policy; no runbooks for common failure modes.
 
 ### 3.2 Security Posture Improvement
 
-Security Hub aggregates findings from GuardDuty, Inspector, Macie, Firewall Manager, and IAM Access Analyzer into a single pane. Prioritize by severity and by how many accounts/resources are affected.
+Security Hub aggregates findings from GuardDuty, Inspector, Macie, Firewall Manager, and IAM Access Analyzer; prioritize by severity × blast radius. IAM Access Analyzer identifies unintended external access — run org-wide from the delegated admin account. Add managed Config rules (`s3-bucket-public-read-prohibited`, `rds-instance-public-access-check`) with SSM Automation remediation. Use SSM Patch Manager + Inspector for OS/package CVE management.
 
-**IAM Access Analyzer** identifies resources shared with external principals (cross-account, public) that you may not have intended. Run org-wide from the delegated admin account to catch unintended public S3 buckets, KMS key policies, and Lambda function policies.
+**Red flag:** GuardDuty not org-wide; S3 Block Public Access not enabled at org level; IAM roles with `*:*` for Lambda or EC2.
 
-**Config rules + remediation:** use managed Config rules for common controls (e.g., `s3-bucket-public-read-prohibited`, `rds-instance-public-access-check`) and attach SSM Automation remediation documents to auto-fix violations where safe.
+### 3.3 Performance and Reliability Improvement
 
-**Patching:** SSM Patch Manager for OS patching across EC2 at scale; Inspector for vulnerability scanning (now agentless for EC2); use Patch Groups and maintenance windows to control blast radius.
+**Performance:** instrument before resizing — X-Ray service maps, CloudWatch Container Insights, Lambda Insights. Compute Optimizer recommends right-sizes based on p99 data. For databases: Performance Insights (7-day free tier), Slow Query Logs, read replicas for read-heavy, DAX for DynamoDB.
 
-**Red flag:** GuardDuty enabled only in the production account, not org-wide; S3 Block Public Access not enabled at the org level; IAM roles with `*:*` in the policy used for Lambda or EC2.
+**Reliability — eliminate SPOFs in blast-radius order:**
+- Single NAT Gateway per region → add one per AZ
+- Single EC2 → ASG min 2
+- Single RDS → enable Multi-AZ
+- Hard-coded endpoints → Route 53 / load balancer DNS
+- Synchronous calls with no retry → add SQS or exponential backoff
 
-### 3.3 Performance Improvement
+Lambda default: 1,000 concurrent executions per region per account `[volatile — verify live]`. Document quota headroom for critical services; request increases before load events.
 
-- **Identify the bottleneck first:** use X-Ray service maps to find the slowest segment. Use CloudWatch Container Insights (ECS/EKS) and Lambda Insights for function-level profiling. Never guess — instrument first.
-- **Rightsizing:** Compute Optimizer analyzes CloudWatch metrics and recommends EC2, ECS task, Lambda memory, and EBS volume right-sizes. Cross-reference with actual p99 CPU/memory before resizing — a temporarily quiet service will appear over-provisioned.
-- **Database performance:** Aurora query plan management, Performance Insights (available for RDS and Aurora; free tier for 7 days; paid for longer retention), and Slow Query Logs are the tools. Add read replicas for read-heavy workloads; add DAX for DynamoDB.
+**Red flag:** resizing on Average CPU without checking peak; single NAT Gateway for all AZs; Lambda with no reserved concurrency protecting a downstream service.
 
-**Red flag:** resizing instances based on Average CPU without checking peak; adding a read replica before checking whether the bottleneck is actually on read path; enabling caching without validating cache hit rate.
+### 3.4 Cost Optimization for Existing Workloads
 
-### 3.4 Reliability Improvement
+1. **Unused resources:** Trusted Advisor + `aws ec2 describe-volumes --filters Name=status,Values=available` for unattached EBS.
+2. **Savings Plan gap:** Cost Explorer coverage report → purchase 1yr Compute Savings Plans for the On-Demand baseline.
+3. **S3 cost:** S3 Storage Lens → lifecycle policies or Intelligent-Tiering for objects with uncertain access patterns.
+4. **Data transfer:** Cost and Usage Reports (CUR) expose transfer line items → replace NAT Gateway egress for S3/DynamoDB with free Gateway endpoints.
 
-Single points of failure (SPOF) are the primary target. Common SPOFs in existing architectures:
-- Single NAT Gateway per region (add one per AZ)
-- Single EC2 instance (add ASG with min 2)
-- Single RDS instance (enable Multi-AZ)
-- Hard-coded endpoints (move to Route 53 or a load balancer DNS)
-- Synchronous cross-service calls with no retry/backoff (add SQS or implement exponential backoff)
-
-**Service quotas matter at scale.** Lambda has a default 1,000 concurrent executions per region per account. SQS has no inherent throughput limit but Lambda event source mapping concurrency is bounded. Document the quota headroom for every critical service and proactively request increases before load events.
-
-**Red flag:** single NAT Gateway for all AZs (single AZ failure kills cross-AZ outbound traffic); Lambda with no reserved concurrency guard protecting a downstream throttle-sensitive service.
-
-### 3.5 Cost Optimization for Existing Workloads
-
-1. **Unused resources:** Trusted Advisor flags idle load balancers, unattached EBS volumes, EC2 instances with low CPU. `aws ec2 describe-volumes --filters Name=status,Values=available` finds unattached volumes directly.
-2. **Savings Plan coverage:** Cost Explorer shows Savings Plan coverage and utilization. Gap = On-Demand spend that could be covered — purchase 1yr Compute Savings Plans to cover the stable baseline.
-3. **S3 cost audit:** S3 Storage Lens gives bucket-level metrics. Lifecycle policies that transition objects to cheaper storage tiers are the first lever; Intelligent-Tiering automates this for uncertain access patterns.
-4. **Data transfer audit:** Cost and Usage Reports (CUR) expose data-transfer line items at resource level. Replace NAT Gateway egress for S3/DynamoDB with Gateway endpoints (free) to eliminate that cost category entirely.
-
-**Red flag:** no lifecycle policies on S3 buckets older than 90 days; gp2 EBS volumes (migrate to gp3 for lower cost + higher baseline performance); no Savings Plan in a stable production environment running 24/7.
+**Red flag:** no S3 lifecycle policies on buckets older than 90 days; gp2 EBS; no Savings Plan in a 24/7 production environment.
 
 ---
 
@@ -279,41 +243,16 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 
 **Red flag:** using DMS without running SCT first on heterogeneous migrations; choosing Snow family for a 500 GB dataset with a 1 Gbps link (DataSync is faster); forgetting to re-point DNS during cutover.
 
-### 4.3 New Architecture for Existing Workloads (Replatform/Refactor)
+### 4.3 Replatform/Refactor Patterns
 
-**Compute modernization path:**
+> Full compute, storage, decoupling, serverless-candidate, and purpose-built-database reference: [references/architecture-patterns.md](references/architecture-patterns.md). Core rules below.
 
-| From | To | Key decision |
-|---|---|---|
-| Bare metal / VM | EC2 in ASG | Rehost; optimize instance family to workload |
-| App server (Tomcat, etc.) | Elastic Beanstalk | Managed platform; still EC2 underneath |
-| Stateless service | ECS/Fargate or EKS/Fargate | Container adoption; Fargate removes node management |
-| Event-driven / short tasks | Lambda | Serverless; eliminates idle compute cost |
+- **Compute:** EC2 in ASG (Rehost) → Elastic Beanstalk (managed platform) → ECS/EKS on Fargate (containers) → Lambda (event-driven short tasks). Match to workload shape.
+- **Storage:** EBS gp3 (block), EFS/FSx (file), S3 (object), Storage Gateway Volume (hybrid iSCSI).
+- **Decoupling:** replace synchronous calls with SQS; fan-out with SNS+SQS; custom schedulers with EventBridge Scheduler; workflow engines with Step Functions.
+- Lambda is cost-optimal for spiky/event-driven; EC2 + Compute Savings Plan is cheaper for consistent 24/7 throughput.
 
-**Storage modernization:**
-- Block: EBS for EC2 boot and transactional I/O; default to gp3.
-- File: EFS (NFS, POSIX, multi-AZ) for shared Linux workloads; FSx for Windows (SMB/DFS) or FSx for Lustre (HPC/ML).
-- Object: S3 — the default for unstructured data, backups, static assets, data lakes.
-- Hybrid cache: Storage Gateway Volume Gateway for on-premises apps that need to read/write to S3 via iSCSI.
-
-### 4.4 Modernization Opportunities
-
-**Decoupling patterns:**
-- Replace synchronous inter-service calls with SQS queues (async, buffered).
-- Replace fan-out direct calls with SNS topic + SQS subscriptions.
-- Replace custom schedulers with EventBridge Scheduler.
-- Replace custom workflow engines with Step Functions.
-
-**Serverless candidates:** any workload with spiky, unpredictable, or low-average traffic is a Savings Plan target or a serverless candidate. Lambda works well for: API backends (via API Gateway), event processors (S3/DynamoDB streams, SQS), scheduled jobs, and data transformations. Lambda does *not* work well for: long-running (>15 min) tasks, workloads needing persistent in-memory state, or workloads with very consistent high throughput (EC2 + Savings Plan is cheaper).
-
-**Purpose-built databases over MySQL-for-everything:**
-- High-volume time-series → Amazon Timestream
-- Fraud/recommendation graphs → Amazon Neptune
-- Ledger / audit trail → Amazon QLDB
-- Session/cache → ElastiCache Redis
-- Full-text search → OpenSearch
-
-**Red flag:** migrating a stateful monolith to Lambda without externalizing state; using RDS MySQL for a workload that is clearly key-value (DynamoDB is cheaper and scales better); refactoring to microservices without first establishing service contracts and observability.
+**Red flag:** migrating a stateful monolith to Lambda without externalizing state; using RDS for a key-value workload; refactoring to microservices without service contracts and observability.
 
 ---
 
@@ -321,46 +260,46 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 
 ### Workflow 1 — Choose and Build Cross-Account/VPC Connectivity (Peering vs Transit Gateway Decision → Build → Verify Routes)
 
-1. **Make the decision:** count the VPCs that need to communicate. ≤3 VPCs with no future growth → VPC Peering (cheaper, no per-attachment charge). 4+ VPCs, any transitive routing needed, or hybrid (VPN/DX) attachment required → Transit Gateway. Document the choice in the architecture record before provisioning.
-   → gate: confirm there are no overlapping CIDRs between any VPC pair (peering and TGW both reject overlapping CIDRs at attachment time); `aws ec2 describe-vpcs --query 'Vpcs[].CidrBlock'` in each account.
-2. **TGW path — create the Transit Gateway** in the hub account (or the account that will own it): `aws ec2 create-transit-gateway --description "<name>" --options AmazonSideAsn=64512,AutoAcceptSharedAttachments=disable,DefaultRouteTableAssociation=enable,DefaultRouteTablePropagation=enable`.
-   → gate: `aws ec2 describe-transit-gateways --query 'TransitGateways[?State==\`available\`]'` — TGW must reach `available` before creating attachments.
-3. Share the TGW to spoke accounts via AWS RAM: `aws ram create-resource-share --name <name> --resource-arns <tgw-arn> --principals <spoke-account-id>`. Accept the share in each spoke account.
-   → gate: in the spoke account, `aws ec2 describe-transit-gateways` should list the shared TGW; `aws ram get-resource-share-invitations` shows `PENDING` if not yet accepted.
-4. Create VPC attachments from each spoke VPC: `aws ec2 create-transit-gateway-vpc-attachment --transit-gateway-id <tgw-id> --vpc-id <vpc-id> --subnet-ids <subnet-ids>`. Repeat for each spoke.
-   → gate: `aws ec2 describe-transit-gateway-vpc-attachments --filters Name=state,Values=available` — each attachment must be `available`.
-5. Update VPC route tables in each spoke to route traffic destined for other VPCs' CIDRs via the TGW: `aws ec2 create-route --route-table-id <rtb> --destination-cidr-block <peer-cidr> --transit-gateway-id <tgw-id>`.
-   → gate: `aws ec2 describe-route-tables --route-table-ids <rtb>` confirms the route; then `traceroute` from an instance in one VPC to a private IP in another — confirm packets traverse the TGW (not the internet gateway).
+1. **Decide:** ≤3 VPCs, no transitive routing, no hybrid attachment → VPC Peering. 4+ VPCs, transitive routing, or VPN/DX attachment → Transit Gateway. Document before provisioning.
+   → gate: no overlapping CIDRs between any VPC pair (both Peering and TGW reject overlapping CIDRs); `aws ec2 describe-vpcs --query 'Vpcs[].CidrBlock'` in each account.
+2. **Create TGW** in the hub account: `aws ec2 create-transit-gateway --description "<name>" --options AmazonSideAsn=64512,AutoAcceptSharedAttachments=disable,DefaultRouteTableAssociation=enable,DefaultRouteTablePropagation=enable`.
+   → gate: `aws ec2 describe-transit-gateways --query 'TransitGateways[?State==\`available\`]'` — must reach `available` before creating attachments.
+3. Share TGW to spoke accounts via AWS RAM; accept the share in each spoke account.
+   → gate: spoke account `aws ec2 describe-transit-gateways` lists the shared TGW; `aws ram get-resource-share-invitations` shows no `PENDING` entries.
+4. Create VPC attachments from each spoke: `aws ec2 create-transit-gateway-vpc-attachment --transit-gateway-id <tgw-id> --vpc-id <vpc-id> --subnet-ids <subnet-ids>`.
+   → gate: `aws ec2 describe-transit-gateway-vpc-attachments --filters Name=state,Values=available` — every attachment `available`.
+5. Update each spoke's VPC route tables to send traffic to peer CIDRs via the TGW.
+   → gate: `aws ec2 describe-route-tables --route-table-ids <rtb>` confirms the route; `traceroute` from an instance in one VPC to a private IP in another confirms packets traverse the TGW.
 
 ---
 
 ### Workflow 2 — Select and Execute a Migration R (The 7 Rs)
 
-1. **Classify each workload:** apply the 7 Rs in elimination order — Retire (no users? decommission) → Retain (regulatory hold or recent CapEx?) → Rehost → Relocate → Replatform → Repurchase → Refactor. Never default to Refactor without a business case that justifies the higher cost and effort.
-   → gate: each workload gets a documented R classification with the rationale; any Refactor must have an approved business case before wave planning proceeds.
-2. **Discover dependencies:** run AWS Application Discovery Service (agent or agentless) against the source environment. Export the dependency map from Migration Hub.
-   → gate: `aws discovery describe-agents` (agent-based) or connect vCenter integration; wait for `HEALTHY` agent status before trusting discovery data. No wave plan is valid without a dependency map.
-3. **For Rehost workloads — provision MGN:** install the AWS Replication Agent on each source server; confirm replication is in `Healthy` state in the MGN console.
-   → gate: `aws mgn describe-source-servers --filters filters=[{name=isArchived,values=[false]}]` — each server should show `dataReplicationInfo.dataReplicationState: Replicating` before scheduling a test launch.
-4. **Test launch (non-disruptive):** launch a test instance in AWS without cutting over the source. Validate application behavior, licensing, and networking.
-   → gate: `aws mgn start-test` for selected source servers; confirm the test instance passes all acceptance checks; document test-launch results before scheduling the cutover window.
-5. **Cutover:** schedule a maintenance window; finalize replication (`aws mgn finalize-cutover`); update DNS (Route 53 or on-premises) to point to the new AWS endpoint; monitor for 24–48 hours before decommissioning the source.
-   → gate: `aws route53 list-resource-record-sets --hosted-zone-id <zone>` confirms the new record points to the AWS IP/ALB; application health checks pass.
+1. **Classify each workload** in elimination order: Retire → Retain → Rehost → Relocate → Replatform → Repurchase → Refactor. Never default to Refactor without an approved business case.
+   → gate: every workload has a documented R + rationale; any Refactor needs a business case before wave planning proceeds.
+2. **Discover dependencies:** run AWS Application Discovery Service (agent or agentless); export the dependency map from Migration Hub.
+   → gate: `aws discovery describe-agents` shows `HEALTHY` status; no wave plan is valid without a dependency map.
+3. **Provision MGN for Rehost workloads:** install the AWS Replication Agent on each source server.
+   → gate: `aws mgn describe-source-servers` shows `dataReplicationInfo.dataReplicationState: Replicating` for all servers before scheduling test launches.
+4. **Test launch (non-disruptive):** `aws mgn start-test`; validate application behavior, licensing, and networking before scheduling the cutover window.
+   → gate: test instance passes all acceptance checks; results documented.
+5. **Cutover:** finalize replication (`aws mgn finalize-cutover`); update DNS to the new AWS endpoint; monitor 24–48 hours before decommissioning the source.
+   → gate: `aws route53 list-resource-record-sets --hosted-zone-id <zone>` confirms the new record; application health checks pass.
 
 ---
 
 ### Workflow 3 — Design a DR Pattern to a Stated RTO/RPO (Backup-Restore vs Pilot Light vs Warm Standby vs Active-Active)
 
-1. **Map RTO/RPO to pattern:** RTO > 1 hr / RPO > 1 hr → Backup & Restore. RTO 10–60 min / RPO minutes → Pilot Light. RTO 1–10 min / RPO near-zero → Warm Standby. RTO < 1 min / RPO near-zero → Multi-site Active-Active. Document the chosen pattern and the business requirements that drive it before any infrastructure work.
-   → gate: confirm cost envelope with the AWS Pricing Calculator for the chosen pattern; over-engineering to active-active when warm standby satisfies the SLA is a budget red flag.
-2. **For Warm Standby — establish data replication:** enable RDS cross-region read replica or Aurora Global Database in the DR region; enable S3 Cross-Region Replication (CRR) for critical buckets; enable DynamoDB Global Tables if applicable.
-   → gate: `aws rds describe-db-instances --db-instance-identifier <replica> --query 'DBInstances[].ReplicaMode'` confirms replication is `open-read-only`; check replica lag: `aws cloudwatch get-metric-statistics --namespace AWS/RDS --metric-name ReplicaLag` — lag should be < RPO target.
-3. **Stand up the reduced-capacity stack in the DR region** (warm standby = scaled-down but running): deploy the CloudFormation/CDK stack to the DR region; confirm EC2/ECS services are running at minimum capacity (e.g., 1 instance vs. production's 10).
-   → gate: `aws ecs describe-services --cluster <dr-cluster> --services <svc>` shows `runningCount >= 1`; Route 53 health check on the DR endpoint is `Healthy`.
-4. **Configure Route 53 failover routing:** create a primary health check on the production endpoint and a secondary failover record pointing to the DR endpoint. Set TTL low (60s) to reduce DNS propagation delay during failover.
-   → gate: `aws route53 get-health-check-status --health-check-id <primary-hc>` is `Healthy`; simulate a failure by disabling the primary health check and confirm DNS resolves to the DR endpoint within 2× TTL.
-5. **Test the runbook end-to-end** at least quarterly: execute the failover SSM Automation document, promote the RDS read replica (`aws rds promote-read-replica`), and validate the DR environment handles production load.
-   → gate: after promotion, `aws rds describe-db-instances` shows the replica is now a standalone instance (no longer a read replica); application smoke tests pass in the DR region.
+1. **Map RTO/RPO to pattern:** RTO > 1 hr / RPO > 1 hr → Backup & Restore. RTO 10–60 min / RPO minutes → Pilot Light. RTO 1–10 min / RPO near-zero → Warm Standby. RTO < 1 min / RPO near-zero → Multi-site Active-Active. Document before any infrastructure work.
+   → gate: confirm cost envelope with the AWS Pricing Calculator; over-engineering to active-active when warm standby satisfies the SLA is a budget red flag.
+2. **Establish data replication (warm standby example):** enable RDS cross-region read replica or Aurora Global Database; S3 CRR for critical buckets; DynamoDB Global Tables if applicable.
+   → gate: `aws rds describe-db-instances` confirms `ReplicaMode: open-read-only`; CloudWatch `ReplicaLag` metric < RPO target.
+3. **Deploy the reduced-capacity stack in the DR region** (warm standby = scaled-down but running).
+   → gate: `aws ecs describe-services` shows `runningCount >= 1`; Route 53 health check on DR endpoint is `Healthy`.
+4. **Configure Route 53 failover routing:** primary health check on production endpoint; secondary failover record to DR endpoint; TTL = 60s.
+   → gate: `aws route53 get-health-check-status` on primary is `Healthy`; disable primary health check and confirm DNS resolves to DR within 2× TTL.
+5. **Test the runbook end-to-end** at least quarterly: promote the RDS read replica (`aws rds promote-read-replica`); run application smoke tests.
+   → gate: `aws rds describe-db-instances` shows the replica as a standalone instance; smoke tests pass in the DR region.
 
 ---
 
@@ -368,13 +307,13 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 
 **Scenario 1 — Transit Gateway vs VPC Peering: the transitive routing trap**
 
-> **Situation:** An enterprise architect designs connectivity for 8 VPCs across 3 accounts: 1 shared-services VPC and 7 application VPCs. She proposes peering each application VPC to the shared-services VPC (7 peering connections) and declares the design complete. A reviewer says the application VPCs cannot communicate with each other. She responds: "They don't need to — they only talk to shared services." Three months later the team needs two application VPCs to share a message queue and the architecture cannot accommodate it without adding 21 more peering connections to reach a full mesh.
+> **Situation:** An architect designs connectivity for 8 VPCs across 3 accounts using hub-and-spoke peering (7 connections to a shared-services VPC). Three months later two application VPCs need to communicate directly; reaching a full mesh would require N×(N-1)÷2 = 28 peering connections.
 
-> **Competent move:** Replace the hub-and-spoke peering design with a **Transit Gateway** from the start. TGW supports transitive routing — any VPC attached to the TGW can reach any other attached VPC through a single route table, and adding new VPCs requires only one new attachment rather than N new peering connections. The full-mesh peering count for N VPCs is N×(N-1)÷2 — for 8 VPCs that is 28 connections, each requiring a separate route table entry in every involved VPC. TGW also supports VPN and Direct Connect attachments, making hybrid extension straightforward.
+> **Competent move:** Use **Transit Gateway** from the start. TGW supports transitive routing — any attached VPC reaches any other through a single route table; adding a new VPC requires one attachment, not N new peering connections. TGW also supports VPN and Direct Connect attachments for hybrid extension. Per-attachment and per-GB charges are justified at ~4+ VPCs.
 
-> **Tempting-but-wrong:** Extending the peering design on-demand as new VPC-to-VPC paths are needed. Each new pair requires a dedicated peering connection, dedicated route table entries in both VPCs, and security group updates — the operational overhead grows quadratically. TGW has per-attachment and per-GB charges that are justified once you have more than ~4–5 VPCs that may need to communicate.
+> **Tempting-but-wrong:** Extending the peering design on demand. Each new pair requires a dedicated connection, route table entries in both VPCs, and security group updates — operational overhead grows quadratically.
 
-> **Verify:** `aws ec2 describe-transit-gateways` to confirm TGW exists; `aws ec2 describe-transit-gateway-attachments --filters Name=state,Values=available` to confirm all VPCs are attached; `aws ec2 describe-transit-gateway-route-tables` to confirm routes propagate correctly; run `traceroute` from an instance in VPC-A to a private IP in VPC-B to confirm routing traverses the TGW.
+> **Verify:** `aws ec2 describe-transit-gateways`; `aws ec2 describe-transit-gateway-attachments --filters Name=state,Values=available`; `aws ec2 describe-transit-gateway-route-tables`; `traceroute` from VPC-A to a private IP in VPC-B confirms routing traverses the TGW.
 
 Further scenarios (Direct Connect encryption gap, Lambda + Aurora connection pool exhaustion, Snow family vs DataSync selection, single NAT Gateway SPOF, SCP vs IAM boundary for region restriction): [references/scenarios.md](references/scenarios.md).
 

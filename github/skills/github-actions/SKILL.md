@@ -16,20 +16,14 @@ metadata:
 
 ## Overview
 
-The GitHub Actions certification (exam GH-200) validates that a practitioner can design, implement, and maintain automation workflows using GitHub Actions at individual, organizational, and enterprise scale. It covers five competency areas: workflow authoring, workflow consumption and troubleshooting, custom action development, enterprise management of runners and policies, and security hardening.
-
-**This file is an operational playbook, not an exam outline.** Each section states the rules an agent must apply when building or reviewing Actions automation: the concrete syntax constraints, the security invariants, the decision criteria for picking a pattern, and the anti-patterns to catch in review.
+**This file is an operational playbook, not an exam outline.** Each section states the rules an agent must apply when building or reviewing Actions automation: syntax constraints, security invariants, decision criteria, and anti-patterns to catch in review. Benchmarked against the GitHub Actions (GH-200) certification blueprint.
 
 > **Load this skill when…** authoring or reviewing GitHub Actions workflow YAML; designing reusable workflows, composite actions, or custom JS/Docker actions; configuring self-hosted runners, OIDC cloud auth, or enterprise runner/policy governance; or hardening an Actions pipeline against script-injection and supply-chain risks.
-> **Not this skill:** this skill covers CI/CD workflow authoring, not general Git/GitHub repository administration, branch protection configuration without Actions, or application code written in the repository.
+> **Not this skill:** general Git/GitHub repository administration, branch protection without Actions, or application code in the repository.
 
-> **Deeper context:** Study resources, official links, and domain weight details live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
+> **Study resources, domain weights, and credential logistics:** [references/study-resources.md](references/study-resources.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's MCP/automation, the GitHub CLI (`gh`) and Actions log/`act`/workflow-lint, or the GitHub web UI, in that order of preference.
-
----
-
-Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 
@@ -314,44 +308,44 @@ Actions supports generating SLSA Build L2+ signed provenance attestations via `a
 
 ### Workflow 1 — Ship a Reusable Workflow Safely (Typed Inputs/Secrets → Pin Actions to SHA → Test from a Caller)
 
-1. In the shared `platform` repo, create `.github/workflows/reusable-build.yml`. Declare `on: workflow_call:` with typed inputs (`string`, `boolean`, `choice`) and explicit secret declarations. Set `required:` and `default:` on every input.
-   → gate: `gh workflow list --repo platform-org/platform` shows the new workflow file; confirm it does NOT appear as a triggerable workflow in the platform repo itself (it should only be callable via `workflow_call`).
-2. Inside the reusable workflow, pin every third-party action to a full commit SHA (not a floating tag): `uses: actions/checkout@<full-40-char-sha>  # v4.x.x`. Add a comment with the corresponding tag for readability.
-   → gate: `grep -r 'uses:' .github/workflows/reusable-build.yml | grep -v '@[0-9a-f]\{40\}'` should return no lines — every `uses:` must end in a 40-character SHA.
-3. Set `permissions:` at the reusable workflow level to the minimum required (e.g., `contents: read`). Do not rely on the caller to provide narrow permissions — a called workflow inherits the calling workflow's permissions but you can restrict further.
-   → gate: confirm `permissions:` block is present at the top-level `jobs:` or workflow level; no job declares `write-all` or omits `permissions:` entirely.
-4. In a caller repo, create a test workflow that calls the reusable workflow: `uses: platform-org/platform/.github/workflows/reusable-build.yml@main` with `with:` inputs and `secrets: inherit` (or explicit mapping).
-   → gate: trigger the caller workflow (`gh workflow run`); confirm the called workflow's jobs appear as nested job groups in the caller run's UI; confirm inputs are received correctly by adding a debug step that echoes `${{ inputs.my-input }}`.
-5. Verify secrets are not logged: check the caller run's step logs — all secret values should appear as `***`; if any secret value is visible in plain text, the secret was passed via `inputs:` (not `secrets:`), which logs it. Move it to the `secrets:` declaration.
+1. Create `.github/workflows/reusable-build.yml` in the shared repo. Declare `on: workflow_call:` with typed inputs (`string`, `boolean`, `choice`) and explicit secret declarations; set `required:` and `default:` on every input.
+   → gate: `gh workflow list --repo platform-org/platform` shows the file; it must NOT appear as a directly triggerable workflow (only callable via `workflow_call`).
+2. Pin every third-party action to a full 40-char SHA: `uses: actions/checkout@<sha>  # v4.x.x`.
+   → gate: `grep -r 'uses:' .github/workflows/reusable-build.yml | grep -v '@[0-9a-f]\{40\}'` returns no lines.
+3. Set `permissions:` at workflow level to the minimum required (e.g., `contents: read`).
+   → gate: `permissions:` block present; no job declares `write-all` or omits `permissions:`.
+4. In a caller repo, invoke the reusable workflow via `uses: platform-org/platform/.github/workflows/reusable-build.yml@main` with `with:` inputs and `secrets: inherit` (or explicit mapping).
+   → gate: `gh workflow run` triggers it; called workflow's jobs appear as nested groups in the caller UI; a debug step echoing `${{ inputs.my-input }}` confirms inputs are received.
+5. Confirm secrets are masked: all secret values in step logs must appear as `***`; if any appear in plain text the secret was passed via `inputs:` instead of `secrets:` — move it to the `secrets:` declaration.
 
 ---
 
 ### Workflow 2 — Set Up OIDC Cloud Auth (No Long-Lived Secrets) with a Scoped Trust Policy
 
-1. Add `permissions: id-token: write` to the workflow or specific job that needs cloud access. Without this permission, the OIDC token cannot be requested and the auth action will silently fail or return an empty token.
-   → gate: after adding the permission, run the workflow and confirm the auth step does not error with "credentials could not be loaded" — that error almost always means `id-token: write` is missing.
-2. In the cloud provider (e.g., AWS), create an IAM OIDC identity provider for `token.actions.githubusercontent.com` (if not already present): `aws iam create-open-id-connect-provider --url https://token.actions.githubusercontent.com --client-id-list sts.amazonaws.com --thumbprint-list <thumbprint>`.
-   → gate: `aws iam list-open-id-connect-providers` confirms the provider exists; `aws iam get-open-id-connect-provider --open-id-connect-provider-arn <arn>` shows the correct URL and client ID.
-3. Create the IAM role with a trust policy scoped to the **specific repo and branch or environment** (not the whole org). Use `StringEquals` not `StringLike` for the `sub` claim: `"repo:my-org/my-service:ref:refs/heads/main"` or `"repo:my-org/my-service:environment:production"`.
-   → gate: `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — confirm `StringEquals` is used and the `sub` value names the exact repo. Test from a different repo — `AssumeRoleWithWebIdentity` should return `AccessDenied`.
-4. Add the cloud provider's setup action to the workflow (e.g., `aws-actions/configure-aws-credentials@<sha>`) with `role-to-assume:` set to the IAM role ARN and `aws-region:` set explicitly.
-   → gate: the step output should show `Assumed role ... with web identity`; subsequent steps can call `aws sts get-caller-identity` and confirm the role ARN matches the expected role.
-5. Confirm no long-lived credentials remain: search the repo's GitHub secrets (`gh secret list`) for any `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` — if found, delete them after confirming OIDC works end-to-end.
+1. Add `permissions: id-token: write` to the workflow or job that needs cloud access.
+   → gate: run the workflow; if the auth step errors with "credentials could not be loaded" the permission is missing.
+2. Create an IAM OIDC identity provider for `token.actions.githubusercontent.com`: `aws iam create-open-id-connect-provider --url https://token.actions.githubusercontent.com --client-id-list sts.amazonaws.com --thumbprint-list <thumbprint>`.
+   → gate: `aws iam list-open-id-connect-providers` confirms the provider; `get-open-id-connect-provider` shows the correct URL and client ID.
+3. Create the IAM role with a trust policy scoped to the specific repo + branch or environment using `StringEquals` (not `StringLike`) on the `sub` claim: `"repo:my-org/my-service:ref:refs/heads/main"` or `"repo:my-org/my-service:environment:production"`.
+   → gate: `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — confirm `StringEquals` and the exact repo. Test from a different repo — `AssumeRoleWithWebIdentity` must return `AccessDenied`.
+4. Add the cloud provider's setup action (e.g., `aws-actions/configure-aws-credentials@<sha>`) with `role-to-assume:` and `aws-region:` set explicitly.
+   → gate: step output shows `Assumed role ... with web identity`; `aws sts get-caller-identity` confirms the expected role ARN.
+5. Confirm no long-lived credentials remain: `gh secret list` — delete any `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` after confirming OIDC works end-to-end.
 
 ---
 
 ### Workflow 3 — Harden a Public-Repo Workflow Against Fork-PR Injection (pull_request_target, Least-Privilege GITHUB_TOKEN)
 
-1. Audit the existing workflow trigger. If it uses `pull_request_target:`, it runs in the context of the base branch with full secrets access — this is the highest-risk trigger for public repos. Confirm whether the workflow checks out PR-head code.
-   → gate: `grep -r 'pull_request_target' .github/workflows/` — any hit requires review; if the workflow also has a `checkout` step with `ref: ${{ github.event.pull_request.head.sha }}`, it is actively exploitable and must be fixed immediately.
-2. Set `permissions:` at the workflow level to the minimum required. For a CI check-run workflow on a public repo, the maximum needed is typically `contents: read` and `pull-requests: write` (to post a comment). Set `permissions: {}` (all deny) as the workflow-level default and grant per-job overrides.
-   → gate: `grep -A5 'permissions:' .github/workflows/<workflow>.yml` — confirm no job has `write-all` or omits `permissions:` against the restrictive workflow default.
-3. For any step that processes user-controlled input (PR title, issue body, branch name), pass the value through an `env:` variable and reference `$ENV_VAR` in the shell — never `${{ github.event.pull_request.title }}` directly in a `run:` block.
-   → gate: `grep -rn '\${{ github.event' .github/workflows/` — every hit must be in an `env:` assignment, not directly inside a `run:` script body.
-4. Pin all third-party actions to full commit SHAs, especially any that have elevated permissions (`id-token: write`, `contents: write`). Supply-chain attacks via compromised action tags are the most common vector for privileged workflows.
-   → gate: `grep -rn 'uses:' .github/workflows/ | grep -v '@[0-9a-f]\{40\}'` — no unpinned `uses:` lines for external actions.
-5. For workflows that must use `pull_request_target` (e.g., to post a comment back to a PR from a fork), structure them as two-workflow patterns: the first workflow runs on `pull_request` (untrusted context, no secrets), saves artifacts; the second runs on `workflow_run:` (trusted context), downloads artifacts, and posts the comment — never executes PR code.
-   → gate: confirm the `workflow_run` workflow does NOT have a checkout step that uses the PR head SHA; it should only download artifacts uploaded by the untrusted `pull_request` workflow.
+1. Audit the trigger. If it uses `pull_request_target:`, it runs with base-branch secrets access — the highest-risk trigger for public repos. Check whether it also checks out PR-head code.
+   → gate: `grep -r 'pull_request_target' .github/workflows/` — any hit requires review; a `checkout` step with `ref: ${{ github.event.pull_request.head.sha }}` is actively exploitable and must be fixed immediately.
+2. Set `permissions: {}` (all deny) as the workflow-level default; grant minimum overrides per job (typical CI: `contents: read`, `pull-requests: write`).
+   → gate: `grep -A5 'permissions:' .github/workflows/<workflow>.yml` — no job has `write-all` or omits `permissions:` against the restrictive default.
+3. For any step processing user-controlled input (PR title, issue body, branch name), pass through an `env:` variable and reference `$ENV_VAR` in the shell — never interpolate `${{ github.event.pull_request.title }}` directly in a `run:` block.
+   → gate: `grep -rn '\${{ github.event' .github/workflows/` — every hit must be in an `env:` assignment, not inside a `run:` body.
+4. Pin all external actions to full commit SHAs.
+   → gate: `grep -rn 'uses:' .github/workflows/ | grep -v '@[0-9a-f]\{40\}'` — no unpinned external actions.
+5. For workflows that must use `pull_request_target` (e.g., posting a comment from a fork), use the two-workflow pattern: `pull_request` (untrusted, no secrets) uploads artifacts; `workflow_run:` (trusted) downloads artifacts and posts the comment — never executes PR code.
+   → gate: the `workflow_run` workflow must have no checkout step using the PR head SHA; it only downloads artifacts from the untrusted `pull_request` workflow.
 
 ---
 
@@ -367,57 +361,7 @@ Actions supports generating SLSA Build L2+ signed provenance attestations via `a
 
 > **Verify:** In the `action.yml`'s `runs` section, confirm `using: composite` and that `steps:` lists the 4 steps directly; in the calling workflow, the action appears as a single `uses:` step within the job (not as a separate `uses:` at job level). `gh workflow list` in the shared repo should NOT show a new workflow file for a composite action.
 
----
-
-**Scenario 2 — GITHUB_OUTPUT vs GITHUB_ENV for cross-job data**
-
-> **Situation:** A CI workflow has two jobs: `build` and `deploy`. The `build` job produces a Docker image tag that the `deploy` job needs to run `docker pull`. A developer writes `echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV` in a step of the `build` job and references `${{ env.IMAGE_TAG }}` in the `deploy` job. The workflow runs but the `deploy` job cannot find the image tag — `env.IMAGE_TAG` is empty.
-
-> **Competent move:** `GITHUB_ENV` propagates environment variables to subsequent **steps within the same job** only — it does not cross job boundaries. To pass data between jobs, write to `GITHUB_OUTPUT` (`echo "image_tag=$TAG" >> $GITHUB_OUTPUT`), declare a job-level `outputs:` block on the `build` job that maps the output (`image_tag: ${{ steps.<step-id>.outputs.image_tag }}`), and reference it in the `deploy` job via `${{ needs.build.outputs.image_tag }}`. The `deploy` job must also declare `needs: build`.
-
-> **Tempting-but-wrong:** Using an artifact to pass a single string value between jobs. Artifacts work for files, but for small string values like an image tag they add unnecessary `upload-artifact`/`download-artifact` steps and storage. `GITHUB_OUTPUT` + job outputs is the canonical, low-overhead pattern for scalar cross-job data.
-
-> **Verify:** Add `- run: echo "${{ needs.build.outputs.image_tag }}"` as the first step in the `deploy` job and confirm the tag appears in the workflow log. Inspect the `build` job's step log to confirm the `GITHUB_OUTPUT` write: the Actions runner will log `Set output image_tag=<value>`.
-
----
-
-**Scenario 3 — OIDC trust policy scoped to organization rather than repo+branch**
-
-> **Situation:** A team sets up OIDC federation between GitHub Actions and AWS. The IAM role trust policy condition is:
-> ```json
-> "StringLike": { "token.actions.githubusercontent.com:sub": "repo:my-org/*" }
-> ```
-> Production deployments succeed. A security reviewer flags the condition as dangerously broad but the engineer argues "it's our org, all our repos are trusted."
-
-> **Competent move:** The `sub` claim for GitHub OIDC is `repo:<org>/<repo>:ref:refs/heads/<branch>` (or `environment:<env>`). A wildcard `repo:my-org/*` allows any repository in the org — including forks, experimental repos, and any new repo created in the future — to assume the production IAM role. Scope the condition to the specific repo and the specific branch or environment: `"StringEquals": { "token.actions.githubusercontent.com:sub": "repo:my-org/my-service:ref:refs/heads/main" }` or, better, `repo:my-org/my-service:environment:production` when using a protected environment.
-
-> **Tempting-but-wrong:** Adding the environment condition as an `AND` alongside the broad org wildcard. If the condition uses `StringLike` with `repo:my-org/*` as the sub-claim check, any repo in the org can still assume the role — adding an environment condition only helps if the environment is correctly configured and the calling repo actually targets that environment. The repo restriction must be specific.
-
-> **Verify:** `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — inspect the `Condition` block; confirm `StringEquals` (not `StringLike`) is used and the `sub` value names the exact repo and branch or environment. Test from a different repo in the org — the `AssumeRoleWithWebIdentity` call should return `AccessDenied`.
-
----
-
-**Scenario 4 — Reusable workflow nesting depth exceeded**
-
-> **Situation:** A platform team builds a layered reusable-workflow architecture: `app-pipeline.yml` calls `build.yml`, which calls `lint.yml`, which calls `security-scan.yml`, which calls `notify.yml`. When a developer triggers the app pipeline, the workflow fails at the `notify.yml` level with an error about the call chain. The team suspects a permissions issue.
-
-> **Competent move:** GitHub Actions limits reusable workflow nesting to **4 levels** (the top-level calling workflow + 3 levels of called reusable workflows). A fifth level causes a runtime failure, not a permissions error. The fix is to restructure: either promote `notify.yml`'s steps into a composite action (step-level reuse, no nesting limit applies) and call it from `security-scan.yml`, or collapse some layers by inlining the notify steps. The 4-level limit is a hard platform constraint, not a configurable policy.
-
-> **Tempting-but-wrong:** Debugging IAM permissions or secrets inheritance, which is the intuitive first guess when a called workflow fails. The nesting-depth limit produces a workflow-level error that is distinct from permission failures; check the workflow run's error message first — it will reference the call depth if that is the cause.
-
-> **Verify:** Count the call chain manually: caller (1) → build.yml (2) → lint.yml (3) → security-scan.yml (4) → notify.yml (5 = over limit). Restructure so notify steps run as a composite action called from within `security-scan.yml` (still level 4) rather than as a fifth reusable workflow. After refactoring, `gh run list --workflow app-pipeline.yml` should show successful runs.
-
----
-
-**Scenario 5 — Self-hosted runner on a public repository**
-
-> **Situation:** An open-source project hosted in a public GitHub org wants to use GPU instances for ML model tests. A maintainer registers a self-hosted GPU runner to the public repository and enables it. Within a day, a fork PR triggers the workflow on the GPU runner, running attacker-controlled code that mines cryptocurrency. The maintainer is surprised: "The workflow requires approval for first-time contributors."
-
-> **Competent move:** The "require approval for first-time contributors" setting gates the *creation* of a workflow run — it does not prevent a workflow from using a self-hosted runner once approved. More importantly, even approved contributors (anyone who has had a PR merged) can trigger runs without approval. Any code in a PR, including fork PRs, runs on the self-hosted runner once the workflow executes. **Never attach self-hosted runners to public repositories.** For GPU workloads in a public open-source project, use GitHub-hosted larger runners (paid, but isolated) or a separate private mirror repository for sensitive compute, never a self-hosted runner on the public repo.
-
-> **Tempting-but-wrong:** Tightening the approval policy to "require approval for all external contributors." This slows down malicious actors but does not prevent the attack — a motivated attacker can impersonate a legitimate contributor or wait for a maintainer to approve their first benign PR. The only safe posture is no self-hosted runners on public repos.
-
-> **Verify:** `gh api repos/{owner}/{repo}/actions/runners --jq '.runners[].labels'` to list runners and their labels; confirm no self-hosted runners are registered to the public repo. For the private GPU runner, create a separate private repo or use runner groups at the org level restricted to specific private repos only.
+Further scenarios (GITHUB_OUTPUT vs GITHUB_ENV for cross-job data, OIDC trust scoped to org vs repo+branch, reusable workflow nesting depth, self-hosted runner on public repo): [references/scenarios.md](references/scenarios.md).
 
 ---
 
