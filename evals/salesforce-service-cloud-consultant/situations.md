@@ -27,3 +27,17 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. A telephony vendor proposes integrating their cloud PBX with Salesforce by building a custom Lightning Web Component that launches in the console's utility bar and makes REST API calls to their system when a call begins. The proposal does not mention Open CTI. Your architect asks if this approach has any functional gaps compared to a proper Open CTI integration. What are the key limitations of the custom LWC approach?
 
 12. A service team operates in three time zones. Business Hours are configured org-wide for 9 AM–5 PM Eastern. A VIP tier of accounts should receive support 9 AM–5 PM Pacific (i.e., support until 8 PM Eastern). The Entitlement Process is shared between standard and VIP accounts. A consultant proposes adding a second Entitlement Process for VIP. Is that the right approach, and what is the more targeted fix?
+
+---
+
+> **Held-out — Cycle-4 (2026-06-10). Do not paste into skill body.**
+
+13. A nonprofit uses Web-to-Case to collect grant applications. During a major grant announcement day, they receive 6,200 submissions in 14 hours. The next morning, the data team queries Salesforce and finds only 5,000 Case records. They assume 1,200 applications were permanently lost and want to contact submitters to reapply. What is the technically correct explanation for what happened to the 1,200 submissions, and what should the data team do before asking submitters to reapply?
+
+14. A Salesforce Service Cloud architect proposes Service Cloud Voice to a financial services client that already uses Genesys Cloud as their contact-center platform under a multi-year contract. The architect's proposal says Service Cloud Voice "requires routing all calls to Amazon Connect" and concludes that Service Cloud Voice is not viable given the Genesys contract. Is this conclusion correct, and what should the architect have considered?
+
+15. A support manager prepares for an upcoming certification exam on Service Cloud Consultant (Service-Con-201). Her study notes say the passing score is 63%. She also reads on a third-party prep site that it is 67%. Which source is more likely correct, and how should she verify?
+
+16. A Salesforce administrator is designing a service solution for a telecommunications company whose support process includes dispatching field technicians to customer premises to repair equipment. The project manager asks whether native Service Cloud Case management (assignment rules, queues, Omni-Channel) can handle the dispatching workflow. What is the correct response?
+
+17. A service operations team receives a complaint that the Salesforce social media channel "no longer shows any incoming mentions or posts" and that the queue has been empty for three months. The team suspects a configuration error and asks you to audit the Social Studio setup. What do you tell them?

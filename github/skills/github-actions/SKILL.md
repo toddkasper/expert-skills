@@ -7,7 +7,7 @@ metadata:
   domain: github
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
   blueprint: January 2026 revision
 ---
@@ -29,7 +29,7 @@ metadata:
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live — volatile facts:** GitHub-hosted runner image versions and pre-installed software (`ubuntu-latest`, `windows-latest`, `macos-latest` image mappings change on a rolling basis) `[volatile — verify live]`, action SHA pins for commonly-used actions (e.g., `actions/checkout`, `actions/setup-node`) `[volatile — verify live]`, free-tier minute allotments and per-minute pricing for larger runners `[volatile — verify live]`, reusable workflow nesting limit (currently 4 levels) `[volatile — verify live]`, artifact retention defaults and per-repo cache quota `[volatile — verify live]`.
+- **Always re-verify live — volatile facts:** GitHub-hosted runner image versions and pre-installed software (`ubuntu-latest`, `windows-latest`, `macos-latest` image mappings change on a rolling basis) `[volatile — verify live]`, action SHA pins for commonly-used actions (e.g., `actions/checkout`, `actions/setup-node`) `[volatile — verify live]`, free-tier minute allotments and per-minute pricing for larger runners `[volatile — verify live]`, reusable workflow nesting limit (currently 10 levels — caller + up to 9 nested workflows) `[volatile — verify live]`, artifact retention defaults and per-repo cache quota `[volatile — verify live]`.
 - **Live wins:** when the live GitHub platform, workflow logs, or official GitHub docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
 - **Escalate to a human — do not silently execute:** enterprise runner policy changes (restricting which actions can run org-wide); modifying branch protection rules or required status checks; registering or deregistering self-hosted runners, especially on public repos; force-merging protected branches; rotating or deleting org-level secrets; enabling or disabling Actions for an org or enterprise; any OIDC trust policy change on a production cloud role.
 - **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with platform updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
@@ -106,6 +106,37 @@ concurrency:
 
 `cancel-in-progress: true` cancels any in-progress run for the same group when a new one starts — essential for branch-based CD to avoid simultaneous deployments. For the default branch where you never want to drop a run, set `cancel-in-progress: false`.
 
+### Service Containers
+
+Service containers run Docker images as sidecar services alongside your job — databases, queues, or any network-reachable dependency. Declare them under `services:` at the job level:
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+```
+
+Key rules:
+- Service containers only work on **Linux runners** (GitHub-hosted `ubuntu-*` or self-hosted Linux). They are not supported on Windows or macOS runners.
+- Use `ports:` to map container ports to host ports; reference the service from job steps via `localhost:<host-port>`.
+- Use `options: --health-cmd ... --health-interval ... --health-retries` to ensure GitHub waits until the container is ready before starting job steps — without a health check the service may not be accepting connections when your test step runs.
+- The `image:` value supports any public Docker image or a private image accessible via registry credentials set in `env:` on the service.
+- To reference a service by hostname instead of `localhost`, jobs running in a **container** (`container:`) can use the service name directly (e.g., `postgres:5432`); jobs running directly on the runner host must use `localhost`.
+
+**Red flags in review:** a service container with no health-check `options:` (tests may start before the DB is ready); a service container on a Windows or macOS runner (unsupported — will silently fail); hard-coded credentials in the `env:` block of a service (map from `secrets:` instead).
+
 **Red flags in review:** `on: push:` with no `branches:` filter on a high-traffic repo (every push triggers a full matrix); `if: always()` on a deploy step that should only run on success; `fail-fast: true` on a cross-OS test matrix where you need all failure data; `${{ secrets.X }}` interpolated directly into a `run:` command string.
 
 ---
@@ -122,12 +153,12 @@ concurrency:
 | Passes secrets | `secrets: inherit` or explicit map | via `inputs:` (secrets not natively supported; pass via env) | N/A |
 | Best for | Full job/pipeline reuse across repos | Step-level logic encapsulation | Giving teams a starting template |
 
-Caller limitations: a reusable workflow can itself call another reusable workflow, up to 4 levels deep. The called workflow's jobs appear in the caller's UI as nested job groups.
+Caller limitations: a reusable workflow can itself call another reusable workflow, up to **10 levels deep** (caller + 9 nested workflows). A single workflow file may also call a maximum of **50 unique reusable workflows** (counting all unique workflows referenced across the entire call tree rooted at that file). The called workflow's jobs appear in the caller's UI as nested job groups.
 
 ### Artifacts and Caching
 
 - **Artifacts** (`actions/upload-artifact` / `actions/download-artifact`) persist files across jobs within a run, or across runs if `retention-days:` is set. Default retention is 90 days (configurable at repo/org level). Artifacts are scoped to a workflow run.
-- **Cache** (`actions/cache`) restores and saves by key + restore-keys. Cache is branch-scoped: a PR branch can read from the default branch cache but not write to it. Cache entries expire after 7 days of no access (or when the repo's 10 GB quota is reached and old entries are evicted).
+- **Cache** (`actions/cache`) restores and saves by key + restore-keys. Cache is branch-scoped: a PR branch can read from the default branch cache but not write to it. Cache entries expire after 7 days of no access (or when the repo's cache storage limit is reached and old entries are evicted). The **default cache storage limit is 10 GB per repository** — this is a default, not a hard cap `[volatile — verify live]`; enterprise owners, organization owners, and repository admins can raise it (up to 10 TB for repository-level settings); usage beyond 10 GB is billed pay-as-you-go.
 - **Do not confuse them:** use cache for build/dependency artifacts that are reproducible (node_modules, Gradle cache, pip wheels); use artifacts for files you need to keep (test reports, build binaries, signed packages).
 
 ### Passing Data Between Jobs
@@ -224,6 +255,8 @@ Variables (`vars.`) follow the same scope hierarchy and are non-sensitive (appea
 
 At the org and enterprise level, administrators can:
 - **Restrict which actions can run:** allow only actions from GitHub, from verified creators, or a specific allowlist (by `owner/repo@ref` pattern).
+- **Block specific actions with the `!`-prefix:** prefix an allowlist entry with `!` to explicitly deny that action (e.g., `!bad-org/bad-action`). The blocklist is evaluated last and overrides any permissive policy — use it for rapid response when an action is known-compromised. `[volatile — verify live]`
+- **Enforce SHA-pinning via policy:** an admin checkbox mandates that all workflows pin actions to a full commit SHA; workflows using floating tags or branch refs fail immediately. This proactively prevents tag-mutation supply-chain attacks at the platform level rather than relying on author discipline. `[volatile — verify live]`
 - **Require approval for first-time contributors** on public repos.
 - **Restrict self-hosted runner registration** to admins (prevent repos from adding their own runners to the org pool).
 - **Enforce required status checks** at the branch protection level — specific workflow job names must pass before merge.
@@ -269,6 +302,8 @@ Requirements:
 Pinning to a full SHA is the only guarantee that the action code cannot change between runs. Tags are mutable; a malicious or compromised publisher can repoint `v4` to different code. SHA-pinning is especially important for actions that have `id-token: write` or elevated `contents: write` permission.
 
 With immutable actions enforcement on GitHub-hosted runners, GitHub resolves tag-pinned actions from an immutable GHCR snapshot — this closes the tag-mutation attack vector for hosted runners, but SHA pinning remains the best practice for auditability and self-hosted runner consistency.
+
+**Organization/enterprise SHA-pinning enforcement (Aug 2025):** admins can enable a policy checkbox that *requires* all workflow `uses:` references to include a full commit SHA — workflows using floating tags (`@v4`, `@main`) fail immediately at the policy layer rather than at execution time `[volatile — verify live]`. This converts SHA-pinning from a voluntary author practice to an enforced platform constraint. If your org has this policy active, tag-only references will cause an immediate "not allowed by policy" failure; the fix is always to add the full SHA.
 
 ### Script Injection
 
@@ -341,7 +376,7 @@ Script injection occurs when user-controlled input (e.g., a PR title, issue body
 
 > **Situation:** A platform team wants to share a "build and push Docker image" sequence across 15 repositories. The sequence is 4 steps: log in to ECR, build image, tag image, push image. A senior engineer proposes creating a reusable workflow (`.github/workflows/docker-build.yml`) in a shared `platform` repo and calling it from each app repo. A colleague suggests a composite action (`action.yml`) instead. The senior engineer says "they do the same thing, just pick one."
 
-> **Competent move:** Use a **composite action**, not a reusable workflow, for step-level logic you want to embed as a step inside a calling job. A composite action runs on the *caller's* runner and shares the runner's filesystem — it can access checked-out source code and build artifacts from preceding steps without artifact uploads/downloads. A reusable workflow spawns its own independent runner(s), requires explicit artifact passing, and counts as a full workflow nesting level against the 4-level limit. For "N steps that run in the context of a caller's job," composite action is the right abstraction.
+> **Competent move:** Use a **composite action**, not a reusable workflow, for step-level logic you want to embed as a step inside a calling job. A composite action runs on the *caller's* runner and shares the runner's filesystem — it can access checked-out source code and build artifacts from preceding steps without artifact uploads/downloads. A reusable workflow spawns its own independent runner(s), requires explicit artifact passing, and counts as a full workflow nesting level against the 10-level nesting limit. For "N steps that run in the context of a caller's job," composite action is the right abstraction.
 
 > **Tempting-but-wrong:** Defaulting to a reusable workflow because it is more familiar. Reusable workflows are the right abstraction for full independent jobs or multi-job pipelines (e.g., a complete deploy pipeline) — not for step sequences that need access to the calling job's runner workspace without artifact overhead.
 
@@ -375,13 +410,13 @@ Script injection occurs when user-controlled input (e.g., a PR title, issue body
 
 **Scenario 4 — Reusable workflow nesting depth exceeded**
 
-> **Situation:** A platform team builds a layered architecture: `app-pipeline.yml` → `build.yml` → `lint.yml` → `security-scan.yml` → `notify.yml`. The workflow fails at the `notify.yml` level. The team suspects a permissions issue.
+> **Situation:** A platform team builds a highly layered shared-pipeline library. Starting from `app-pipeline.yml`, each workflow calls the next: `app-pipeline.yml` → `build.yml` → `test.yml` → `lint.yml` → `security-scan.yml` → `sast.yml` → `sbom.yml` → `sign.yml` → `attest.yml` → `notify.yml` → `report.yml`. The workflow fails deep in the chain. The team suspects a secrets-inheritance issue.
 
-> **Competent move:** GitHub Actions limits reusable workflow nesting to 4 levels (caller + 3 levels of called workflows). A fifth level causes a runtime failure, not a permissions error. Fix: promote `notify.yml`'s steps into a composite action and call it from `security-scan.yml`, or collapse layers by inlining notify steps. The 4-level limit is a hard platform constraint `[volatile — verify live]`.
+> **Competent move:** GitHub Actions limits reusable workflow nesting to **10 levels** (caller counts as level 1; up to 9 additional nested calls). An eleventh level causes a runtime failure, not a permissions or secrets error. Count the chain: `app-pipeline.yml` (1) → `build.yml` (2) → `test.yml` (3) → `lint.yml` (4) → `security-scan.yml` (5) → `sast.yml` (6) → `sbom.yml` (7) → `sign.yml` (8) → `attest.yml` (9) → `notify.yml` (10) → `report.yml` (11 = over limit). Fix: promote `report.yml`'s steps into a **composite action** and call it from level 10, or collapse layers by inlining. The 10-level limit is a hard platform constraint `[volatile — verify live]`. Additionally, a single workflow file may reference at most **50 unique reusable workflows** across its entire call tree.
 
-> **Tempting-but-wrong:** Debugging IAM permissions or secrets inheritance first. The nesting-depth error is distinct from permission failures; check the workflow run's error message — it will reference the call depth.
+> **Tempting-but-wrong:** Debugging secrets inheritance or IAM permissions first. The nesting-depth error produces a distinct message referencing call depth — check it before assuming a permissions failure.
 
-> **Verify:** Count the call chain: caller (1) → build.yml (2) → lint.yml (3) → security-scan.yml (4) → notify.yml (5 = over limit). After refactoring notify into a composite action called from level 4, `gh run list --workflow app-pipeline.yml` should show successful runs.
+> **Verify:** Count the call chain to confirm depth > 10. After refactoring the deepest workflow into a composite action called from level 10, `gh run list --workflow app-pipeline.yml` should show successful runs.
 
 Further scenario (self-hosted runner on a public repository): [references/scenarios.md](references/scenarios.md).
 
@@ -421,6 +456,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 - **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: GITHUB_OUTPUT vs GITHUB_ENV, OIDC org-scope trust, reusable workflow nesting depth) to meet the teaching-scenario standard (≥4 inline). Scenario 5 remains in references. "Versioning and Publishing" and "Artifact Attestations" subsections moved to references/advanced-features.md to offset body length.
+- **2026-06-10** — Cycle-4 curation (inbox): corrected reusable workflow nesting limit from 4 → 10 levels in all three locations (Uncertainty §, §2 body, Scenario 4) and updated Scenario 4's example chain to demonstrate a genuine 11-level over-limit case; added "max 50 unique reusable workflows per file" limit. Corrected cache 10 GB from "hard cap" to "configurable default" (billable above 10 GB, up to 10 TB). Added §1 Service Containers subsection (GH-200 blueprint gap). Added `!`-prefix blocklist and SHA-pinning enforcement policy controls to §4 Policies and §5 SHA-Pinning (Aug 2025 feature). Eval probes 13–15 added.
 
 ---
 

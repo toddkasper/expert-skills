@@ -1,6 +1,6 @@
 # Nonprofit Cloud (Industries) Deep Dive — Sections 16–19
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Contains the full operational detail for PART B (NP-Con-102 / Salesforce Industries Nonprofit Cloud). Applies only if the org has Nonprofit Cloud / Industries enabled — confirm by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager); NPC uses namespace-free Industries standard objects like `Gift`, `Program`, `ProgramEnrollment`.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Contains the full operational detail for PART B (NP-Con-102 / Salesforce Industries Nonprofit Cloud, now branded **Agentforce Nonprofit** as of Oct 2025 `[volatile — verify live]`). Applies only if the org has Nonprofit Cloud / Agentforce Nonprofit / Industries enabled — confirm by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager); NPC uses namespace-free Industries standard objects like `Gift`, `Program`, `ProgramEnrollment`.
 
 ---
 
@@ -72,7 +72,7 @@ Decision matrix:
 
 **Anti-pattern: reaching for OmniStudio when a plain screen Flow suffices.** OmniStudio adds licensing and maintenance overhead; use it when guided-flow complexity or Industries integration genuinely warrants it. Key signals to use OmniScript over Flow: multi-step with conditional branching across many objects, need for FlexCard integration, or the process must call an Integration Procedure.
 
-**Grantmaking** (NP-Con-102 domain): manages grant proposals, awards, and disbursements through Industries-native objects. Key objects: `Grant`, `GrantApplication`, `FundingAward`, `FundingDisbursement`. OmniStudio is commonly used to build grant application intake flows.
+**Grantmaking** (NP-Con-102 domain): manages grant opportunities, applications, awards, and disbursements through Industries-native objects. Key objects: `FundingOpportunity` (the grant offering a funder publishes), `IndividualApplication` (a grantee's application to a FundingOpportunity), `FundingAward` (the awarded grant), `FundingDisbursement` (each payment tranche). Additional supporting objects: `ApplicationDecision`, `ApplicationReview`, `FundingAwardRequirement`, `FundingAwardAmendment`. **There are no standard objects named `Grant` or `GrantApplication` in the Grantmaking data model** — using those names in SOQL or Apex will produce an "object not found" error. `[verified against Nonprofit Cloud for Grantmaking Developer Guide, 2026]` OmniStudio is commonly used to build grant application intake flows.
 
 ---
 *Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

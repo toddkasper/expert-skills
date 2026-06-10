@@ -39,4 +39,19 @@
 **Verify:** Confirm Data Cloud licensing is included or procured before committing to this architecture — it is a separate SKU. Validate that the specific Commerce Cloud and Marketing Cloud connectors (Data Streams) cover the data sources in the scenario. Then prototype a Data Stream and Identity Resolution ruleset in a sandbox before presenting the design as final.
 
 ---
+
+## Workflow 3 — Size an LDV data model (selectivity, skew, indexes)
+
+1. Estimate the record count at 5-year growth. If projected count exceeds ~2M rows, classify as LDV and apply LDV design rules throughout.
+   → gate: documented record-count estimate with growth assumption.
+2. Confirm each filter column is indexed (standard indexed fields, External IDs, or custom indexes via Salesforce support request).
+   → gate: at least one leading indexed field in every production SOQL WHERE clause.
+3. Check for ownership skew: if a single user/queue will own >10,000 records, redesign OWD to Private + Sharing Rules to avoid the "fat node" sharing-tree penalty.
+   → gate: no single owner accounts for >10% of the total row count, OR architect review confirms skew-safe.
+4. Verify selectivity: run candidate SOQL with `EXPLAIN` (Tooling API or Dev Console). Table scan on an LDV object triggers *"non-selective query against large object"* in production.
+   → gate: EXPLAIN returns `leadingOperationType: Index` for every production query path.
+5. Plan archival/soft-delete before the object reaches LDV scale — retrofitting indexes to a live LDV object is expensive.
+   → gate: archival policy documented and scheduled.
+
+---
 *Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

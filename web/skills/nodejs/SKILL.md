@@ -6,7 +6,7 @@ metadata:
   domain: web
   type: certification-playbook
   status: operational
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint: JSNAD / JSNSD curriculum (retired Sep 2025 — used as competence map only)
 ---
 
@@ -31,13 +31,13 @@ Credential context (retired JSNAD/JSNSD) and study path: see [references/study-r
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** Node.js LTS release lines and their API stability tier change on a schedule — APIs stable in Node 18 may be deprecated or removed in Node 22/24. `[volatile — verify live]` marks apply to: the `node:test` runner API surface (added Node 18, still gaining features each release); `require(esm)` support for CJS-loading ESM (stable in Node 22 — behavior varies by version); `stream.pipeline()` Promise variant availability (`node:stream/promises` — verify against the project's Node version); `worker_threads` API surface (stable Node 12+, but options evolve). Check `engines` in `package.json` and the [Node.js release schedule](https://nodejs.org/en/about/releases/) before relying on a version-specific API.
+- **Always re-verify live:** Node.js LTS release lines and their API stability tier change on a schedule — APIs stable in Node 22 may be deprecated or removed in Node 24/26. `[volatile — verify live]` marks apply to: the `node:test` runner API surface (added Node 18, still gaining features each release); `require(esm)` support for CJS-loading ESM (available Node 20.17.0+, unflagged in 20.19.0+/22.12.0+, stable in 25.4.0 — behavior varies by version) `[volatile — verify live]`; `stream.pipeline()` Promise variant availability (`node:stream/promises` — verify against the project's Node version); `worker_threads` API surface (stable Node 12+, but options evolve). Check `engines` in `package.json` and the [Node.js release schedule](https://nodejs.org/en/about/previous-releases) before relying on a version-specific API. **Current LTS lines (2026-06-10):** Node 26 is Current; Node 24 (Krypton) is Active LTS (recommended for production); Node 22 (Jod) is Maintenance LTS (security fixes only); Node 20 reached EOL March 24, 2026; Node 18 reached EOL March 27, 2025. `[volatile — verify live]`
 - **Live wins:** the installed Node.js version's actual runtime behavior and the [official Node.js docs](https://nodejs.org/docs/latest/api/) are authoritative over this file → log discrepancies via Feedback protocol below.
 - **Escalate to a human:** production deploys; dependency major-version bumps (especially `express`→`fastify` or Node LTS upgrades); data migrations; deleting or force-pushing git history; infrastructure changes (Redis, load balancer config, rate-limit store).
 - **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
 Specific volatile facts in this skill:
-- `require(esm)` in CJS files — `[volatile — verify live]` — stable Node 22+, not available in Node 18/20.
+- `require(esm)` in CJS files — `[volatile — verify live]` — available since Node 20.17.0 (behind `--experimental-require-module`); unflagged and warning-free in Node 20.19.0+/22.12.0+/23.0.0+; marked fully stable (non-experimental) in Node 25.4.0. Not available in Node 18 or Node 20 < 20.17.0.
 - `node:test` runner API (e.g., `--test`, `--test-reporter`) — `[volatile — verify live]` — features added each LTS cycle.
 - `stream.pipeline()` from `node:stream/promises` — `[volatile — verify live]` — verify it exists in the project's Node version (Node 15+).
 - Fastify vs Express security default behavior (Helmet bundled, AJV schema validation) — `[volatile — verify live]` — confirm against installed library version.
@@ -86,7 +86,7 @@ const { pipeline } = require('node:stream/promises');
 await pipeline(readableSource, transformStep, writableDest);
 ```
 
-**Backpressure — the rule:** when `writable.write()` returns `false`, the consumer's buffer is full. Stop sending: pause the readable (`.pause()`) and wait for the `drain` event before resuming. `pipeline()` handles this automatically. `highWaterMark` (default 16 KB for byte streams, 16 objects for object-mode streams) controls the buffer ceiling.
+**Backpressure — the rule:** when `writable.write()` returns `false`, the consumer's buffer is full. Stop sending: pause the readable (`.pause()`) and wait for the `drain` event before resuming. `pipeline()` handles this automatically. `highWaterMark` (default **64 KiB / 65536 bytes** for byte streams, 16 objects for object-mode streams) controls the buffer ceiling. `[volatile — verify live]` — raised from 16 KiB to 64 KiB in nodejs/node#53494.
 
 **Buffer:** fixed-size raw memory outside V8's heap. Created with `Buffer.alloc(n)` (zero-fills — safe) or `Buffer.allocUnsafe(n)` (faster but contains old memory — only use when immediately overwriting). Never create Buffers from user-supplied length without range-checking — a huge `n` is a DoS vector. Encode/decode with `buf.toString('utf8')` / `Buffer.from(str, 'utf8')`.
 
@@ -114,7 +114,7 @@ await pipeline(readableSource, transformStep, writableDest);
 |---|---|---|
 | File extension | `.js` (default) / `.cjs` | `.mjs` / `.js` with `"type":"module"` |
 | Load | Synchronous, dynamic | Async, static |
-| Interop from CJS | `require('./foo.cjs')` works | `require('esm-only-pkg')` requires dynamic `import()` or Node ≥22 `require(esm)` (stable in Node 22) `[volatile — verify live]` |
+| Interop from CJS | `require('./foo.cjs')` works | `require('esm-only-pkg')` requires dynamic `import()` — or `require(esm)` if Node ≥20.17.0 (unflagged in 20.19.0+/22.12.0+; fully stable in 25.4.0; not available in Node 18 or <20.17.0) `[volatile — verify live]` |
 | Interop from ESM | `import cjsPkg from 'cjs-pkg'` works (default export = `module.exports`) | |
 | Tree-shaking | ❌ (dynamic require) | ✅ (static analysis) |
 | `__dirname` / `__filename` | Available | Not available — use `import.meta.url` + `fileURLToPath` |
@@ -239,6 +239,27 @@ For richer features (mocking, snapshot, coverage): Jest (most popular ecosystem)
 **What to test (and not):** test behavior at module boundaries, not implementation details. Stub I/O (filesystem, network, DB) at the lowest practical layer. Prefer integration tests for stream pipelines — mock streams are error-prone. Mock `child_process.spawn` carefully; it's easier to extract the shell logic into a testable pure function and call the process-boundary once.
 
 **Coverage:** 80% line/branch is a useful floor, not a ceiling. 100% coverage with bad assertions is worse than 70% with precise assertions.
+
+---
+
+## 7. Process, OS & Node CLI
+
+Covers JSNAD domains Process/OS (6%) and Node.js CLI (4%) — ~10% of the curriculum.
+
+**`process` rules:**
+- `process.argv` is `[node, script, ...userArgs]`; use `node:util` `parseArgs` for option parsing.
+- `process.env` values are always **strings** — cast explicitly and provide defaults (`Number(process.env.PORT) || 3000`); missing vars return `undefined` and coerce silently.
+- `process.stdin` / `stdout` / `stderr` are Readable/Writable streams — pipe-friendly when redirected.
+- `process.exit(code)` — `0` = success, non-zero = failure; CLIs must set non-zero so `||` and CI step-checks catch errors. Never call inside a route handler.
+- `process.on('SIGTERM')` / `'SIGINT'` — **always handle in servers**. Container orchestrators (Kubernetes, ECS) send SIGTERM before force-kill; unhandled SIGTERM exits immediately and drops in-flight requests. Minimal pattern: `process.on('SIGTERM', () => server.close(() => process.exit(0)))`.
+- `process.on('exit', fn)` — synchronous only; no async work permitted in the handler.
+- `process.hrtime.bigint()` — nanosecond monotonic timer for benchmarking; never `Date.now()` for durations.
+
+**`node:os`:** `os.cpus().length` sets the parallelism ceiling for worker pools (use `length - 1`). `os.tmpdir()` gives the platform-correct temp directory — never hardcode `/tmp`. `os.hostname()` for log correlation. `os.EOL` for cross-platform line endings.
+
+**CLI flags** `[volatile — verify live]`: `--env-file <path>` loads a `.env` without a library (Node 20.6+); `--watch` restarts on file changes (Node 18.11+); `NODE_OPTIONS` prepends flags to every invocation; `--permission` + `--allow-fs-read/write/net/child-process` sandboxes access (stable Node 22+); `--trace-warnings` prints stack traces for warnings.
+
+**Red flags:** hardcoded `/tmp` (use `os.tmpdir()`); `process.env.VAR` without a fallback or explicit cast; SIGTERM unhandled in a containerized service; `process.exit()` inside a route handler.
 
 ---
 
@@ -382,6 +403,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) `require(esm)` volatile-fact corrected — available Node 20.17.0+, unflagged 20.19.0+/22.12.0+, stable 25.4.0; ESM interop table and §Uncertainty bullet updated. (2) `highWaterMark` byte-stream default corrected from 16 KiB to 64 KiB (65536 bytes); object-mode 16 unchanged. (3) Node version matrix refreshed — Node 18 EOL Mar 2025, Node 20 EOL Mar 24 2026; Active LTS = 24 (Krypton), Maintenance LTS = 22 (Jod), Current = 26; framing updated throughout Uncertainty. (4) Added §7 Process, OS & Node CLI covering process.argv/env/signals/exit codes, `node:os`, and CLI flags (--env-file, --watch, --permission, NODE_OPTIONS) to close the JSNAD ~10% coverage gap. `last-reviewed` updated to 2026-06-10.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---

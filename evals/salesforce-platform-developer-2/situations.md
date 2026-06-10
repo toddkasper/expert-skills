@@ -27,3 +27,17 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. A developer deploys a new custom object `Shipment__c` with a lookup to `Account`. They then deploy a permission set that includes object-level Create/Read/Edit/Delete access to `Shipment__c` and `<fieldPermissions>` for every field on the object — including the `Name` (auto-number) field and the `OwnerId` field. The deploy fails. What is the specific reason, and how do you fix the permission set XML?
 
 12. A developer writes a Custom Metadata Type-based feature flag system. The CMT `Feature_Flag__mdt` has a `Is_Enabled__c` checkbox field. In Apex, the developer queries it with `[SELECT Is_Enabled__c FROM Feature_Flag__mdt WHERE DeveloperName = 'Dark_Launch']`. A senior developer says this is functional but notes one subtle benefit the developer is not taking advantage of. What is that benefit, and how would you rewrite the access to leverage it?
+
+---
+
+## Held-out probes — Cycle-4 curation (2026-06-10)
+
+> _Added from Cycle-4 inbox lessons. Do not paste into a skill body._
+
+13. An org has a custom object `Inspection__c` with 4 million records. A developer writes a SOQL query filtering on a custom indexed field `Status__c`. In a test with production data, the query performs well when filtering for `Status__c = 'Pending'` (which matches 280,000 records) but throws `QueryException: Non-selective query` when filtering for `Status__c = 'Closed'` (which matches 700,000 records). The developer is confused because both values use the same custom indexed field with an equality predicate. Explain why one query is selective and the other is not, using the correct selectivity thresholds.
+
+14. A developer has built a system that publishes standard-volume Platform Events (`Order_Update__e`, defined as standard-volume) for real-time order processing. The architect mentions that this design carries a specific sunset risk that could break the integration within the next 12 months. What is that risk, what is the recommended migration path, and what is the key behavioral difference between the two event types to account for in the subscriber?
+
+15. A Visualforce page is being built to display a paginated list of `Invoice__c` records (up to 10,000 records total) with a "Next" and "Previous" button. A developer writes a custom Apex list controller that manually queries and slices records. A code reviewer flags this as unnecessary. What built-in Salesforce mechanism should replace the custom pagination logic, what is the correct way to declare it in the Apex controller class, and what VF component/attribute renders the navigation controls?
+
+16. A Visualforce page needs to call a JavaScript function that manipulates a specific `<apex:outputPanel>` component identified by `id="statusPanel"`. The developer writes `document.getElementById('statusPanel')` in the JavaScript, but it never finds the element at runtime even though the panel is rendered. Why does this happen, and what is the correct expression to use in Visualforce to get the actual rendered DOM id?

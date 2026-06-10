@@ -6,7 +6,7 @@ metadata:
   domain: web
   type: competence-playbook
   status: active
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   anchored-to: TypeScript Handbook + official release notes (typescriptlang.org)
 ---
 
@@ -38,7 +38,7 @@ Next.js server components, Node.js APIs) is deferred to the sibling skills (`rea
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** TypeScript compiler defaults and strictness options changed materially at 6.0 and will change again at 7.0 — always check the installed TypeScript version (`npm ls typescript`) and compare against the [release notes](https://devblogs.microsoft.com/typescript/). `[volatile — verify live]` marks apply to: `strict` default (was `false` before TS 6.0); `module`/`target` defaults (changed in TS 6.0); `types` default (changed from auto-load all to `[]` in TS 6.0); `--moduleResolution node` deprecation timeline (deprecated 6.0, removal in 7.0 — `[volatile — verify live]`); `const` type parameters (TS 5.0+ only); TypeScript 7.0 Go-native compiler timeline and option removal (expected late 2026 — `[volatile — verify live]`).
+- **Always re-verify live:** TypeScript compiler defaults and strictness options changed materially at 6.0 and will change again at 7.0 — always check the installed TypeScript version (`npm ls typescript`) and compare against the [release notes](https://devblogs.microsoft.com/typescript/). `[volatile — verify live]` marks apply to: `strict` default (was `false` before TS 6.0); `module`/`target` defaults (changed in TS 6.0); `types` default (changed from auto-load all to `[]` in TS 6.0); `--moduleResolution node` deprecation timeline (deprecated 6.0, removal in 7.0 — `[volatile — verify live]`); `const` type parameters (TS 5.0+ only); TypeScript 7.0 Go-native compiler timeline and option removal (Beta shipped 2026-04-21; stable expected ~June 2026 — `[volatile — verify live]`).
 - **Live wins:** the installed TypeScript version's actual compiler behavior and [typescriptlang.org](https://typescriptlang.org) are authoritative over this file → log discrepancies via Feedback protocol below.
 - **Escalate to a human:** major TypeScript version upgrades in production monorepos (breaking defaults can silently change inferred types); removing `strict: false` overrides across a large legacy codebase (compile errors may cascade); dependency major-version bumps; production deploys after tsconfig changes.
 - **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
@@ -58,13 +58,16 @@ changed nine defaults at once. Know these before touching a tsconfig in 2026.
 | `rootDir` | inferred | `.` (tsconfig directory) |
 | `types` | `["*"]` (all @types) | **`[]`** (none) |
 | `noUncheckedSideEffectImports` | `false` | `true` |
+| `libReplacement` | `true` | **`false`** |
 
 **Removed entirely in 6.0:** `--outFile`, `--module amd/umd/systemjs/none`,
-`--moduleResolution classic`, `target: es5`, `--downlevelIteration`, legacy `module` keyword
-(use `namespace`), `import assertions` with `assert` (use `with`).
+`--moduleResolution classic`, legacy `module` keyword (use `namespace`),
+`import assertions` with `assert` (use `with`).
 
-**Deprecated in 6.0 (will be removed in 7.0):** `--baseUrl`, `--moduleResolution node` (node10),
-`--esModuleInterop false`, `--allowSyntheticDefaultImports false`.
+**Deprecated in 6.0 (will be removed in 7.0):** `target: es5`, `--downlevelIteration`,
+`--baseUrl`, `--moduleResolution node` (node10), `--esModuleInterop false`,
+`--allowSyntheticDefaultImports false`. Still usable in 6.0 via `"ignoreDeprecations": "6.0"`;
+must be cleaned up before adopting 7.0.
 
 **`types: []` default is a stealth breaking change:** any project that relied on auto-loaded
 `@types/node`, `@types/jest`, etc., must now list them explicitly:
@@ -72,7 +75,8 @@ changed nine defaults at once. Know these before touching a tsconfig in 2026.
 { "compilerOptions": { "types": ["node", "jest"] } }
 ```
 
-TypeScript 7.0 (Go-native compiler, ~late 2026) `[volatile — verify live]` will remove everything deprecated in 6.0 and is
+TypeScript 7.0 (Go-native compiler) `[volatile — verify live]` Beta shipped 2026-04-21; stable
+expected ~June 2026 (RC a few weeks prior). Will remove everything deprecated in 6.0 and is
 expected to deliver ~10× build speedups. All 6.0-deprecated options must be cleaned up before
 adopting 7.0.
 
@@ -201,7 +205,7 @@ Remap keys with `as`: `{ [K in keyof T as Capitalize<string & K>]: T[K] }`.
 
 ### The strict flag hierarchy
 
-`"strict": true` (now the 6.0 default) enables eight sub-flags:
+`"strict": true` (now the 6.0 default) enables nine sub-flags:
 
 | Sub-flag | What it catches |
 |---|---|
@@ -213,6 +217,7 @@ Remap keys with `as`: `{ [K in keyof T as Capitalize<string & K>]: T[K] }`.
 | `noImplicitThis` | `this` typed as `any` in functions |
 | `alwaysStrict` | Emits `"use strict"` |
 | `useUnknownInCatchVariables` | Catch variable typed `unknown` not `any` |
+| `strictBuiltinIteratorReturn` | Built-in iterator `TReturn` is `undefined` not `any` (TS 5.6+) |
 
 **Opt-in beyond strict** (not yet defaults, but strongly recommended):
 
@@ -415,8 +420,9 @@ cast raw parsed data with `as`.
   packages; use `--module esnext` + `"moduleResolution": "bundler"` for bundled apps.
 - **DO** explicitly list `"types": ["node"]` (or whichever @types you need) in tsconfig — the
   6.0 default is `"types": []`, so nothing is auto-loaded.
-- **DON'T** use deprecated 6.0 options (`--baseUrl`, `--moduleResolution node`, `--outFile`) in
-  new projects; they will be removed in TypeScript 7.0.
+- **DON'T** use 6.0-deprecated options (`--baseUrl`, `--moduleResolution node`,
+  `target: es5`, `--downlevelIteration`) in new projects; they will be removed in TypeScript 7.0.
+  (`--outFile` and `--moduleResolution classic` were removed outright in 6.0 — do not use at all.)
 - **DO** add `"declarationMap": true` in library packages so consumers can jump-to-source.
 - **DON'T** cast `JSON.parse(...)` with `as MyType` — use a runtime validator (Zod/Valibot) and
   let the validator produce the typed output.
@@ -454,6 +460,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) TS 7.0 timeline corrected — Beta 2026-04-21, stable ~June 2026 (not "late 2026"); (2) `target: es5` and `--downlevelIteration` moved from "Removed in 6.0" to "Deprecated in 6.0" (still usable via `ignoreDeprecations`; removed in 7.0); (3) strict sub-flag count corrected 8→9, added `strictBuiltinIteratorReturn` (TS 5.6); (4) `libReplacement` default `true→false` added to 6.0 defaults table; Operational Rules updated to match. Four held-out eval probes added (situations 13–16). `last-reviewed` set to 2026-06-10.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---

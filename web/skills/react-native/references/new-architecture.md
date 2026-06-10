@@ -45,8 +45,12 @@ The New Architecture is the default from React Native 0.76+ and mandatory from E
 
 1. Run `npx expo-doctor@latest` — it flags libraries incompatible with the New Architecture
 2. Check [React Native Directory](https://reactnative.directory/) for the `new arch` badge on every dependency
-3. Major ecosystem libraries that require minimum versions: React Navigation 7.2+, Reanimated 3.5.1+, Gesture Handler 2.16.2+, Vision Camera 4.0+
-4. Legacy bridge modules (`NativeModules.X`) still work via interop in SDK 52-54; plan migration before SDK 55
+3. Major ecosystem libraries — **check each library's own compatibility page rather than relying on hard-coded patch minimums, which go stale quickly** `[volatile — verify live]`:
+   - **Reanimated:** v4.x is New-Architecture-only (v3 is unmaintained — no ongoing updates); minimum RN version varies by 4.x patch — check [Reanimated compatibility page](https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/)
+   - **Gesture Handler:** v3.x (released May 2026) is a full rewrite for the New Architecture; v2.x supported both architectures — check [releases](https://github.com/software-mansion/react-native-gesture-handler/releases) for the current minimum
+   - **Vision Camera:** v4.0+ required; check the repo for New-Arch notes
+   - **React Navigation:** 7.2+ required
+4. Legacy bridge modules (`NativeModules.X`) worked via interop in SDK 52–54; **SDK 55 (released Feb 25 2026) made the New Architecture mandatory and non-disableable — interop is only available on SDK 54 and earlier** `[volatile — verify live]`
 
 **Red flag:** adding a library without checking its New Architecture support status — it may cause silent runtime failures or a hard crash rather than a clean error.
 

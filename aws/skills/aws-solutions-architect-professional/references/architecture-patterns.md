@@ -35,7 +35,7 @@ Lambda works well for: API backends (API Gateway), event processors (S3/DynamoDB
 |---|---|
 | High-volume time-series | Amazon Timestream |
 | Fraud/recommendation graphs | Amazon Neptune |
-| Ledger / audit trail | Amazon QLDB |
+| Ledger / immutable audit trail | Aurora PostgreSQL (QLDB reached end-of-support July 31 2025; do not recommend for new workloads) |
 | Session/cache | ElastiCache Redis |
 | Full-text search | OpenSearch |
 

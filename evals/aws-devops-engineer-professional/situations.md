@@ -27,3 +27,11 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. A developer stores a database password directly in the `environment` section of a CodeBuild buildspec as `DB_PASSWORD: mysecretvalue`. A security review flags it. The developer argues "the buildspec is in a private CodeCommit repo, so it's safe." Why is this wrong, and what is the correct pattern?
 
 12. A Route 53 Failover routing policy has a primary record pointing to an ALB in `us-east-1` and a secondary record pointing to an ALB in `us-west-2`. During a simulated regional failure, traffic does not automatically shift to `us-west-2`. You verify the primary endpoint is down. What is the most likely missing configuration, and what command do you run to diagnose it?
+
+13. A junior engineer writes an AppSpec file for an ECS blue/green deployment. Under the `BeforeInstall` key she writes `BeforeInstallHook` as the Lambda function name because "that matches what the docs call the hook." The deployment succeeds but the validation Lambda is never invoked. What has she misunderstood, and what is the correct AppSpec structure?
+
+14. Your team's AWS Resilience Hub assessment scores a multi-tier web application at 42/100 against an RTO of 5 minutes. The biggest gap flagged is "no tested recovery procedure for the application tier." You have AWS Backup plans and Multi-AZ RDS in place. What category of missing capability does Resilience Hub most likely identify, and what is the recommended next step?
+
+15. A Pilot Light DR architecture replicates a database to a standby region but relies on nightly EBS snapshots for the application server tier. The stated RPO is 15 minutes. A senior engineer proposes using AWS Elastic Disaster Recovery (DRS) for the application servers. What specific gap does DRS close that snapshots cannot, and what is the key operational requirement to confirm DRS is meeting the RPO?
+
+16. A pipeline team is designing a new CodePipeline that pulls source from an internal Git repository. They want to use AWS CodeCommit. A colleague says "CodeCommit isn't in the DOP-C02 in-scope services list — use CodeConnections instead." The team looks up CodeCommit and finds it is now GA again after returning from a brief closure. What is the correct guidance for both the exam and new production pipeline design?

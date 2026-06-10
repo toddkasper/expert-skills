@@ -11,7 +11,7 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 | Exam Code | MC-202 |
 | Questions | 60 scored multiple-choice/multiple-select (+ up to 5 unscored pilot questions) |
 | Time Limit | 90 minutes |
-| Passing Score | 67% (approximately 40 of 60 scored questions correct) |
+| Passing Score | 65% (approximately 39 of 60 scored questions correct) `[volatile — verify live]` |
 | Cost | $200 USD (retake: $100 USD), plus applicable taxes |
 | Prerequisites | None formally required; MKT 101 course and 6+ months SFMC experience strongly recommended |
 | Retake Policy | Up to two retakes; first retake at the discounted retake fee. Maintained via annual Trailhead maintenance modules |
@@ -19,9 +19,9 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 Delivery is proctored — onsite testing center or online remote proctoring (no open-book).
 Recommended prep is ~28 hours via the official Trailmix.
 
-Domain weights (official guide): Email Marketing Best Practices **10%**, Content Creation &
-Delivery **24%**, Marketing Automation **26%**, Subscriber & Data Management **26%**, Insights &
-Analytics **14%**.
+Domain weights (official guide) `[volatile — verify live]`: Email Marketing Best Practices **15%**,
+Email Message Design **13%**, Content Creation & Delivery **18%**, Marketing Automation **19%**,
+Subscriber & Data Management **28%**, Tracking & Reporting **7%**.
 
 ## Study Resources
 
@@ -39,11 +39,12 @@ Analytics **14%**.
 
 Complete in domain order:
 
-- **Best Practices:** Email Marketing Best Practices · CAN-SPAM Compliance · Deliverability Fundamentals
-- **Content & Delivery:** Content Builder Basics · AMPscript for Personalization (trail) · Content Studio modules
-- **Subscriber & Data:** Marketing Cloud Data Management (trail) · Contact Builder Basics · Data Extension Basics · Marketing Cloud Data Views
-- **Automation:** Automation Studio Basics · Journey Builder Basics · Build Customer Journeys with Journey Builder (trail)
-- **Insights & Analytics:** Marketing Cloud Reporting · Analytics Builder Basics
+- **Best Practices (15%):** Email Marketing Best Practices · CAN-SPAM Compliance · Deliverability Fundamentals
+- **Email Message Design (13%):** Content Builder Basics · Email Design Principles · A/B Testing in Marketing Cloud · Approval Workflow setup
+- **Content & Delivery (18%):** AMPscript for Personalization (trail) · Content Studio modules · Triggered Sends
+- **Subscriber & Data (28%):** Marketing Cloud Data Management (trail) · Contact Builder Basics · Data Extension Basics · Marketing Cloud Data Views
+- **Automation (19%):** Automation Studio Basics · Journey Builder Basics · Build Customer Journeys with Journey Builder (trail)
+- **Tracking & Reporting (7%):** Marketing Cloud Reporting · Analytics Builder Basics
 
 ### Community & Third-Party Resources
 
@@ -61,8 +62,7 @@ Complete in domain order:
 ## Recommended Study Plan
 
 1. **Weeks 1–2:** Complete the official Certification Trailmix (~28 hours). Do the hands-on challenges.
-2. **Weeks 3–4:** Drill the two 26% domains — Marketing Automation and Subscriber & Data Management.
-   Build real journeys and automations in a free SFMC developer org or trial.
+2. **Weeks 3–4:** Drill the largest domain — Subscriber & Data Management (28%) — and Marketing Automation (19%). Also cover Email Message Design (13%): A/B test discipline, approval workflow, and Content Builder template architecture. Build real journeys and automations in a free SFMC developer org or trial.
 3. **Week 5:** Two to three full practice exams; trace every miss back to the exam guide section.
 4. **Week 6:** Review weak areas; watch multi-select questions (must get *all* correct options).
 

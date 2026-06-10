@@ -7,7 +7,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -25,7 +25,9 @@ This file covers **two related but distinct** Salesforce certifications for nonp
 
 Both exams once shared a single Trailhead credential page and are still discussed interchangeably in the community, which causes confusion. Read the official exam guide carefully to confirm which version you are registering for.
 
-**Picking the right model at decision time:** an org running the **NPSP managed package** maps to **NP-Con-101**; an org running **Industries-based Nonprofit Cloud** maps to **NP-Con-102**. NPSP is the legacy model Salesforce is sunsetting in favor of Nonprofit Cloud over the coming years `[volatile — verify live]`. **Default all operational decisions to the NPSP (101) model unless someone has confirmed Nonprofit Cloud / Industries is enabled** — verify by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager): NPSP objects carry `npe01__` / `npo02__` / `npsp__` / `npe4__` / `npe5__` namespaces `[volatile — verify live]`, while NPC objects are namespace-free Industries standard objects like `Gift`, `Program`, and `ProgramEnrollment`.
+> **Current product naming (Dec 2025):** Salesforce rebranded Nonprofit Cloud as **"Agentforce Nonprofit"** in October 2025 `[volatile — verify live]`. The Power of Us program now grants eligible nonprofits 10 **Agentforce Nonprofit** licenses (not free NPSP licenses, which were removed from the Power of Us offering in December 2025). In community discussions and documentation you may still see "Nonprofit Cloud (NPC)" used — treat "Agentforce Nonprofit" and "Nonprofit Cloud" as referring to the same Industries-based platform. `[volatile — verify live]`
+
+**Picking the right model at decision time:** an org running the **NPSP managed package** maps to **NP-Con-101**; an org running **Industries-based Nonprofit Cloud / Agentforce Nonprofit** maps to **NP-Con-102**. NPSP is in stable maintenance mode — **feature development ended in March 2023** when Salesforce launched Nonprofit Cloud; NPSP remains fully supported with no announced end-of-life date `[volatile — verify live]`. **Default all operational decisions to the NPSP (101) model unless someone has confirmed Nonprofit Cloud / Industries is enabled** — verify by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager): NPSP objects carry `npe01__` / `npo02__` / `npsp__` / `npe4__` / `npe5__` namespaces `[volatile — verify live]`, while NPC objects are namespace-free Industries standard objects like `Gift`, `Program`, and `ProgramEnrollment`.
 
 > **Deeper context:** Study resources (official Salesforce + community, hands-on environments), the Relevance map, and full deep-dive operational detail live in:
 > - [references/study-resources.md](references/study-resources.md) — study paths, links, certification sequence recommendation, exam-topic ↔ operational-rule relevance table
@@ -86,9 +88,11 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 # PART B — Nonprofit Cloud (Industries) Operational Knowledge (NP-Con-102)
 
-> Applies only if the org has **Nonprofit Cloud / Industries** enabled. For an NPSP org, treat this as forward-looking. Confirm by listing the org's objects (MCP / `sf sobject list` / Object Manager) — NPC uses namespace-free Industries objects.
+> Applies only if the org has **Agentforce Nonprofit / Nonprofit Cloud / Industries** enabled. For an NPSP org, treat this as forward-looking. Confirm by listing the org's objects (MCP / `sf sobject list` / Object Manager) — NPC uses namespace-free Industries objects.
 
 **Rule: Permission Set Licenses gate NPC features.** In Nonprofit Cloud, access errors are usually a missing Permission Set License, not a sharing problem. Each module (Fundraising, Program Management, Outcome Management, Grantmaking) requires its specific PSL **plus** a Permission Set assigned to the user. Troubleshoot "can't see the feature" by checking the PSL assignment first.
+
+> **NP-Con-102 coverage note:** The four exam domains and approximate weights are: Nonprofit Cloud Feature Configuration (~35%), Solution Design (~32%), Nonprofit Cloud Setup (~22%), and Nonprofit Implementation Strategy (~11%). Solution Design (32%) and Implementation Strategy (11%) together represent ~43% of the exam. Solution Design tests selecting the right Salesforce solution for customer requirements — declarative vs custom vs third-party; Implementation Strategy tests facilitating a successful engagement: discovery, user stories, change management, testing, and deployment strategy. See [references/study-resources.md](references/study-resources.md) for the full blueprint map. `[volatile — verify live against the current NP-Con-102 exam guide]`
 
 **Key NPC term translations:**
 
@@ -153,7 +157,7 @@ Read this first. Each rule is imperative and concrete.
 - **DO** run all `sf project` commands from the SFDX project root and run a JWT smoke test after any metadata/cert change.
 - **DO** verify any field/picklist/relationship against the live org (describe the object, run SOQL) before writing code that depends on it.
 - **DO** treat data-model changes as all-three: doc + SFDX XML + app-layer types (and permset FLS + schema regen if it touches Contact).
-- **DO** default to the NPSP (101) model; only use NPC/Industries patterns if listing the org's objects confirms Industries objects exist.
+- **DO** default to the NPSP (101) model; only use NPC/Agentforce Nonprofit (Industries) patterns if listing the org's objects confirms Industries objects exist.
 - **DO** check PSL assignment first when a Nonprofit Cloud feature is inaccessible — it's usually a missing Permission Set License, not a sharing issue.
 
 ---
@@ -286,6 +290,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Added Agentforce Nonprofit rebrand note (Oct 2025) and Power of Us license change (Dec 2025, now grants Agentforce Nonprofit licenses); both marked `[volatile]`. (2) Fixed NPSP framing: replaced "sunsetting over the coming years" with accurate "feature development ended March 2023, fully supported, no announced EOL." (3) Added NP-Con-102 domain-weight coverage note to PART B (Solution Design 32%, Implementation Strategy 11%, etc.). (4) Fixed Grantmaking object names in references/nonprofit-cloud-industries.md (`Grant`/`GrantApplication` → `FundingOpportunity`/`IndividualApplication`). (5) Updated references/study-resources.md: relabeled legacy PDF link, updated certification sequence recommendation, fixed NPSP EOL framing.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---

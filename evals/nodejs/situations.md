@@ -27,3 +27,11 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. An `async` function is called inside a `forEach` loop — `items.forEach(async (item) => { await db.save(item); })`. The surrounding code logs "all done" immediately after `forEach` returns and the tests pass. What's wrong, and what is the correct pattern for awaiting all saves?
 
 12. A Node.js service's `process.on('uncaughtException', (err) => { logger.error(err); })` handler logs the error and then continues normally — no exit, no restart. A senior engineer says this is unsafe even though the app appears to keep running. What's the risk, and what should the handler do?
+
+13. A CJS module on Node 20.15.0 attempts to load an ESM-only package with `const mod = require('esm-pkg')` and throws "ERR_REQUIRE_ESM". A developer on the same team running Node 22.12.0 reports the same call works without any flags. Explain the version-dependent behavior and what the Node 20 developer should do to fix this without upgrading Node.
+
+14. A stream Transform is constructed with no options and processes binary data in chunks. Under load the pipeline stalls frequently — the downstream writable regularly returns `false` and the readable side keeps buffering. Profiling shows the internal buffer grows to 65 536 bytes before backpressure kicks in. A teammate suggests lowering `highWaterMark` to 16 384 on the Transform to reduce memory pressure. Is this a sound tuning decision? What is the actual default, and what trade-off does lowering it introduce?
+
+15. A containerized Node.js service receives SIGTERM from Kubernetes when a rolling deploy drains a pod, but in-flight HTTP requests are regularly cut off mid-response and clients see connection resets. The SIGTERM handler does not exist — the process exits immediately. Write the minimal code change (using only Node.js built-ins) and explain why the container orchestrator needs the process to handle SIGTERM cooperatively.
+
+16. A CLI tool reads `process.env.TIMEOUT` and passes it directly to `setTimeout(fn, process.env.TIMEOUT)`. In local testing it works fine. In CI the timer never fires, causing the test suite to hang. Identify two separate bugs on this single line and describe the correct fix for each.

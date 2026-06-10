@@ -7,7 +7,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -32,16 +32,16 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** `[volatile — verify live]` items include: BA-201 blueprint topic weights and question counts, Salesforce automation tooling retirement dates (Workflow Rules / Process Builder deprecation timeline), specific org edition/license feature availability, and managed-package automation behavior (NPSP, Nonprofit Cloud) across package versions.
+- **Always re-verify live:** `[volatile — verify live]` items include: BA-201 blueprint topic weights and question counts, specific org edition/license feature availability, and managed-package automation behavior (NPSP, Nonprofit Cloud) across package versions.
 - **Live wins:** when this file and the live org, current exam guide, or official Salesforce release notes disagree — for example, a new Salesforce automation tool introduced in a recent release — trust the live system and flag this skill as stale via the Feedback protocol below.
 - **Escalate to a human:** surface — never silently decide — any action that constitutes a sign-off or go-live decision (go/no-go for production deployment, sponsor approval to defer a Must requirement, acceptance of a residual defect risk). These decisions belong to the named human Accountable in the RACI; the BA facilitates and documents, not decides.
 - **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
-> **Volatile tag index:** The specific items tagged `[volatile — verify live]` in this skill (blueprint weights, automation deprecation timeline, NPSP package behavior) are annotated in [references/study-resources.md](references/study-resources.md) — load that file when verifying exam logistics or planning a study pass.
+> **Volatile tag index:** The specific items tagged `[volatile — verify live]` in this skill (blueprint weights, NPSP package behavior) are annotated in [references/study-resources.md](references/study-resources.md) — load that file when verifying exam logistics or planning a study pass.
 
 ---
 
-## 1. Collaboration with Stakeholders (24% — highest weight)
+## 1. Collaboration with Stakeholders (23% — highest weight) [volatile — verify live]
 
 **Map stakeholders before the first workshop, not after.** Build a power/interest grid: high-power/high-interest = manage closely (project lead, executive board); high-power/low-interest = keep satisfied (executive sponsor); low-power/high-interest = keep informed (end users whose daily work changes); low-power/low-interest = monitor. **Decision rule:** the person who can say "no, ship it differently" is a primary stakeholder and must sign off; everyone else is consulted or informed.
 
@@ -114,7 +114,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ---
 
-## 4. Requirements (17%)
+## 4. Requirements (18%) [volatile — verify live]
 
 **Know which artifact you owe, and don't blur them.** Requirements = the *what* (business-owned contract). User stories = the *what, from the user's perspective, sized for a sprint*. **Decision rule:** use a formal Business Requirements Document / Functional Spec when the environment is regulated, fixed-price, or audited; use a story backlog when delivery is agile and the team is trusted.
 
@@ -147,7 +147,7 @@ A solution can pass verification and fail validation — a feature built exactly
 
 ---
 
-## 5. Business Process Mapping (16%)
+## 5. Business Process Mapping (12%) [volatile — verify live]
 
 **Map as-is before to-be, with SMEs, in a swimlane.** Lanes = actors (end user, intake volunteer, data-entry volunteer, Salesforce, staff reviewer). Capture handoffs, bottlenecks, manual workarounds, and the **exception paths SOPs never mention** (incomplete submission, illegible document, applicant with no email).
 
@@ -164,7 +164,7 @@ A solution can pass verification and fail validation — a feature built exactly
 | Need | Tool | Don't use because |
 |---|---|---|
 | Block bad data at save | Validation rule | A flow for this is overkill and slower |
-| No-code record automation, multi-step, async, scheduled | Flow (Record-Triggered / Screen / Scheduled) | Workflow rules and Process Builder are retired for new work |
+| No-code record automation, multi-step, async, scheduled | Flow (Record-Triggered / Screen / Scheduled) | Workflow Rules and Process Builder reached end of support Dec 31 2025; no new builds |
 | Complex logic, bulk DML, callouts, transaction control, managed-package side-effect orchestration | Apex trigger/class | Flow can't safely bulk-orchestrate managed-package side effects |
 | Multi-stage human sign-off | Approval Process / Flow approval | Hand-rolling status picklists loses audit trail |
 
@@ -172,13 +172,13 @@ A solution can pass verification and fail validation — a feature built exactly
 - A to-be map with no exception/unhappy paths — go-live will hit them on day one.
 - Mapping the SOP instead of reality (people don't follow the SOP — observe).
 - A process map that isn't version-controlled alongside the requirement that drove it.
-- Recommending workflow rule / Process Builder for *new* automation — both are retired; flow or Apex.
+- Recommending Workflow Rule / Process Builder for *new* automation — both reached end of support Dec 31 2025 (creation blocked; existing automations still run); use Flow or Apex for new work.
 
 **Verification step:** Before mapping a "future state" that adds automation, audit what already fires on the object (relationships, record types, existing automations) and confirm with the team — an unmapped existing automation can sabotage the to-be process.
 
 ---
 
-## 6. User Acceptance Testing (8% — smallest weight, highest stakes)
+## 6. User Acceptance (UAT) (12% — smallest weight, highest stakes) [volatile — verify live]
 
 **Write a UAT plan with explicit entry and exit criteria.** Entry: build is feature-complete, in a representative environment (sandbox), test data loaded, testers trained. Exit: all Must-have scenarios pass; no open blocker/critical defects; known issues documented with agreed workarounds; business sign-off recorded.
 
@@ -301,7 +301,7 @@ Read this first. Each rule is imperative and concrete.
 15. **DON'T** phrase a requirement as a solution ("add a trigger"); phrase the need ("on approval the person must exist as a Contact").
 16. **DO** maintain traceability: requirement → story → test → defect; never break the chain (e.g., hand-editing a generated schema file).
 17. **DO** map as-is before to-be, in swimlanes, including exception/unhappy paths SOPs omit.
-18. **DON'T** recommend workflow rules or Process Builder for new automation — both are retired; use Flow or Apex.
+18. **DON'T** recommend Workflow Rules or Process Builder for new automation — both reached end of support Dec 31 2025 (existing automations still run; new creation blocked); use Flow or Apex.
 19. **DO** use a validation rule to block bad data, Flow for no-code automation, Apex for bulk/side-effect orchestration.
 20. **DO** distinguish verification (built to spec) from validation (right spec); a build can pass one and fail the other.
 21. **DO** run UAT in a sandbox with boundary test data; **NEVER** run UAT against production.
@@ -338,6 +338,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 - **2026-06-09** — Curation pass (inbox: D10 audit finding): moved niche detail to references to meet the context-economy budget.
+- **2026-06-10** — Cycle-4 curation (inbox): corrected four of six domain weights to match official Trailhead blueprint (Collaboration 24%→23%; Requirements 17%→18%; Business Process Mapping 16%→12%; User Acceptance 8%→12%); §6 heading aligned to official domain name "User Acceptance" (UAT kept parenthetically); WFR/Process Builder framing updated from "retired/pending" to "end of support Dec 31 2025, existing automations still run"; study-resources.md Volatile Tag Index updated to match.
 
 ---
 

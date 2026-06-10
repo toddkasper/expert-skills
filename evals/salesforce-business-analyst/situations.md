@@ -27,3 +27,5 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. A new report type is added to Salesforce to surface volunteer hours. The BA updates the requirements document to reflect the new field list but does not update the user story, acceptance criteria, or UAT test case for the related story. Why is this a problem, and what must the BA do?
 
 12. After go-live, the admin reports that login rates for intake volunteers are 40% of the expected rate, even though UAT passed. The volunteers were trained two weeks before launch. What two post-launch actions should the BA take, and what adoption metric should be established to track improvement?
+
+13. During a to-be process mapping session, a senior stakeholder says: "We have 40 active Workflow Rules on the Opportunity object. Since Salesforce retired Workflow Rules at the end of 2025, we need to migrate all of them to Flow before we can map any future-state automation." You are the BA facilitating the session. Is the stakeholder's premise correct, and what is your competent response?

@@ -26,7 +26,7 @@ keep the credential active.
 - [Study for the Salesforce JavaScript Developer I Exam (Trail)](https://trailhead.salesforce.com/content/learn/trails/study-for-the-salesforce-javascript-developer-i-exam) — Official 3-module trail with interactive flashcards and scenario questions; covers all 7 domains (~40 min, 800 points). Start here.
 - [Prepare for your Salesforce JavaScript Developer I Credential (Trailmix)](https://trailhead.salesforce.com/users/strailhead/trailmixes/prepare-for-your-salesforce-javascript-developer-i-credential) — Salesforce's official curated trailmix (~32 hours of content)
 - [JavaScript Skills for Salesforce Developers (Module)](https://trailhead.salesforce.com/content/learn/modules/javascript-essentials-salesforce-developers) — Salesforce-contextualized JS fundamentals
-- [Lightning Web Components Specialist (Superbadge)](https://trailhead.salesforce.com/content/learn/superbadges/superbadge_lwc_specialist) — Required second component of the credential; 16 hands-on coding challenges (~14–30 hours)
+- [Lightning Web Components Specialist (Superbadge)](https://trailhead.salesforce.com/content/learn/superbadges/superbadge_lwc_specialist) — Required second component of the credential; 16 hands-on coding challenges and 2 quizzes (~14–30 hours) `[volatile — verify live]`
 - [Salesforce Certified JavaScript Developer — Credential Page](https://trailhead.salesforce.com/credentials/javascriptdeveloperi) — Official credential overview and exam registration link
 
 ### Community Study Guides & Practice Exams

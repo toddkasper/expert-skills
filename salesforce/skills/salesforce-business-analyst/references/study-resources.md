@@ -27,7 +27,7 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 
 **Maintenance:** Annual release-specific Trailhead maintenance module (one per year, free).
 
-**Domain weights (60 scored questions; each point ≈ 0.6 questions):** Collaboration with Stakeholders 24% · User Stories 18% · Customer Discovery 17% · Requirements 17% · Business Process Mapping 16% · User Acceptance Testing 8%.
+**Domain weights (60 scored questions; each point ≈ 0.6 questions):** `[volatile — verify live]` Collaboration with Stakeholders 23% · User Stories 18% · Customer Discovery 17% · Requirements 18% · Business Process Mapping 12% · User Acceptance 12%.
 
 ## Study Resources
 
@@ -50,11 +50,11 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 ### Suggested Study Sequence (4–6 weeks)
 
 1. Download the official exam guide PDF from the Trailhead Academy registration page — read the domain descriptions and percentage weights first.
-2. Work through the official trailmix (~28 hrs); prioritize the Collaboration with Stakeholders and User Stories modules, which together account for 42% of the exam.
+2. Work through the official trailmix (~28 hrs); prioritize the Collaboration with Stakeholders and User Stories modules, which together account for 41% of the exam.
 3. Complete the Business Administration Specialist superbadge for hands-on practice applying configuration in a BA-driven scenario.
 4. Read the Salesforce Ben guide and use its flashcard-style domain summaries as a review pass.
 5. Take 2–3 full timed practice exams; identify which domains you're missing; go back to Trailhead for targeted review.
-6. Re-read your user story writing and acceptance criteria notes the day before — Collaboration + User Stories is nearly half the exam.
+6. Re-read your user story writing and acceptance criteria notes the day before — Collaboration (23%) + User Stories (18%) is 41% of the exam.
 
 ---
 
@@ -68,8 +68,8 @@ The BA methodology in this skill — requirements elicitation, process mapping, 
 
 Items tagged `[volatile — verify live]` in [../SKILL.md](../SKILL.md) and their current annotations:
 
-- **BA-201 blueprint topic weights (24% / 18% / 17% / 17% / 16% / 8%)** `[volatile — verify live]` — Salesforce updates exam blueprints; verify against the current official exam guide before studying or quoting weights.
-- **Workflow Rules and Process Builder "retired for new work" status** `[volatile — verify live]` — Salesforce has announced deprecation; verify the current enforcement date and any grace periods in the latest release notes.
+- **BA-201 blueprint topic weights (23% / 18% / 17% / 18% / 12% / 12%)** `[volatile — verify live]` — Salesforce updates exam blueprints; verify against the current official exam guide before studying or quoting weights. (Order: Collaboration with Stakeholders / User Stories / Customer Discovery / Requirements / Business Process Mapping / User Acceptance.)
+- **Workflow Rules and Process Builder end-of-support status** — Settled: end of support was Dec 31 2025 (new creation blocked in Winter '23/Summer '23; support and bug fixes ended Dec 31 2025). Existing active automations continue to run. No longer volatile — this date is past.
 - **NPSP managed-package automation side effects** (Household Account creation, `npe01__PreferredPhone__c` workflow rule) `[volatile — verify live]` — package version-specific; confirm active automations in the target org before writing requirements.
 
 ---

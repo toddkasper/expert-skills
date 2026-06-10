@@ -7,7 +7,7 @@ metadata:
   domain: aws
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
   blueprint: SAP-C02 (2026-06-07 verified)
 ---
@@ -69,8 +69,8 @@ An AWS Organization with multiple accounts is the baseline for any enterprise. A
 | Hub-and-spoke across many VPCs or accounts | Transit Gateway (TGW) | Transitive routing; costs per attachment + data processing; supports VPN and Direct Connect attachments |
 | Private access to a service (e.g. S3, API endpoint) without routing through internet | VPC Endpoint (Gateway for S3/DynamoDB, Interface for most others) | Interface endpoints cost per AZ per hour + data; Gateway endpoints are free |
 | Expose your service to consumers without full VPC access | AWS PrivateLink | Consumer VPCs connect via Interface endpoint; no VPC peering needed; consumers cannot initiate connections back |
-| On-premises to AWS, dedicated bandwidth | AWS Direct Connect | 1 Gbps or 10 Gbps dedicated; does not encrypt in transit by default — add a VPN over DX for encryption |
-| On-premises to AWS, internet-based encrypted | Site-to-Site VPN | Up to 1.25 Gbps per tunnel; dual-tunnel for redundancy |
+| On-premises to AWS, dedicated bandwidth | AWS Direct Connect | 1, 10, 100, or 400 Gbps dedicated port speeds `[volatile — verify live]`; does not encrypt in transit by default — add a VPN over DX for encryption |
+| On-premises to AWS, internet-based encrypted | Site-to-Site VPN | Standard tunnels up to 1.25 Gbps each; Large Bandwidth Tunnels up to 5 Gbps each (TGW/Cloud WAN attachments only, Nov 2025) `[volatile — verify live]`; dual-tunnel for redundancy |
 
 **Transitive routing trap:** VPC Peering is non-transitive — A→B and B→C does not mean A→C. Use Transit Gateway for transitive routing.
 
@@ -227,7 +227,7 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 **Core decision rules (always loaded):**
 - **MGN** for server Rehost (block-level replication; test launch does not interrupt the source server).
 - **DMS** for database migration; always run **SCT first** for heterogeneous migrations (Oracle/SQL Server → Aurora/PostgreSQL) — schema incompatibilities mid-migration are expensive.
-- **DataSync** for file-share sync (NFS/SMB → S3/EFS/FSx) when bandwidth is sufficient. **Snow family** when online transfer is impractical (>10 TB with <1 Gbps) `[volatile — verify live]`.
+- **DataSync** for file-share sync (NFS/SMB → S3/EFS/FSx) when bandwidth is sufficient. **Snow family** when online transfer is impractical (>10 TB with <1 Gbps) `[volatile — verify live]`. **Note:** Snowball Edge is no longer available to new customers; for new physical transfers use AWS Data Transfer Terminal or partner solutions. Snowmobile (truck) was discontinued in 2024.
 - **AD Connector** (proxy) when on-premises AD must stay authoritative; **AWS Managed Microsoft AD** when you need a full AD in AWS for domain-join and trusts.
 - **AWS Application Discovery Service** before wave planning — dependency mapping must precede grouping.
 - Run DMS in **CDC mode** for near-zero-downtime cutovers — full-load + CDC keeps target in sync; cutover window is minutes, not hours.
@@ -241,7 +241,7 @@ Every migration decision maps to one of the 7 Rs. Apply them in assessment order
 - **Compute modernization:** EC2 in ASG → Elastic Beanstalk → ECS/EKS on Fargate → Lambda. Don't jump to Lambda without verifying task duration <15 min and state can be externalized.
 - **Storage:** EBS gp3 (block, default over gp2); EFS for Linux POSIX / FSx for Windows SMB/DFS or Lustre HPC; S3 (object); Storage Gateway Volume (hybrid iSCSI).
 - **Decoupling:** SQS for async; SNS+SQS for fan-out; EventBridge Scheduler for custom schedules; Step Functions for multi-step workflows.
-- **Purpose-built databases:** DynamoDB (key-value); Neptune (graph); Timestream (time-series); QLDB (ledger); OpenSearch (full-text) — don't default everything to RDS.
+- **Purpose-built databases:** DynamoDB (key-value); Neptune (graph); Timestream (time-series); OpenSearch (full-text) — don't default everything to RDS. For ledger/immutable-audit workloads use **Aurora PostgreSQL** (QLDB reached end-of-support July 31 2025 and is no longer a valid option).
 - Lambda cost-optimal for spiky/event-driven; EC2 + Savings Plan cheaper for 24/7 consistent throughput — cross-compare at ~50% utilization.
 
 **Red flag:** migrating a stateful monolith to Lambda without externalizing state; using RDS MySQL for a key-value workload; refactoring to microservices without service contracts and observability; choosing EFS when FSx for Windows is required for SMB/DFS.
@@ -387,6 +387,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to 12-dimension skill standard: task-vocab description, Scope block, Uncertainty & Escalation with `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, feedback protocol. Exam logistics relocated to references/study-resources.md.
 - **2026-06-09** — Inlined 4 decision scenarios; restored D3 migration/architecture core decision rules inline in §4.2 and §4.3; prose compression pass.
+- **2026-06-10** — Cycle-4 curation (inbox): removed QLDB (EOL Jul 31 2025) from purpose-built DB list, replaced with Aurora PostgreSQL for ledger workloads (§4.3 + references/architecture-patterns.md); Snow Family updated — Snowmobile discontinued 2024, Snowball Edge no longer available to new customers, redirect to DataSync/Data Transfer Terminal, corrected capacities 210 TB Storage Optimized / 28 TB NVMe Compute Optimized (§4.2 + references/migration-tooling.md); Direct Connect dedicated port speeds corrected to 1/10/100/400 Gbps (§1.2); Site-to-Site VPN updated — standard tunnels 1.25 Gbps, Large Bandwidth Tunnels up to 5 Gbps for TGW/Cloud WAN (Nov 2025) (§1.2); volatile markers added where appropriate.
 
 ---
 

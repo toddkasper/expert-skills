@@ -55,3 +55,13 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
     After deploying, every button logs the same number regardless of which one is clicked. What is the bug, and what is the minimal correct fix?
 
 12. A `Promise.all` call fans out three independent imperative Apex fetches. One of the three Apex methods occasionally throws a permission error for guest users. After the error, none of the three results are used and the component shows a full error state even though the other two calls succeeded. What change would let the component display partial results for the two succeeding calls while surfacing only the failed one's error separately?
+
+---
+
+> ## Held-out probes — Cycle 4 (2026-06-10)
+
+13. A developer is debugging an LWC component that manipulates a third-party charting library's canvas element directly via `this.template.querySelector('canvas').getContext('2d')`. A colleague says "that will never work — Lightning Locker blocks direct DOM access on canvas elements." The component was deployed to an org created in Spring '23 and the canvas manipulation actually does work. How do you reconcile these two statements, and what is the correct framing of the security model in effect?
+
+14. A team's CDK stack deploys a Node.js Lambda function using the `nodejs20.x` runtime identifier. A security scan flags it as using a deprecated runtime. The team lead says "Node 20 was just released two years ago — the scan must be wrong." What is the accurate status of `nodejs20.x` as of mid-2026, and what runtime identifier(s) should the team migrate to?
+
+15. A candidate for the Salesforce JavaScript Developer I credential completes all 16 coding challenges in the LWC Specialist superbadge on Trailhead, receives a "Challenge passed" confirmation for each one, and believes the superbadge is now complete. However, the credential is not awarded. What requirement did the candidate most likely overlook, and what must they do to finish?

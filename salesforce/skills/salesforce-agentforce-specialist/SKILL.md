@@ -1,13 +1,13 @@
 ---
 name: salesforce-agentforce-specialist
-description: Building and governing Salesforce Agentforce and generative-AI features — Agentforce agents (topics, actions, agent-user security, the reasoning loop), Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex), Data Cloud and Knowledge grounding/RAG, and the Einstein Trust Layer (data masking, zero-retention, audit). Use when implementing or reviewing agents, prompt templates, grounding, or AI guardrails. Not admin-level Agentforce permission setup alone (see salesforce-administrator) or Apex action-code internals (see salesforce-platform-developer-2). Scoped and benchmarked by the Agentforce Specialist (AI-201) blueprint.
+description: Building and governing Salesforce Agentforce and generative-AI features — Agentforce agents (topics, actions, agent-user security, the reasoning loop), Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex), Data 360 (formerly Data Cloud) and Knowledge grounding/RAG, and the Einstein Trust Layer (data masking, zero-retention, audit). Use when implementing or reviewing agents, prompt templates, grounding, or AI guardrails. Not admin-level Agentforce permission setup alone (see salesforce-administrator) or Apex action-code internals (see salesforce-platform-developer-2). Scoped and benchmarked by the Agentforce Specialist (AI-201) blueprint.
 metadata:
   anchor-credential: Salesforce Certified Agentforce Specialist
   exam-code: AI-201
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -26,17 +26,22 @@ metadata:
 
 The Agentforce Specialist (formerly AI Specialist) validates the ability to
 implement, configure, and govern Salesforce generative + agentic AI — Prompt
-Builder, Agentforce agents (formerly Einstein Copilot), Model Builder, Data
-Cloud grounding, and the Einstein Trust Layer. This document is an
-**operational playbook**, not an exam outline: every section states the rule
+Builder, Agentforce agents (formerly Einstein Copilot), Model Builder, Data 360
+(formerly Data Cloud) grounding, and the Einstein Trust Layer. This document is
+an **operational playbook**, not an exam outline: every section states the rule
 as an actionable instruction, the real limits, the decision criteria, and the
 anti-patterns to catch in review.
+
+> **Product rename (Oct 2025):** Salesforce **Data Cloud** was renamed
+> **Data 360** at Dreamforce on October 13, 2025. The underlying product,
+> licenses, data model, and integrations are unchanged. This document uses
+> "Data 360 (formerly Data Cloud)" on first use and "Data 360" thereafter.
 
 The certification sits between entry-level **AI Associate** (conceptual, no
 hands-on) and senior architecture credentials. Recommended (not required)
 prior knowledge: Salesforce Administrator or Platform App Builder.
 
-> **Load this skill when…** building or reviewing Agentforce agents (topics, actions, agent-user security); creating Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex); configuring Data Cloud grounding or Knowledge RAG for a prompt or agent; or reviewing Einstein Trust Layer settings (data masking, zero-retention, audit trail).
+> **Load this skill when…** building or reviewing Agentforce agents (topics, actions, agent-user security); creating Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex); configuring Data 360 (formerly Data Cloud) grounding or Knowledge RAG for a prompt or agent; or reviewing Einstein Trust Layer settings (data masking, zero-retention, audit trail).
 > **Not this skill:** admin-level Agentforce permission setup (enabling features, assigning licenses) without building an agent → see `salesforce-administrator`; writing the Apex code behind an agent action → see `salesforce-platform-developer-2`.
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
@@ -51,7 +56,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** `[volatile — verify live]` items include: Agentforce agent type availability per edition and license (Service Agent, SDR Agent, Sales Coach Agent), Prompt Builder template type capabilities across releases, Data Cloud RAG/Data Library feature availability, Einstein Trust Layer masking configuration UI paths, and AI-201 blueprint topic weights.
+- **Always re-verify live:** `[volatile — verify live]` items include: Agentforce agent type availability per edition and license (Service Agent, SDR Agent, Sales Coach Agent), Prompt Builder template type capabilities across releases, Data 360 RAG/Data Library feature availability, Einstein Trust Layer masking configuration UI paths, and AI-201 blueprint topic weights.
 - **Live wins:** when this file and the live org or official AI-201 blueprint disagree — for example, a template type added or renamed in a recent release — trust the live system and flag this skill as stale via the Feedback protocol below.
 - **Escalate to a human:** surface — never silently execute — any configuration that points an agent at sensitive or PII-containing records without first verifying the running-user's FLS and sharing scope, grants an agent user a broad profile or "Modify All" permission, publishes a prompt template with no Trust Layer masking review for sensitive fields, or configures a production agent without Testing Center validation.
 - **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
@@ -59,12 +64,12 @@ Credential logistics and study path: see [references/study-resources.md](referen
 Inline volatile tags applied:
 - Agent type roster (Service Agent, SDR Agent, Sales Coach Agent, Employee Agent) `[volatile — verify live]` — new agent types are introduced each release; verify available types in your org's Agentforce Setup.
 - AI Associate credential retired "in early 2026" `[volatile — verify live]` — retirement dates and credential transitions are announced on Trailhead; verify current status.
-- Data Cloud RAG / Data Library / vector search availability `[volatile — verify live]` — requires Data Cloud provisioning; feature names and configuration paths change across releases.
+- Data 360 (formerly Data Cloud) RAG / Data Library / vector search availability `[volatile — verify live]` — requires Data 360 provisioning; feature names and configuration paths change across releases.
 - Einstein Trust Layer masking configuration for custom fields `[volatile — verify live]` — masking entity configuration UI and defaults evolve; verify which custom fields require explicit registration in your org's current release.
 
 ---
 
-## 1. Prompt Engineering & Prompt Builder (30% — largest topic)
+## 1. Prompt Engineering & Prompt Builder (20%) [volatile — verify live]
 
 ### The rules
 
@@ -89,7 +94,7 @@ Inline volatile tags applied:
 - **Ground every template.** Ungrounded prompts hallucinate. Grounding sources,
   in increasing power: (a) **merge fields** off the template's input record/object,
   (b) **related-record merge fields** via lookup traversal, (c) **flow/Apex**
-  data providers, (d) **Data Cloud RAG retriever** for unstructured content.
+  data providers, (d) **Data 360 RAG retriever** for unstructured content.
   Use the lightest one that supplies the needed facts.
 - **Static vs. dynamic grounding:** static = fixed text baked into the template
   (policy, tone, disclaimers). Dynamic = merge fields resolved at run time from
@@ -137,7 +142,7 @@ Inline volatile tags applied:
 
 ---
 
-## 2. Agentforce Concepts — agents, topics, actions, security (30%)
+## 2. AI Agents — agents, topics, actions, security (35% — largest domain) [volatile — verify live]
 
 ### The rules
 
@@ -213,16 +218,16 @@ Inline volatile tags applied:
 
 ---
 
-## 3. Agentforce + Data Cloud grounding (20%)
+## 3. Data 360 (formerly Data Cloud) for Agentforce — grounding (20%) [volatile — verify live]
 
 ### The rules
 
-- **Data Cloud must be enabled before any Data Library / RAG feature exists.**
+- **Data 360 must be enabled before any Data Library / RAG feature exists.**
   RAG grounding, vector search, and Data Library are not available in an org
-  without first provisioning Data Cloud. Don't design a solution that assumes
-  them unless Data Cloud is confirmed enabled.
+  without first provisioning Data 360 (formerly Data Cloud). Don't design a
+  solution that assumes them unless Data 360 is confirmed enabled.
 - **Use the Data Library for unstructured grounding** (PDFs, Knowledge articles,
-  uploaded files, Data Cloud objects). Structured CRM facts should still come
+  uploaded files, Data 360 objects). Structured CRM facts should still come
   from merge fields / Flow, not RAG.
 - **Chunking governs retrieval quality.** Chunk unstructured docs into
   retrievable segments with sensible size + overlap: too large dilutes relevance,
@@ -241,31 +246,45 @@ Inline volatile tags applied:
 
 ### Anti-patterns / red flags
 
-- Designing RAG features for an org where Data Cloud isn't enabled → the build
+- Designing RAG features for an org where Data 360 isn't enabled → the build
   won't have the objects.
 - Using vector search for exact-ID lookups → keyword is faster and exact.
 - One giant chunk per document → poor retrieval relevance.
 
 ### Verify against the live org
 
-- Confirm Data Cloud presence/absence by checking whether Data Cloud DMO/DLO
-  objects appear in the object list. Treat Data Cloud features as a future,
+- Confirm Data 360 presence/absence by checking whether Data 360 DMO/DLO
+  objects appear in the object list. Treat Data 360 features as a future,
   post-provisioning capability if they're absent.
 
 ---
 
-## 4 & 5. Agentforce + Service Cloud / Sales Cloud (10% each)
+## 4. Development Lifecycle — testing, deployment, adoption (20%) [volatile — verify live]
 
-Key guard-rules (see Quick Reference below for the full list):
-- Ground service agents on Knowledge articles; always configure an escalation/hand-off path to a human.
-- Confirm `Case` / `KnowledgeArticleVersion` are in use before proposing a Service Cloud-grounded agent.
-- **Don't force-fit SDR/Coach/pipeline agents to orgs with no sales pipeline** (e.g. NPSP donation-based orgs — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
+> **Blueprint note:** Development Lifecycle is a top-level AI-201 domain (≈20%). Service Cloud and Sales Cloud are **not** standalone exam domains; their agent patterns are covered within §2 (AI Agents). The key Service/Sales guard-rules are retained below.
 
-Full feature-to-scenario matching tables (Service moment → feature; Sales generative feature → use case), Service Agent grounding configuration, SDR vs. Sales Coach Agent distinction, and cloud-specific anti-patterns: [references/study-resources.md](references/study-resources.md) — load when building a Service or Sales Cloud agent.
+### The rules
+
+- **Test with Agentforce Testing Center before any production release.** Author test utterances covering happy-path, adversarial/out-of-scope, and edge cases (record not found, ambiguous input). Review both **trustworthiness** and **topic-and-action accuracy** scores — these are quality signals to iterate on, not a binary pass/fail.
+- **Deploy agent metadata + backing automation + agent user together.** A change set or metadata deployment that includes the agent Bot, topics, and prompt templates must also include the backing Flows/Apex. The agent user, their profile, and permission set assignments must exist in the target org. Missing any of these three layers is the most common cutover failure.
+- **Activation does not travel with deployment.** A Prompt Builder template deployed via change set lands in Draft status in the target org. Reactivate it in Prompt Builder before the agent action can invoke it.
+- **Monitor adoption post-launch.** Review agent conversation logs, escalation rates, and topic-accuracy scores in production. Falling trustworthiness scores or rising escalation rates are signals that topic instructions or action logic needs iteration.
+
+**Service/Sales agent guard-rules (no standalone exam domains; patterns sit within AI Agents):** ground service agents on Knowledge articles and always configure an escalation/hand-off path; confirm `Case`/`KnowledgeArticleVersion` are in use before proposing a Service Cloud-grounded agent; don't force-fit SDR/Coach agents to orgs with no sales pipeline (see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)). Full feature-to-scenario tables and cloud-specific anti-patterns: [references/study-resources.md](references/study-resources.md).
+
+Anti-patterns: (a) "it worked in sandbox" as a production gate — always run Testing Center in the production org post-deploy; (b) deploying the agent Bot without its backing Flows or agent user → every action fails at run time; (c) assuming a deployed template is Active — reactivate it in the target org.
 
 ---
 
-## 6. Einstein Trust Layer & data protection (woven through all topics)
+## 5. Multi-Agent Interoperability (5%) [volatile — verify live]
+
+Key operational rules: use MCP for agent-to-agent communication; use Agent API to trigger an Agentforce agent from an external system or orchestrator; design each agent with a single responsibility. Least-privilege applies to every agent in a multi-agent network — inter-agent calls do not expand the called agent's access. Trust Layer masking and audit apply to all AI calls regardless of call origin.
+
+Full rules, anti-patterns, and A2A protocol decision criteria: [references/study-resources.md](references/study-resources.md).
+
+---
+
+## 6. Einstein Trust Layer & data protection (woven through all domains)
 
 ### The rules
 
@@ -310,11 +329,13 @@ Full feature-to-scenario matching tables (Service moment → feature; Sales gene
 - **DO** give each agent a scoped topic with clear instructions; **DON'T** build one mega-topic — the planner will misroute.
 - **DO** prefer Flow actions over Apex actions when both work; use Apex only when Flow can't express it.
 - **DO** run the agent as a **least-privilege named user**; **DON'T** hand it a powerful profile "to make it work."
-- **DO** deploy the agent's backing Flows/Apex AND create its agent user + permission sets in the target org — a frequent cutover miss.
-- **DO** validate agents in Testing Center; treat trustworthiness scores as quality signals to iterate on, not a binary pass/fail.
+- **DO** deploy agent metadata + backing Flows/Apex + agent user + permission sets together to the target org — omitting any layer causes run-time failures.
+- **DO** test in Agentforce Testing Center with happy-path, adversarial, and edge-case utterances before production; run the same set post-deployment in prod; treat trustworthiness/topic-accuracy scores as iteration signals, not a binary gate.
+- **DO** reactivate a Prompt Builder template in the target org after deployment; activation status does not travel with a change set.
 - **DO** pick search type by query shape: keyword for exact IDs, vector for conceptual, hybrid as production default.
-- **DON'T** assume Data Cloud / Data Library / RAG features exist unless Data Cloud is confirmed enabled.
+- **DON'T** assume Data 360 / Data Library / RAG features exist unless Data 360 (formerly Data Cloud) is confirmed enabled.
 - **DON'T** propose Sales Cloud agents (SDR/Coach/pipeline) for an org with no sales pipeline.
+- **DON'T** build a single "super-agent" for multi-agent workflows — compose focused specialist agents and use MCP/Agent API for orchestration.
 - **DO** configure Trust Layer masking explicitly for SSN, medical, DOB, and PII fields; **DON'T** assume defaults cover custom fields.
 - **DO** keep the Trust Layer audit trail on — it's the compliance record. **DON'T** put PII/sensitive content in static grounding or logs.
 - **DO** verify field API names + lengths + FLS with `describe` before wiring merge fields or agent actions.
@@ -449,27 +470,27 @@ Original teaching scenarios — distinct from held-out eval scenarios in `evals/
 
 ---
 
-**Scenario 4 — RAG retriever for an org without Data Cloud**
+**Scenario 4 — RAG retriever for an org without Data 360**
 
 > **Situation:** A solution design calls for a Service Agent grounded on a
-> library of internal process PDFs using Data Cloud vector search. The architect
-> starts building the Data Library and retriever configuration, then discovers
-> the feature is unavailable in Setup.
+> library of internal process PDFs using Data 360 (formerly Data Cloud) vector
+> search. The architect starts building the Data Library and retriever
+> configuration, then discovers the feature is unavailable in Setup.
 >
-> **Competent move:** Confirm whether Data Cloud is provisioned by checking
-> whether Data Cloud DMO/DLO objects appear in the object list, or whether the
-> Data Cloud section is visible in Setup. If Data Cloud is absent, RAG / Data
+> **Competent move:** Confirm whether Data 360 is provisioned by checking
+> whether Data 360 DMO/DLO objects appear in the object list, or whether the
+> Data 360 section is visible in Setup. If Data 360 is absent, RAG / Data
 > Library / vector search are unavailable. Pivot to Knowledge articles for
 > unstructured grounding (requires Knowledge to be enabled), or scope in Data
-> Cloud provisioning as a prerequisite work item with budget and timeline impact.
+> 360 provisioning as a prerequisite work item with budget and timeline impact.
 >
 > **Tempting-but-wrong:** Begin building Data Library configurations assuming the
-> feature exists, or promise a go-live date without first validating Data Cloud's
+> feature exists, or promise a go-live date without first validating Data 360's
 > presence. This wastes build effort and sets a delivery date against a
 > dependency that hasn't been funded.
 >
-> **Verify:** Check the object list for Data Cloud objects before any design
-> work. Document Data Cloud as a dependency in the solution spec.
+> **Verify:** Check the object list for Data 360 objects before any design
+> work. Document Data 360 as a dependency in the solution spec.
 
 ---
 
@@ -516,6 +537,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Blueprint reweight: §1 Prompt Engineering corrected from 30% → 20%; §2 AI Agents corrected from 30% → 35% (largest domain); "largest topic" label removed from Prompt Engineering and moved to AI Agents. (2) New top-level sections added: §4 Development Lifecycle (20%) and §5 Multi-Agent Interoperability (5%) — both are current AI-201 exam domains. Service Cloud / Sales Cloud guard-rules folded into §4 (no longer standalone 10%-each framing). (3) Data Cloud → Data 360 rename (Dreamforce Oct 2025): all body occurrences updated; "Data 360 (formerly Data Cloud)" on first use, description field, volatile tags, scenarios, quick reference, and study-resources. (4) Passing score: 72% → 73% (44/60) `[volatile — verify live]` in study-resources.md. Sources: salesforceben.com/salesforce-agentforce-specialist-certification-guide-tips/ (domain weights, passing score); salesforceben.com/salesforce-data-cloud-renamed-to-data-360-as-part-of-agentforce-360/ (Data 360 rename). Domain percentages marked `[volatile — verify live]`.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---

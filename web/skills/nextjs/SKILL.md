@@ -6,7 +6,7 @@ metadata:
   domain: web
   type: competence-playbook
   status: operational
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   docs-version: "16.2.7"
   docs-retrieved: "2026-06-07"
 ---
@@ -39,7 +39,7 @@ a legacy path — do not build new features there.
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** Next.js caching semantics, middleware conventions, and PPR defaults changed materially between v14, v15, and v16. Always check the project's installed version (`package.json`) before applying any caching, rendering, or middleware guidance from this file. `[volatile — verify live]` marks apply to: `cacheLife` built-in profile values (stale/revalidate/expire times — `[volatile — verify live]`); PPR default enablement (`cacheComponents: true` default in v15+ — `[volatile — verify live]`, confirm in `next.config.ts`); `middleware.ts` → `proxy.ts` rename (v16 — `[volatile — verify live]`, check your installed version before renaming); `updateTag` vs `revalidateTag` callable contexts (Server Actions only vs Route Handlers — confirm in the installed version's docs); App Store SDK requirements for iOS (advances annually — `[volatile — verify live]` for the nextjs skill's mobile references).
+- **Always re-verify live:** Next.js caching semantics, middleware conventions, and PPR defaults changed materially between v14, v15, and v16. Always check the project's installed version (`package.json`) before applying any caching, rendering, or middleware guidance from this file. `[volatile — verify live]` marks apply to: `cacheLife` built-in profile values (stale/revalidate/expire times — `[volatile — verify live]`); `cacheComponents` opt-in flag (introduced v16.0.0; not a default — confirm `cacheComponents: true` in `next.config.ts` before assuming PPR or `use cache` are active; v15 used separate `experimental.ppr` / `experimental.useCache` / `experimental.dynamicIO` flags — `[volatile — verify live]`); `middleware.ts` → `proxy.ts` rename (v16 — `[volatile — verify live]`, check your installed version before renaming); `updateTag` vs `revalidateTag` callable contexts (Server Actions only vs Route Handlers — confirm in the installed version's docs); App Store SDK requirements for iOS (advances annually — `[volatile — verify live]` for the nextjs skill's mobile references).
 - **Live wins:** the installed Next.js version's actual behavior and [nextjs.org/docs](https://nextjs.org/docs) for that version are authoritative over this file → log discrepancies via Feedback protocol below.
 - **Escalate to a human:** Next.js major version upgrades in production (breaking caching, middleware, and Server Action semantics); production deploys of cache invalidation changes (`revalidateTag` on a high-traffic route); `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` rotation; store submissions (iOS/Android).
 - **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
@@ -123,9 +123,9 @@ server; they just cannot be *imported* inside the client module graph.
 
 ## 2. Rendering & Caching
 
-### Rendering Model (PPR + Cache Components, v15+)
+### Rendering Model (PPR + Cache Components, v16+)
 
-With `cacheComponents: true` in `next.config.ts` (the recommended default in v15+) `[volatile — verify live]`, Next.js
+With `cacheComponents: true` in `next.config.ts` (opt-in; set this to enable the model — data is dynamic by default) `[volatile — verify live]`, Next.js
 uses **Partial Prerendering (PPR)** as the default:
 
 - Components marked `"use cache"` → rendered at build time and included in the static shell.
@@ -151,12 +151,18 @@ cacheTag('name')      — tags the cache entry for on-demand invalidation
 
 | Profile | Stale | Revalidate | Expire |
 |---|---|---|---|
-| `seconds` | 0 | 1s | 60s |
+| `default` | 5m | 15m | never |
+| `seconds` | 30s | 1s | 1m |
 | `minutes` | 5m | 1m | 1h |
 | `hours` | 5m | 1h | 1d |
 | `days` | 5m | 1d | 1w |
 | `weeks` | 5m | 1w | 30d |
-| `max` | 5m | 30d | ~indefinite |
+| `max` | 5m | 30d | 1 year |
+
+Omitting `cacheLife` inside a `use cache` scope applies the `default` profile (15-minute
+revalidate, never expires) — it does **not** mean "no caching". A **30-second minimum** is
+enforced on the client-side stale value so that prefetched links remain usable; the `seconds`
+profile stale (30s) is already at this floor.
 
 Short-lived profiles (`seconds`, or `revalidate: 0`, or `expire` < 5 min) are automatically
 excluded from prerenders and become dynamic streaming holes.
@@ -448,6 +454,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 ## Changelog
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
+- **2026-06-10** — Cycle-4 curation (inbox): (1) corrected `cacheComponents` version from "v15+" to v16.0.0 (§2 header, Uncertainty); v15 used `experimental.ppr`/`experimental.useCache`/`experimental.dynamicIO`. (2) reworded `cacheComponents` from "recommended default" to opt-in — data is dynamic by default, set `cacheComponents: true` to enable. (3) added `default` profile row to cacheLife table (stale 5m, revalidate 15m, expire never); clarified that omitting `cacheLife` applies this profile, not "no caching". (4) fixed `seconds` profile stale from 0 to 30s; fixed `max` expire from "~indefinite" to 1 year; added 30s client-cache floor note. All four items verified live against nextjs.org/docs (v16.2.9). Eval probe S-13 + A-13 added.
 
 ---
 

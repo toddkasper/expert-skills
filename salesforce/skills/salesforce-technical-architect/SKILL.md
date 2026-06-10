@@ -6,7 +6,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -37,9 +37,9 @@ Credential logistics and study path: see [references/study-resources.md](referen
 - **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
 Inline volatile tags applied:
-- Synchronous governor limits table `[volatile — verify live]` — Salesforce adjusts limits between major releases; verify against the current Apex Developer Guide before using these numbers in a capacity design.
+- Synchronous governor limits `[volatile — verify live]` — Salesforce adjusts limits between major releases; verify against the current Apex Developer Guide.
 - Daily API allocation formula `[volatile — verify live]` — Bulk API daily limits scale with license count per a formula Salesforce updates; check the current limits documentation.
-- External Client App (ECA) UI workflow `[volatile — verify live]` — ECA Policies tab path and Connected App migration behavior change with each release; confirm in your org's current Setup UI.
+- External Client App (ECA) UI workflow `[volatile — verify live]` — ECA Policies tab path and Connected App end-of-support timeline evolve; confirm in your org's current Setup UI. Since Spring '26, new Connected App creation is blocked by default org-wide; ECA is the standard for new integrations.
 - Data Cloud identity resolution and Calculated Insights behavior `[volatile — verify live]` — Data Cloud feature set evolves rapidly; verify feature availability and configuration steps in the current Data Cloud documentation.
 
 ---
@@ -48,24 +48,17 @@ Inline volatile tags applied:
 
 **Stay single-org unless you have a hard reason to split.** Split into multiple orgs ONLY for: legal/data-residency separation, distinct business units with zero shared data, or M&A integration timelines. For a small single-entity org, a single Salesforce org is correct and any "let's add an org" instinct is wrong. Splitting costs you cross-org reporting, duplicated security-model maintenance, and middleware to sync shared Contacts.
 
-**Treat governor limits as design inputs, not runtime surprises.** Memorize the per-transaction ceilings and design under them:
-
-| Limit | Synchronous | Asynchronous (Batch/Future/Queueable) |
-|---|---|---|
-| SOQL queries | 100 | 200 |
-| SOQL rows returned | 50,000 | 50,000 |
-| DML statements | 150 | 150 |
-| DML rows | 10,000 | 10,000 |
-| CPU time | 10,000 ms | 60,000 ms |
-| Heap size | 6 MB | 12 MB |
-| Callouts | 100 | 100 |
-| Callout timeout (total) | 120 s | 120 s |
-
-A REST/Bulk integration that upserts from an external system is bound by **API limits**, not Apex limits — but any **trigger/Flow Apex** that fires on a record change IS bound by the table above. When approval automation creates a parent record plus several child/relationship records in one transaction, that is multiple DML targets; bulk-safe design matters even at low volume, because backfills re-toggle many records at once.
+**Treat governor limits as design inputs, not runtime surprises.** Key synchronous per-transaction ceilings: 100 SOQL / 50k rows / 150 DML / 10k DML rows / 10s CPU / 6 MB heap / 100 callouts; async doubles CPU (60s) and heap (12 MB). A REST/Bulk integration is bound by API limits, not Apex limits — but any trigger or Flow that fires on the changed record IS bound by these. Bulk-safe design matters even at low volume because backfills re-toggle many records at once. Full limits table → [references/study-resources.md](references/study-resources.md). `[volatile — verify live]`
 
 **Document management: files go to object storage, references go to Salesforce.** Keep file bytes in external object storage (e.g. S3 with customer-managed encryption) and store only the key/reference in Salesforce. When you DO surface a document inside Salesforce, use `ContentVersion` → `ContentDocumentLink` (junction to the record). One `ContentDocument` can link to many records via multiple `ContentDocumentLink` rows.
 
-**Red flags:** second org "for the portal" (sandbox covers it); file blobs as base64 in a long-text field; approval automation that loops record-by-record.
+**License-type selection.** Match license type to access need — wrong type creates sharing constraints you cannot engineer around. Experience Cloud licenses (Customer Community / Customer Community Plus / Partner Community) for external users, not full CRM seats; Platform licenses for internal-only custom-app users; full Salesforce only where standard CRM objects are needed. `[volatile — verify live]` — verify the current license matrix before committing.
+
+**Reporting & Analytics.** Schema decisions constrain reportability: discrete columns for anything staff will filter or report on — SOQL cannot GROUP BY a JSON sub-key; master-detail for roll-up summaries (cascade-delete trade-off); custom Report Types for cross-object reporting beyond one hop. Reporting across orgs is an ETL problem. CRM Analytics when native reports hit row-count or real-time limits.
+
+**Mobile platform solutions.** Decision: **Salesforce Mobile App** (no-code, standard objects) → **Mobile SDK** (offline sync, push, branded native) → **LWC OSS + PWA** (mobile web, no app-store). Mobile surfaces expose the same sharing model, FLS, and governor limits as desktop. `[volatile — verify live]` — Mobile SDK versions change each release. Expanded trade-off worked examples → [references/communication-well-architected.md](references/communication-well-architected.md).
+
+**Red flags:** second org "for the portal" (sandbox covers it); file blobs as base64 in a long-text field; approval automation that loops record-by-record; defaulting full Salesforce licenses to external portal users; storing reportable data in JSON fields; mobile addressed only with "they can use the browser."
 
 **Verify:** enumerate the custom-object inventory before assuming an object exists; describe the object to confirm field count and types before writing a mapper.
 
@@ -90,11 +83,13 @@ OAuth flow decision table:
 | SPA / mobile, no secret | Auth code + PKCE (never implicit/User-Agent) |
 | Machine client with its own SF identity | Client Credentials |
 
-**External Client App (ECA) permission assignment lives on the ECA, not the permission set.** Connected App *creation* can be blocked in modern orgs, pushing you to an ECA. The classic "Assigned Connected Apps" section on a permset page does NOT govern ECAs. Working path: **ECA detail → Policies tab → Edit → App Policies → Select Permission Sets.** Browser-AI tools edit the wrong page and report success — verify via `SetupEntityAccess` query before trusting it. An ECA's Consumer Key is UI-only (behind email verification) and not exposed via any API.
+**External Client App (ECA) is the default for new integrations (Spring '26+).** New Connected App creation is blocked by default org-wide since Spring '26 — both UI and Metadata API; a Support request is required to unblock. Existing Connected Apps continue to work. Use ECA for all new integrations. `[volatile — verify live]` — see official help article id=005228017 for current status and end-of-support timeline.
+
+**ECA permission assignment lives on the ECA, not the permset.** The "Assigned Connected Apps" section on a permset page governs legacy Connected Apps only. For ECA: **ECA detail → Policies tab → Edit → App Policies → Select Permission Sets.** Verify via `SetupEntityAccess` query — do not trust the UI. Consumer Key is UI-only, not accessible via API.
 
 **No PII or sensitive data in logs. Ever.** Log record IDs and identity subject IDs only.
 
-**Red flags:** assuming object access implies field access; `<fieldPermissions>` on a required field (deploy fails); implicit/User-Agent OAuth flow; trusting a UI tool's "success" on ECA assignment; new Contact-writing field missing from FLS permset.
+**Red flags:** assuming object access implies field access; `<fieldPermissions>` on a required field (deploy fails); implicit/User-Agent OAuth flow; trusting a UI tool's "success" on ECA assignment; new Contact-writing field missing from FLS permset; designing a new integration around Connected App creation without confirming it is unblocked in the org (Spring '26 default blocks it).
 
 **Verify:** after deploying a field, SOQL-select it — *"Invalid field"* = FLS missing, not deploy failure. Confirm permset assignment via `PermissionSetAssignment` / `SetupEntityAccess`, not the UI.
 
@@ -221,8 +216,6 @@ OAuth flow decision table:
 
 **Score every proposal against Trusted / Easy / Adaptable** — every design choice is defensible on all three axes; when a trade-off sacrifices one, name it. **MuleSoft** is enterprise API mesh, not point-to-point glue. **Data Cloud** owns the Unified Profile when a 360 view across clouds is required. **Marketing Cloud** sees synchronized CRM copies, not live data — never assume otherwise.
 
-Key one-liners (check Quick Reference below): score Trusted/Easy/Adaptable on every design; no MuleSoft for simple one-to-one SF↔system syncs; Marketing Cloud sees synchronized copies, not live CRM data.
-
 Full worked examples — Well-Architected trade-off framing, MuleSoft vs. Named Credentials decision criteria, Data Cloud Identity Resolution, Marketing Cloud integration patterns, and stakeholder-facing defense communication: [references/communication-well-architected.md](references/communication-well-architected.md) — load when designing multi-cloud architecture or preparing an architectural defense presentation.
 
 ---
@@ -248,8 +241,8 @@ Full worked examples — Well-Architected trade-off framing, MuleSoft vs. Named 
 
 1. Generate an RSA key pair. Store the private key in a secrets store (e.g. AWS SSM SecureString, Azure Key Vault). Never store it in an env var or commit it to source control.
    → gate: private key retrievable only via the secrets store API; not present in any repo or CI variable.
-2. Create a Connected App (or External Client App) in the target Salesforce org: upload the certificate (public key), enable OAuth scopes, and restrict to the integration user's profile.
-   → gate: Connected App Consumer Key is captured (UI-only in ECA — do it now); App is saved.
+2. Create an **External Client App** (or legacy Connected App if already unblocked — see Security section) in the target Salesforce org: upload the certificate (public key), enable OAuth scopes, and restrict to the integration user's profile. For a new org, default to ECA; Connected App creation is blocked by default since Spring '26.
+   → gate: Consumer Key is captured (UI-only in ECA — do it now; it is not accessible via API); App is saved.
 3. Assign the integration user to the Connected App / ECA via the Policies tab (ECA) or permset "Assigned Connected Apps" (Connected App). Confirm via `SetupEntityAccess` query — do not trust the UI "success."
    → gate: `SELECT SetupEntityId FROM SetupEntityAccess WHERE SetupEntityId = '<AppId>' AND AssigneeId = '<UserId>'` returns a row.
 4. Test the JWT token exchange: sign a JWT assertion with the private key, POST to `https://<instance>/services/oauth2/token`, receive an access token.
@@ -260,18 +253,7 @@ Full worked examples — Well-Architected trade-off framing, MuleSoft vs. Named 
 
 ---
 
-### Workflow 3 — Size an LDV data model (selectivity, skew, indexes)
-
-1. Estimate the record count for the object at 5-year growth. If projected count exceeds ~2M rows, classify as LDV and apply LDV design rules throughout.
-   → gate: documented record-count estimate with growth assumption.
-2. Identify every filter used in SOQL queries against this object. Confirm each filter column is indexed (standard indexed fields, External IDs, or custom indexes via Salesforce support request).
-   → gate: at least one leading indexed field in every production SOQL WHERE clause; no non-selective query paths remain.
-3. Check for ownership skew: if a single user or queue will own >10,000 records, that OWD + sharing model will produce a "fat node" in the sharing tree. Redesign OWD to Private + Sharing Rules, or use org-wide-default Public Read/Write if sharing is not sensitive, to avoid the skew calculation penalty.
-   → gate: no single owner accounts for >10% of the total row count, OR a Salesforce architect review has confirmed the sharing design is skew-safe.
-4. Verify query selectivity: run candidate SOQL with `EXPLAIN` (via Tooling API or Developer Console). Confirm the query uses an index (cost < 1); a table scan on an LDV object will trigger the *"non-selective query against large object"* error in production.
-   → gate: EXPLAIN returns `leadingOperationType: Index` for every production query path.
-5. Plan archival or soft-delete strategy before the object reaches LDV scale — retrofitting indexes or archival to a live LDV object is expensive.
-   → gate: archival policy documented and scheduled.
+Workflow 3 — Size an LDV data model (selectivity, skew, indexes, archival): see [references/scenarios.md](references/scenarios.md).
 
 ---
 
@@ -309,11 +291,15 @@ Five original scenarios covering the highest-value operational gotchas across CT
 
 - **DO** treat governor limits as design inputs: 100 SOQL / 50k rows / 150 DML / 10k DML rows / 10s CPU sync.
 - **DON'T** put SOQL or DML inside a `for` loop — query into a Map, DML once. #1 review red flag.
+- **DO** match license type to need: Experience Cloud licenses for external users; Platform licenses for internal-only-custom-app users; full Salesforce only where standard CRM objects are needed.
+- **DON'T** store reportable data in JSON fields — GROUP BY and filter on discrete columns only.
+- **DO** choose the right mobile path: Salesforce Mobile App (no-code standard objects), Mobile SDK (native/offline/branded), LWC OSS+PWA (lightweight mobile web).
 - **DO** add `<fieldPermissions>` in a permset for every new non-required custom field — SFDX field-meta grants FLS to no one.
 - **DON'T** add `<fieldPermissions>` for a `<required>` field — deploy will fail.
 - **DON'T** assume object access implies field access — separate gates.
 - **DO** use Permission Sets / Groups for all new access; Profiles are legacy.
 - **DO** use JWT Bearer for headless service→SF; RSA key in secrets store, rotated annually.
+- **DO** use External Client App (ECA) for all new integrations — Connected App creation is blocked by default since Spring '26; existing Connected Apps still work.
 - **DO** assign ECA access on the ECA Policies tab (not the permset "Assigned Connected Apps" page).
 - **DON'T** trust a UI "success" on ECA assignment — verify via `SetupEntityAccess` query.
 - **DON'T** log PII or sensitive data — record IDs and identity subjects only.
@@ -363,6 +349,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) **ECA/Connected App reframe** — Spring '26 blocks new Connected App creation by default org-wide; ECA promoted as the standard for new integrations throughout Security section, Workflow 2 step 2, volatile-tag block, red flags, and Quick Reference. (2) **System Architecture coverage gap** — added operational rules for license-type selection, reporting & analytics architecture, and mobile platform solutions (the three CTA blueprint topics absent from the prior version); updated red flags and Quick Reference accordingly. Both items verified against official sources (Salesforce Help id=005228017; SalesforceBen CTA guide).
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---

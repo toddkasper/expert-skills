@@ -6,9 +6,9 @@ metadata:
   exam-code: Sales-Con-201
   domain: salesforce
   type: certification-playbook
-  blueprint: June 2024 restructure (5 domains)
+  blueprint: June 2024 restructure (5 domains); AI domain added (exact weights — verify live)
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -35,9 +35,7 @@ cycle; the credential expires if not maintained.
 
 The exam outline was restructured in June 2024, collapsing nine topic areas into
 five consolidated domains. The skills tested are identical; only the
-labels/groupings changed. Current blueprint: Practical Application of Sales Cloud
-Expertise 33%, Sales Lifecycle 23%, Implementation Strategies 15%, Data
-Management 15%, Consulting Practices 14%.
+labels/groupings changed. The blueprint was subsequently updated to add a **Predictive and Generative AI domain** (~13% `[volatile — verify live]`); exact current domain weights are in [references/study-resources.md](references/study-resources.md).
 
 > **Load this skill when…** scoping or implementing Sales Cloud; designing lead conversion, opportunity pipeline stages, or forecasting; picking automation tools (Flow vs Apex) for a sales workflow; modeling the sales data layer or sharing model; planning a data migration or deduplication; or building sales reports and dashboards.
 > **Not this skill:** service console or case management → see `salesforce-service-cloud-consultant`; external portals or communities → see `salesforce-experience-cloud-consultant`; general org admin, profiles, or permission sets not tied to a sales implementation → see `salesforce-administrator`.
@@ -322,7 +320,9 @@ should → data leak.
 
 ## 11. AI & sales productivity features
 
-Decision criteria for Einstein Scoring, Sales Engagement, and Einstein Copilot — including data-volume prerequisites and when *not* to recommend heavyweight AI features: [references/ai-sales-features.md](references/ai-sales-features.md) — load when evaluating or recommending AI add-ons for a Sales Cloud implementation.
+Decision criteria for Einstein Scoring, Sales Engagement, and Agentforce (formerly Einstein Copilot) — including data-volume prerequisites and when *not* to recommend heavyweight AI features: [references/ai-sales-features.md](references/ai-sales-features.md) — load when evaluating or recommending AI add-ons for a Sales Cloud implementation.
+
+> **Rename:** Einstein Copilot was renamed **Agentforce** (officially "Agentforce Assistant, formerly Einstein Copilot") in the Spring '25 release. In exam and implementation contexts, use "Agentforce for Sales" for the agent-based sales assistant. The product functionality is unchanged; only the name changed. The exam's Predictive and Generative AI domain (~13% `[volatile — verify live]`) covers Agentforce for Sales, predictive AI tools, and Salesforce's Trusted AI Principles (Responsibility, Accountability, Transparency, Empowerment, Inclusivity).
 
 Core rule to hold inline: **Einstein Lead/Opportunity Scoring needs history** — minimum volume of closed/converted records (hundreds+) `[volatile — verify live]`. Do not recommend for low-volume orgs.
 
@@ -467,6 +467,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 ## Changelog
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09. Section 2 (Apex governor limits) condensed to a stub with full detail moved to references/apex-limits.md to keep body within word budget.
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Added Predictive and Generative AI domain note (~13%, third-party-sourced, `[volatile — verify live]`); updated blueprint domain names and weights to reflect post-2024 restructure (Consulting + Implementation merged; AI domain added). (2) Renamed Einstein Copilot → Agentforce throughout §11 and ai-sales-features.md (Spring '25 official rename confirmed). (3) Passing score updated in study-resources.md (68% → `[volatile — verify live]` with conflicting third-party values 69–73%). Eval probes 13–14 added.
 
 ---
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their respective owners. "Salesforce," "Sales Cloud," "Einstein," "Flow," "Apex," and related marks are property of Salesforce, Inc., used here solely to identify subject matter. Guidance only — verify against official Salesforce documentation and live orgs before acting. No certification outcome is implied or guaranteed.*

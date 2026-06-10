@@ -29,7 +29,22 @@ Additional logistics: Part 1 is virtual (Zoom screen-share). Part 2 is virtual o
 - [Official CTA Exam Guide PDF](https://developer.salesforce.com/resources2/certification-site/files/SGCertifiedTechnicalArchitect.pdf) — developer.salesforce.com / official; domain-by-domain skill bullets
 - [Architect Trailblazer Community Group](https://trailhead.salesforce.com/trailblazer-community/topics/reviewboard) — Trailhead / official; mock scenario partners and CTA mentors
 - [Salesforce Well-Architected Framework](https://architect.salesforce.com/well-architected/overview) — architect.salesforce.com / official; the trusted/easy/adaptable framework underpinning board scoring
-- [Apex Developer Guide — Governor Limits](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_gov_limits.htm) — official; authoritative per-transaction limit reference behind the tables above
+- [Apex Developer Guide — Governor Limits](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_gov_limits.htm) — official; authoritative per-transaction limit reference
+
+## Synchronous governor limits (quick reference)
+
+`[volatile — verify live]` — Salesforce adjusts limits between major releases; treat as current estimates and re-verify against the Apex Developer Guide before capacity design.
+
+| Limit | Synchronous | Asynchronous (Batch/Future/Queueable) |
+|---|---|---|
+| SOQL queries | 100 | 200 |
+| SOQL rows returned | 50,000 | 50,000 |
+| DML statements | 150 | 150 |
+| DML rows | 10,000 | 10,000 |
+| CPU time | 10,000 ms | 60,000 ms |
+| Heap size | 6 MB | 12 MB |
+| Callouts | 100 | 100 |
+| Callout timeout (total) | 120 s | 120 s |
 
 ### Community Resources
 
