@@ -51,6 +51,10 @@ measurement stays trustworthy.
 3. **Judge** — an LLM judge (a panel, for reliability) grades each answer against `answer-key.md`.
 4. **Report** — baseline pass rate, skilled pass rate, lift, and a per-scenario table.
 
+**Run it:** the agent-executable, step-by-step version of this protocol lives in
+[evals/run-eval.md](evals/run-eval.md). Results are recorded in the scoreboard at
+[evals/RESULTS.md](evals/RESULTS.md), which keeps history so lift is trendable per skill.
+
 ## Rubric (per scenario)
 
 - **PASS (1.0)** — identifies the competent action **and** avoids the tempting-but-wrong option.
@@ -66,6 +70,16 @@ measurement stays trustworthy.
 
 Run before first publish, and again on any blueprint change or significant skill edit (regression
 check). At scale, run as a multi-agent batch: per skill × scenario × condition → judge → aggregate.
+
+## Regenerate on review
+
+Any eval scenario that probes a **volatile fact** (a governor limit, a price, an API/runtime
+version default, a blueprint weight — e.g. TypeScript 6.0 defaults, AWS service limits) must be
+**re-validated against official docs at each `last-reviewed` bump** of the skill it measures. A
+volatile fact can drift out from under both the skill and its eval; if the eval's expected
+answer is now wrong, the measurement is worse than none. When you bump a skill's
+`last-reviewed`, re-check its eval's volatile probes and update `answer-key.md` (and the
+scenario, if needed) in the same pass — keeping the held-out discipline intact.
 
 ## Honesty notes
 

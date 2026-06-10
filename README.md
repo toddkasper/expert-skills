@@ -47,7 +47,8 @@ rhythm, decision scenarios, a deduped DO/DON'T quick reference, and a disclaimer
 carries **freshness metadata** (`last-reviewed`, and `blueprint-verified` where a cert applies)
 so a reader can tell how stale any claim might be; exam logistics live in
 `references/study-resources.md`, never in the body. Every skill is measured by a held-out
-competence eval — method and scoreboard convention in [EVALS.md](EVALS.md).
+competence eval — method in [EVALS.md](EVALS.md), the executable protocol in
+[evals/run-eval.md](evals/run-eval.md), and the scoreboard in [evals/RESULTS.md](evals/RESULTS.md).
 
 ## Per-org / per-project specialization
 
