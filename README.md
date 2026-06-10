@@ -40,8 +40,14 @@ repo. Claude Code also auto-discovers skills in `~/.claude/skills/` or a project
 ## How skills work
 
 Each skill is a directory with a `SKILL.md` (YAML metadata + instructions) and an optional
-`references/` folder loaded on demand (progressive disclosure). Every skill is measured by a
-held-out competence eval — method and scoreboard convention in [EVALS.md](EVALS.md).
+`references/` folder loaded on demand (progressive disclosure). All skills follow one
+**standardized anatomy** — see [TEMPLATE.md](TEMPLATE.md): a task-vocabulary `description`, an
+Overview + Scope block, numbered domain sections with the rules→decision-table→red-flags→verify
+rhythm, decision scenarios, a deduped DO/DON'T quick reference, and a disclaimer. Frontmatter
+carries **freshness metadata** (`last-reviewed`, and `blueprint-verified` where a cert applies)
+so a reader can tell how stale any claim might be; exam logistics live in
+`references/study-resources.md`, never in the body. Every skill is measured by a held-out
+competence eval — method and scoreboard convention in [EVALS.md](EVALS.md).
 
 ## Per-org / per-project specialization
 
