@@ -6,6 +6,9 @@ metadata:
   exam-code: EX-Con-101
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Experience Cloud Consultant — Skills Reference
@@ -24,6 +27,9 @@ external sharing model safely, provision and authenticate external users, and
 harden the guest user surface. The recurring exam (and real-world) framing is not
 "how do I configure X" but "given this requirement, which approach is correct and
 **why**, and what breaks if I pick wrong."
+
+> **Load this skill when…** scoping or building a Salesforce portal, community, or external site; selecting an external license type (Customer/Partner/External Apps); configuring the external sharing model (sharing sets, share groups, guest profile hardening); provisioning or authenticating external users (SSO, self-registration, JIT); or debugging an external-user access failure (CRUD, FLS, OWD, sharing).
+> **Not this skill:** internal-org sharing model or permission sets for employees alone → see `salesforce-advanced-administrator`; service console configuration for internal agents → see `salesforce-service-cloud-consultant`; sales pipeline configuration → see `salesforce-sales-cloud-consultant`.
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 

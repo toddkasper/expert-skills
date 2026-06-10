@@ -7,6 +7,8 @@ metadata:
   domain: aws
   type: certification-playbook
   status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
   blueprint: DOP-C02 (launched March 2023; verify at official exam guide link below)
 ---
 
@@ -17,6 +19,9 @@ metadata:
 The AWS Certified DevOps Engineer – Professional credential validates that a practitioner can provision, operate, and manage distributed systems and services on AWS with a high degree of automation. It targets engineers with 2+ years of hands-on AWS experience who own the delivery pipeline end-to-end: building and securing CI/CD systems, expressing infrastructure as code, designing for resilience, instrumenting observability, and enforcing security and compliance programmatically.
 
 **This file is an operational playbook, not an exam outline.** Each section states the actual rules an agent must apply when doing DevOps work on AWS — the decision criteria for picking a deployment strategy, the failure modes to catch in review, and the "verify against the live account" steps. A recurring principle: when in doubt about account state, **query the AWS APIs — never assume from IaC source or console screenshots**, because infrastructure state diverges from templates the moment manual changes are made.
+
+> **Load this skill when…** building or reviewing a CI/CD pipeline (CodePipeline, CodeBuild, CodeDeploy); authoring or debugging CloudFormation/CDK/SAM templates; designing deployment strategies (blue/green, canary, rolling); configuring observability stacks, automated remediation, or compliance-as-code on AWS.
+> **Not this skill:** threat-detection, IAM policy depth, or encryption strategy → see `aws-security-specialty`; enterprise architecture trade-offs, migration planning, or multi-account design patterns → see `aws-solutions-architect-professional`.
 
 > **Study resources** live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
 

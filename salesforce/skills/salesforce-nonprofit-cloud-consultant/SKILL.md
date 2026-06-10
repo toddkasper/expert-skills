@@ -6,6 +6,9 @@ metadata:
   exam-codes: NP-Con-101, NP-Con-102
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Nonprofit Cloud Consultant — Skills Reference
@@ -30,6 +33,9 @@ Both exams once shared a single Trailhead credential page and are still discusse
 > - [references/nonprofit-cloud-industries.md](references/nonprofit-cloud-industries.md) — PART B detail: full NPC term-translation table, PSL gating, Program Management & Outcome objects, OmniStudio tool selection
 >
 > For org-specific applications, keep a per-org appendix in your own project, referenced from a CLAUDE.md.
+
+> **Load this skill when…** configuring or troubleshooting an NPSP org (Household Accounts, TDTM, rollups, recurring donations, gift entry, hard/soft credit); implementing Salesforce Industries Nonprofit Cloud (Program Management, Outcome Management, Grantmaking, OmniStudio); or deciding which nonprofit model applies to an org.
+> **Not this skill:** underlying platform rules (Apex governor limits, FLS, deployment discipline) not specific to nonprofit objects → see `salesforce-administrator` and the platform-developer skills; Experience Cloud portals for nonprofit constituent engagement → see `salesforce-experience-cloud-consultant`.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
 

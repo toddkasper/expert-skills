@@ -6,6 +6,9 @@ metadata:
   exam-code: AI-201
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Agentforce Specialist (AI-201) — Skills Reference
@@ -32,6 +35,9 @@ anti-patterns to catch in review.
 The certification sits between entry-level **AI Associate** (conceptual, no
 hands-on) and senior architecture credentials. Recommended (not required)
 prior knowledge: Salesforce Administrator or Platform App Builder.
+
+> **Load this skill when…** building or reviewing Agentforce agents (topics, actions, agent-user security); creating Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex); configuring Data Cloud grounding or Knowledge RAG for a prompt or agent; or reviewing Einstein Trust Layer settings (data masking, zero-retention, audit trail).
+> **Not this skill:** admin-level Agentforce permission setup (enabling features, assigning licenses) without building an agent → see `salesforce-administrator`; writing the Apex code behind an agent action → see `salesforce-platform-developer-2`.
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 

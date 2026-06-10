@@ -7,17 +7,23 @@ metadata:
   domain: salesforce
   type: certification-playbook
   blueprint: December 2025 refresh
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Administrator — Skills Reference
 
 ## Overview
 
-The Salesforce Certified Platform Administrator credential (formerly "Salesforce Certified Administrator," exam code Plat-Admn-201) validates that a practitioner can configure and manage a Salesforce org to meet business needs without writing code. It covers everything an admin touches day-to-day: security and sharing models, object and field customization, automation with Flow Builder, data quality, reports and dashboards, and — as of the December 2025 exam refresh — foundational AI capabilities via Agentforce.
+The Salesforce Certified Platform Administrator credential (exam code Plat-Admn-201) covers everything an admin touches day-to-day: security and sharing models, object and field customization, Flow automation, data quality, reports and dashboards, and — as of the December 2025 refresh — foundational Agentforce AI capabilities.
 
-**This file is an operational playbook, not an exam outline.** Each section states the actual rules an agent must apply when doing admin work in an org, the concrete limits, the decision criteria for picking a tool, and the anti-patterns to catch in review. A recurring principle throughout: when in doubt about org state, **query the org — never assume from metadata XML**, because XML in a repo is not always deployed, and metadata does not carry runtime state (FLS, cache, active flows).
+**This is an operational playbook, not an exam outline.** A recurring principle: **query the org — never assume from metadata XML.** XML in a repo is not always deployed, and metadata does not carry runtime state (FLS, cache, active flows).
 
-> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). Nonprofit/NPSP applications of these rules live in [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). For org-specific specifics, keep a per-org appendix in your own project, referenced from a CLAUDE.md.
+> **Load this skill when…** configuring org security (profiles, permission sets, OWD, FLS, sharing rules); building or debugging Flow automation; importing or cleaning data; setting up reports/dashboards; doing initial Agentforce agent setup.
+> **Not this skill:** Apex/triggers/SOQL → see `salesforce-platform-developer-1`; advanced sharing architecture, deployment pipelines, or audit monitoring → see `salesforce-advanced-administrator`; building or governing Agentforce agents → see `salesforce-agentforce-specialist`.
+
+> Study resources: [references/study-resources.md](references/study-resources.md). Nonprofit/NPSP applications: [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). Org-specific rules: keep a per-org appendix in your project CLAUDE.md.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
 
@@ -29,7 +35,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ## 1. Security & Access Model — the rule that governs everything
 
-This is the most-tested domain. Access is computed by **layering**, and you must reason about the whole stack, not one layer.
+Access is computed by **layering** — reason about the whole stack, not one layer.
 
 **The layering rule (memorize the order):**
 1. **OWD (Org-Wide Defaults)** set the floor — the most restrictive baseline per object (Private / Public Read Only / Public Read/Write / Controlled by Parent).
@@ -39,16 +45,16 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 5. **Profiles** set object CRUD + the FLS baseline + app/tab/record-type/layout assignments + login hours/IP.
 6. **Permission sets & permission set groups** are **purely additive** — they grant, never revoke. The only way to "take away" inside a group is a **muting permission set**.
 
-**Object access ≠ field access ≠ record access. All three must line up:**
-- **Object (CRUD):** profile or permission set says you can Read/Create/Edit/Delete the object at all.
-- **Field (FLS):** even with full object Read, a field hidden by FLS returns *"Invalid field"* in SOQL and is absent from the UI. **FLS is independent of OWD** — a Public Read/Write object can still have invisible fields.
-- **Record (sharing):** OWD + role + sharing rules decide *which rows* you see.
+**Object CRUD ≠ FLS ≠ record sharing — all three must pass:**
+- **Object CRUD:** can the user Read/Create/Edit/Delete the object at all?
+- **FLS:** even with full object Read, a field hidden by FLS returns *"Invalid field"* in SOQL and is absent from the UI. FLS is independent of OWD.
+- **Record sharing:** OWD + role + sharing rules decide *which rows* are visible.
 
-**CRITICAL — SFDX field-meta.xml does NOT carry FLS.** Deploying a custom field via SFDX creates the field but grants field-level security to **no one — not even System Administrator**. Queries hit *"Invalid field"* even with full object access until a profile or permission set explicitly lists `<fieldPermissions>`. Always deploy `<fieldPermissions>` alongside every new non-required field.
+**CRITICAL — SFDX field-meta.xml does NOT carry FLS.** A deployed custom field is invisible to everyone — including System Administrator — until a profile or permset lists `<fieldPermissions>`. Always deploy `<fieldPermissions>` alongside every new non-required field.
 
-**Required-field exception:** Required fields (`<required>true</required>`) are *always* visible/editable and **must be omitted** from `<fieldPermissions>`. Including one fails the permset deploy with *"You cannot deploy to a required field."*
+**Required-field exception:** Required fields are always readable/editable — **omit them from `<fieldPermissions>`**. Including one fails deploy: *"You cannot deploy to a required field."*
 
-**Permission-set assignment gotcha for External Client Apps:** ECA usage is authorized on the **ECA itself** (ECA detail → Policies tab → Edit → App Policies → Select Permission Sets), **not** on the classic Permission Set "Assigned Connected Apps" page. Browser-AI tools edit the wrong place and report success — verify the assignment via a `PermissionSetAssignment` query before trusting it.
+**ECA assignment gotcha:** ECA usage is authorized on the **ECA itself** (ECA detail → Policies → Edit → App Policies → Select Permission Sets), not on the classic Permission Set "Assigned Connected Apps" page. Browser-AI tools edit the wrong place and report success — verify via `PermissionSetAssignment` query.
 
 | Need | Use | Why |
 |---|---|---|
@@ -62,23 +68,23 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 **Red flags:** a new SFDX field deployed with no accompanying `<fieldPermissions>`; a permset XML listing a required field; "grant access" attempted by editing OWD to Public (nukes the floor for everyone); assuming a permission set can revoke; trusting a browser-tool "success" on ECA assignment.
 
 **Verify against the live org:**
-- Describe the `<object>` object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Setup → Object Manager → <object> → Fields & Relationships) → inspect each field; if a field you expect is missing, suspect FLS, not a missing field.
-- Run `SELECT PermissionsRead, PermissionsEdit, Field FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')` via your Salesforce MCP/connection, or `sf data query --query "SELECT PermissionsRead, PermissionsEdit, Field FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')"` (Salesforce CLI), or the Developer Console Query Editor — to confirm FLS actually landed.
-- Run `SELECT AssigneeId, PermissionSet.Name FROM PermissionSetAssignment WHERE PermissionSet.Name='<permset>'` (MCP / `sf data query` / Developer Console) to confirm assignment before trusting it.
+- Describe the object (MCP / `sf sobject describe --sobject <object>` / Object Manager → Fields & Relationships) — if a field you expect is missing from the output, suspect FLS.
+- Confirm FLS landed: `SELECT PermissionsRead, PermissionsEdit, Field FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')` (MCP / `sf data query` / Developer Console).
+- Confirm permset assignment: `SELECT AssigneeId, PermissionSet.Name FROM PermissionSetAssignment WHERE PermissionSet.Name='<permset>'` (MCP / `sf data query` / Developer Console).
 
-**Setup Audit Trail:** 180-day log of who changed what in Setup. First stop when behavior changes and nobody admits to a change — including silent changes introduced by managed packages (see §4).
+**Setup Audit Trail:** 180-day log of Setup changes. First stop when behavior changes unexpectedly — including silent managed-package changes (see §4).
 
 ---
 
 ## 2. Configuration & Setup — org, users, company
 
-**Users are deactivated, never deleted.** You cannot delete a user. Deactivating frees the license; freezing (Setup → Users → Freeze) instantly blocks login without freeing the license — use freeze when you need to lock someone out *now* and deactivate later (deactivation can be blocked by pending records the user owns, e.g. open approvals).
+**Users are deactivated, never deleted.** Deactivating frees the license; freezing (Setup → Users → Freeze) blocks login immediately without freeing the license — use freeze for urgent lockout, deactivate later (blocked if the user owns open approvals).
 
-**Company settings to know:** fiscal year (standard vs custom), business hours (drive escalation/milestone timing), locale/language/currency. Multi-currency, once enabled, **cannot be disabled.**
+**Company settings:** fiscal year, business hours (drive escalation timing), locale/language/currency. Multi-currency, once enabled, **cannot be disabled.**
 
-**Login & session security:** login hours and login IP ranges live on the **profile**; trusted IP ranges (skip-verification) live in Network Access. Session timeout and "lock session to IP" live in Session Settings. MFA is mandatory for direct logins.
+**Login & session security:** login hours + IP ranges → profile only. Trusted IP ranges (skip-verification) → Network Access. MFA is mandatory for direct logins.
 
-**Sandbox creation can be gated by org policy** — some orgs require a Public Group with the admin as a member before a sandbox can be created (a one-time setup quirk worth checking if sandbox creation fails).
+**Sandbox creation can be gated** — some orgs require a Public Group with the admin as a member before creation (check this first if sandbox creation fails).
 
 **Decision — where does a permission live?**
 
@@ -109,27 +115,27 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 | Max per object | 40 | 2 |
 | Reparenting | Yes | Off by default |
 
-**Roll-up summary fields** exist **only on the master side of a master-detail** (COUNT/SUM/MIN/MAX, optionally filtered). Need a roll-up over a Lookup? You can't declaratively — use a record-triggered Flow or Apex trigger, or Declarative Lookup Rollup Summaries (DLRS).
+**Roll-up summary fields** exist **only on the master side of a master-detail** (COUNT/SUM/MIN/MAX). For a Lookup roll-up use a record-triggered Flow, Apex, or DLRS.
 
-**Lookup `relationshipName` must be unique per parent object** — two Lookups to the same parent can't share a relationshipName (deploy fails: *"Duplicate relationship name"*). Use role-specific suffixes to disambiguate. SOQL parent traversal is keyed on **field name** (e.g. `Parent__r.Name`), not relationshipName, so renaming relationshipName is safe.
+**Lookup `relationshipName` must be unique per parent** — two Lookups to the same parent with the same name fail deploy: *"Duplicate relationship name."* SOQL parent traversal keys on the **field name** (`Parent__r.Name`), not relationshipName, so renaming is safe.
 
-**Formula fields never store data** — they compute at read time, so they can't be set, indexed normally, or used as external IDs. Cross-object formulas span up to **10 relationship hops**.
+**Formula fields never store data** — computed at read time; can't be set, indexed normally, or used as external IDs. Cross-object formulas: up to **10 hops**.
 
-**Field sizing should be treated as a contract.** When a system writes from application/form code into Salesforce fields, the code's string-length and picklist constraints should be **derived from the live Salesforce field metadata**, not hand-set literals — and regenerated whenever a field is resized or a picklist edited. A defensive truncation at the write boundary is a last-line fallback for legacy/API-bypass records, **not** a substitute for keeping the constraints current. So a field resize is rarely a one-file change: the SF metadata, any generated schema/validation artifacts, and the data-model docs must all move together — all or none.
+**Field sizing is a contract.** Form/integration string lengths and picklist constraints must be **derived from live Salesforce field metadata**, not hand-set literals, and regenerated whenever a field is resized or a picklist changes. A field resize is rarely a one-file change: SF metadata, generated schema/validation artifacts, and data-model docs move together — all or none. Truncation at the write boundary is a fallback, not a substitute.
 
-**Record types** drive page-layout assignment (profile × record type → layout) and picklist value subsets. **External IDs** are the upsert key for idempotency and for late re-link paths — they must be unique, are indexed, and a record can have up to 7 external ID fields.
+**Record types** drive page-layout assignment (profile × record type → layout) and picklist subsets. **External IDs** are the upsert key for idempotency and late re-linking — unique, indexed, max 7 per object.
 
-**Quick Action / Lightning cache scar:** Adding fields to an existing Quick Action's `quickActionLayoutItems` via SFDX updates the metadata but **does NOT invalidate the runtime QA cache** that renders Lightning contextual tabs (`console:relatedRecord`) — even after full logout/login. New fields are silently absent, no error. **Cache-bust fix:** edit any non-field-list metadata on the QA (`<description>`, `<label>`, `<layoutSectionStyle>`) and redeploy; SF treats the structural change as meaningful and flushes the org-level cache.
+**Quick Action / Lightning cache scar:** Adding fields to a Quick Action's layout via SFDX does **not** invalidate the runtime QA cache on Lightning contextual tabs (`console:relatedRecord`). New fields are silently absent even after logout/login. **Cache-bust:** edit any non-field-list metadata on the QA (`<description>`, `<label>`, or `<layoutSectionStyle>`) and redeploy — SF treats the structural change as meaningful and flushes the cache.
 
 **Red flags:** choosing master-detail when the child must sometimes exist alone (use Lookup); expecting a roll-up over a Lookup; two same-parent Lookups with identical relationshipName; hand-editing generated schema/validation files; a form `max()` literal that doesn't trace to the field-length source of truth; adding QA fields and not seeing them on the tab (apply the cache-bust).
 
-**Verify:** Describe the target object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Setup → Object Manager → <object> → Fields & Relationships) to read true field lengths and picklist values before trusting any schema file. List the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager) to confirm an object exists before referencing it.
+**Verify:** Describe the object (MCP / `sf sobject describe --sobject <object>` / Object Manager) to read true field lengths and picklist values before trusting any schema file. List objects (MCP / `sf sobject list` / Object Manager) to confirm an object exists before referencing it.
 
 ---
 
 ## 4. Automation — Flow first, and the managed-package trap
 
-**Workflow Rules and Process Builder were retired Dec 31, 2025 — build all new automation in Flow.** You still must *recognize* them because managed packages and legacy org config still contain them, and they still fire.
+**Workflow Rules and Process Builder were retired Dec 31, 2025 — build all new automation in Flow.** Still recognize them — managed packages and legacy configs still contain them and they still fire.
 
 **Pick the flow type by trigger:**
 
@@ -142,19 +148,19 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 | Reusable logic called by other flows/Apex/REST | **Autolaunched** (invocable) |
 | React to a Platform Event | **Platform-event-triggered** flow |
 
-**Before-save vs after-save is the single most important automation choice:** before-save can set fields on the triggering record with **zero added DML** (huge for performance and limits); after-save runs post-commit and is required to touch *other* records. Default field values and same-record validation → before-save. Roll-ups, child records, emails → after-save.
+**Before-save vs after-save is the key automation choice:** before-save sets fields on the triggering record with **zero added DML** (fastest, no recursion); after-save runs post-commit and is required for related records, email, or Apex. Same-record field sets → before-save. Rolls-ups, child records, emails → after-save.
 
-**Governor limits inside a transaction (flows + Apex + triggers all share these):** 100 SOQL queries, 150 DML statements, 50,000 rows retrieved, 10,000 DML rows, 6 MB heap (sync) / 12 MB (async), 10s CPU (sync). Flows process records in **batches of 200**. Bulk integration paths can run near these — keep work bulk and out of loops.
+**Governor limits (all flows + Apex + triggers share one transaction):** 100 SOQL, 150 DML statements, 50k rows, 10k DML rows, 6 MB heap (sync), 10s CPU. Flows batch in **200s**.
 
-**Bulkify everything.** Never put a Get Records / Create / Update / Delete element (or SOQL/DML) **inside a Loop**. Pattern: Get once into a collection → Loop in memory to build a second collection → one Create/Update **after** the loop. Same rule in Apex: query into a Map, iterate in memory, collect into a List, DML once.
+**Bulkify.** Never put Get/Create/Update/Delete (or SOQL/DML) **inside a Loop** — collect once, work in memory, one DML after the loop.
 
-**Managed-package automation silently mutates your data.** A managed package can ship its own Workflow Rules, flows, and triggers in its namespace that fire on your records — often driven by package-default picklist values you never set. (Canonical scar: an NPSP-shipped workflow rule that copies `Phone → MobilePhone` off a defaulted preferred-phone picklist, silently overwriting data on insert — worked example in [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).) **Lesson:** when a field changes value with no code of yours responsible, **suspect managed-package automation** (workflow rules, flows, triggers in a namespace), not your own — and check it *before* blaming a more visible package. An Apex debug-log probe in a sandbox is the fastest way to catch the real culprit; the fix is usually to deactivate the offending rule in Setup.
+**Managed-package automation silently mutates your data.** A managed package ships Workflow Rules, flows, and triggers in its namespace that fire on your records. When a field changes with no code of yours responsible, **suspect managed-package automation first** — check Setup → Workflow Rules and Flows filtered by namespace, then enable an Apex debug log in a sandbox to catch the culprit. The fix is usually deactivating the offending rule. Canonical scar: NPSP copies `Phone → MobilePhone` from a defaulted preferred-phone picklist on insert (worked example: [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
-**Approval processes** — action timing you must place correctly: Initial Submission Actions, Approval Actions, Rejection Actions, Recall Actions, and Final Approval/Rejection Actions. Approver sources: specific user, role, queue, related-user field, or manager. A native Approval Process and a picklist-edit-plus-flow are both valid patterns; pick by complexity.
+**Approval processes** — place actions correctly: Initial Submission, Approval, Rejection, Recall, Final Approval/Rejection. Approver sources: specific user, role, queue, related-user field, or manager field.
 
 **Red flags:** any Get/Create/Update/Delete element inside a Loop; before-save flow doing DML on other objects (use after-save); building a *new* Workflow Rule or Process Builder; assuming "the field changed itself" without checking managed-package automation; an after-save flow that re-triggers itself (recursion — add entry criteria / `ISCHANGED` guards).
 
-**Verify:** Run `SELECT Id, MasterLabel, TriggerType, Status FROM FlowDefinitionView WHERE Status='Active'` (MCP / `sf data query` / Developer Console) to see what's actually firing; describe the affected object (MCP / `sf sobject describe` / Object Manager) to inspect managed-package fields and their defaults before debugging mystery data changes; Setup Audit Trail for recent automation changes.
+**Verify:** `SELECT Id, MasterLabel, TriggerType, Status FROM FlowDefinitionView WHERE Status='Active'` (MCP / `sf data query` / Developer Console) to see what's firing; describe the affected object (MCP / `sf sobject describe` / Object Manager) to inspect managed-package fields before debugging mystery data changes; Setup Audit Trail for recent automation changes.
 
 ---
 
@@ -171,71 +177,49 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 | Built-in dup matching | ✅ | ❌ |
 | Interface | Browser wizard | Desktop app / CLI (CLI for scheduled jobs) |
 
-**On a managed-package org, prefer the package's own loader when it owns the data model** — it understands the package's required relationships and field mappings that a generic loader will get wrong (e.g. NPSP Data Import for Household/Contact/gift loads; worked example in [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
+**On a managed-package org, prefer the package's own loader** — it understands required relationships and field mappings a generic loader gets wrong (e.g. NPSP Data Import for Household/Contact/gift loads; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 **Recycle Bin retention is 15 days**; hard delete (Data Loader) skips it and is unrecoverable.
 
-**Duplicate management** = Matching Rules (define what counts as a dup, e.g. fuzzy name + exact email) + Duplicate Rules (Alert allows-with-warning vs Block prevents save).
+**Duplicate management:** Matching Rules (define similarity) + Duplicate Rules (Alert = warn; Block = prevent save) — you need both; neither works alone.
 
-**Validation rules** fire on save; a rule that evaluates `TRUE` **blocks** the save. Use `ISCHANGED()`, `ISNEW()`, `PRIORVALUE()`, and profile/permission checks (`$Permission`, `$Profile`) to scope. Place the error on a specific field where possible, not just top-of-page.
+**Validation rules** fire on save; `TRUE` → blocks the save. Use `ISCHANGED()`, `ISNEW()`, `PRIORVALUE()`, `$Permission`, `$Profile` to scope. Place the error on a specific field, not top-of-page.
 
-**Reports:** tabular (lists, no grouping — can't drive most dashboards), summary (group by rows), matrix (rows × columns), joined (multiple report types). Cross-filters answer "Contacts WITHOUT applications." Custom Report Types are required to report across custom-object relationships not in standard types.
+**Reports:** tabular (no grouping, can't drive dashboards), summary (row groups), matrix (row × column), joined. Cross-filters = "Contacts WITHOUT applications." Custom Report Types expose object relationships not in standard types.
 
-**Dashboards & sharing:** dashboards run as a fixed running user (everyone sees that user's data) **unless** it's a dynamic dashboard (runs as viewer). Folder sharing controls who can open the report/dashboard at all — **report visibility is gated by both folder access and the running user's record access** (OWD/sharing still apply to the data).
+**Dashboards:** run as a fixed running user **unless** dynamic (runs as viewer). Folder access + running user's record access both gate what data appears.
 
 **Red flags:** Data Import Wizard for >50k rows or for an unsupported object; hard delete without a backup; a dashboard exposing data because its running user is an admin; expecting a report to show records the running user can't see.
 
-**Verify:** Run `SELECT COUNT() FROM <object>` (MCP / `sf data query` / Developer Console) to sanity-check row counts before/after an import; run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API) to confirm it returns what staff expect; query the matching Contacts (MCP / `sf data query` / a list view) to spot-check that a backfill landed.
+**Verify:** `SELECT COUNT() FROM <object>` (MCP / `sf data query` / Developer Console) to sanity-check row counts before/after import; run the report (MCP / Reports tab / Analytics REST API) to confirm output; spot-query Contacts (MCP / `sf data query` / list view) to verify a backfill landed.
 
 ---
 
-## 6. Sales & Marketing — Sales Cloud objects
+## 6. Sales, Service & Productivity — key rules
 
-Sales Cloud objects apply even in orgs that don't run a classic pipeline, and managed packages routinely rename or repurpose them.
+Rules and red flags for Sales Cloud, Service Cloud, and productivity features. Deep detail and worked examples: [references/sales-service-detail.md](references/sales-service-detail.md) — load when configuring lead assignment, case queues, entitlements, Omni-Channel, or Knowledge.
 
-- **Leads:** assignment rules route by criteria to a user or queue; web-to-lead default cap is **500/day**; lead conversion maps Lead fields → Account/Contact/Opportunity and the Lead becomes read-only/archived.
-- **Accounts/Contacts:** the **account model** (Business Accounts, Person Accounts, or a package's Household model) determines how Contacts roll up — confirm which is active before reporting on relationships or membership.
-- **Opportunities:** stages carry probability; Opportunity Contact Roles link multiple people to one deal. A managed package may repurpose Opportunities for a non-sales process.
-- **Campaigns:** member statuses, hierarchy, and ROI fields (Actual Cost, Expected Revenue).
+**Sales Cloud:** Lead assignment rules route by criteria; web-to-lead default cap is **500/day**; lead conversion maps Lead fields → Account/Contact/Opportunity. Confirm the active **account model** (Business Accounts vs Person Accounts vs package Household) before reporting on relationships — it determines how Contacts roll up. Opportunity stages carry probability; a managed package may repurpose Opportunities for a non-sales process.
 
-**Red flag:** treating a repurposed Opportunity as a sales pipeline; ignoring the active account model when counting or rolling up Contacts. Worked nonprofit example (NPSP Households, gift Opportunities, appeal Campaigns): [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+**Service Cloud:** Case queues + assignment rules route work; **escalation rules are business-hours-aware** — the same mechanism underlies any "awaiting action" reminder. **On-Demand Email-to-Case** routes through Salesforce servers and avoids a firewall port requirement — prefer it over Standard Email-to-Case. Web-to-Case cap is **5,000 cases/24 hours**. Entitlements + Milestones enforce SLAs; milestones require an entitlement process on the account/product — they do not activate on all cases automatically.
 
----
+**Productivity:** Quick Actions (object-specific vs global) are subject to the **QA cache trap in §3** — apply the cache-bust after editing field lists. Group tasks assign to up to 200 users (creates a copy per user). Shared activities link one activity to multiple contacts.
 
-## 7. Service & Support — Cases
+**AppExchange:** install in **sandbox first**, look for the security-review badge, manage managed-package updates centrally. Never edit managed-package metadata directly — extend alongside it.
 
-- **Cases:** queues route incoming work; assignment rules send to user/queue; **escalation rules** are time-based and **business-hours-aware** — the same time-based-escalation pattern underlies any "awaiting action" reminder workflow.
-- **Email-to-Case** (on-demand variant needs no firewall change) threads replies via a threading key in the email subject. Standard Email-to-Case requires an open firewall port; On-Demand Email-to-Case routes through Salesforce servers and avoids the firewall requirement — pick On-Demand unless you have a specific reason to route inbound mail directly.
-- **Web-to-Case:** captures form submissions as Cases; default cap is 5,000 cases per 24 hours. Cases above the cap are emailed to the org's default case email address. Requires no code — just generate the HTML from Setup.
-- **Entitlements & Milestones** enforce SLAs with time-based milestone actions (warning/violation). Milestones require a process associated with a product/account entitlement — they do not activate automatically on all cases.
-- **Omni-Channel** routes by presence/capacity/skills. Agent status (Available/Busy/Away) is set by the agent; a supervisor can override. Routing configurations define the priority and model (most available, least active, or external routing).
-- **Knowledge:** articles attach to cases and are searchable by support agents and in Experience Cloud portals; article visibility is controlled by data categories and the user's data category visibility settings.
-
-**Note:** Knowledge + entitlements apply to any support portal; a time-based "awaiting action / missing-document reminder" is conceptually the same business-hours-aware mechanism as case escalation.
+**Red flags:** treating a repurposed Opportunity as a sales pipeline; ignoring the active account model when counting Contacts; editing managed-package metadata directly; adding Quick Action fields without cache-busting; expecting Standard Email-to-Case to work without an open firewall port.
 
 ---
 
-## 8. Productivity & Collaboration
+## 7. Agentforce AI (8%) — awareness + permissions
 
-- **Quick Actions:** object-specific (create/update/log-a-call on a record) vs global. Contextual record tabs backed by object-specific Quick Actions are **subject to the QA cache trap in §3** — apply the cache-bust after editing their field lists.
-- **Activities:** Tasks/Events; group tasks assign to up to 200 users (creates a copy per user); shared activities link one activity to multiple contacts.
-- **Email:** org-wide email addresses, letterhead/HTML templates, merge fields, Email-to-Salesforce BCC logging. Transactional email is often handled outside SF (e.g. SES), while approval-notification copy lives in SF Flow email actions.
-- **AppExchange:** install in **sandbox first**, look for the security-review badge, manage managed-package updates centrally. A managed package (e.g. NPSP, CPQ) ships locked components — never edit managed metadata directly; extend alongside it.
+**Permission reasoning is identical to §1** — the same OWD + FLS + permission sets stack.
 
-**Red flag:** editing managed-package metadata directly; adding Quick Action fields and not cache-busting.
-
----
-
-## 9. Agentforce AI (8%) — awareness + permissions
-
-Newest domain. The **permission reasoning is the same access stack as §1.**
-
-- **Agentforce** = configurable, conversational, action-taking autonomous agents; distinct from **Einstein** (predictive/generative features embedded in standard objects, e.g. Opportunity/Lead Scoring, Next Best Action).
-- **Agent Builder** (declarative): set agent identity/persona, **instructions** (guardrails), **topics** (what it can help with), and **actions** (Apex-backed, Flow-backed, API, email) within topics. Topics define scope — if a user request doesn't match an active topic's description, the agent declines even if an action exists. Instructions are evaluated before every response and are the primary guardrail mechanism.
-- **Prompt Builder:** prompt template types — Flex, Sales Email, Record Summary, Field Generation. Templates merge runtime data; the running user's FLS controls which fields merge successfully.
-- **Actions:** an agent action can be a Flow, an Apex method, an API call, or a standard action (e.g. Send Email). Each action must be explicitly added to a topic — actions not linked to any topic are unreachable.
-- **Security:** an agent **runs in a configured user context and is bound by that user's OWD + FLS + permission sets.** The #1 failure mode is "agent can't access a record" — diagnose as a normal access problem: check the running user's object CRUD, FLS, and sharing, exactly as in §1. Use conversation transcripts + debug logs.
-- **Einstein features (not Agentforce):** Opportunity Scoring, Lead Scoring, Next Best Action, Einstein Activity Capture — these are predictive/generative features on standard objects, configured separately from Agent Builder, and do not use the topics/actions model.
+- **Agentforce** = configurable, autonomous conversational agents. Distinct from **Einstein** (predictive/generative features on standard objects: Opportunity/Lead Scoring, Next Best Action).
+- **Agent Builder:** configure identity/persona, **instructions** (guardrails evaluated before every response), **topics** (scope — if a request doesn't match an active topic, the agent declines), and **actions** (Flow, Apex, API, standard email) within topics. Actions not linked to a topic are unreachable.
+- **Prompt Builder:** template types — Flex, Sales Email, Record Summary, Field Generation. Running user's FLS controls which fields merge.
+- **Security:** an agent **runs in a configured user context — OWD + FLS + permission sets apply.** "Agent can't see a record" → diagnose as a normal access problem: object CRUD, FLS, sharing. Use conversation transcripts + debug logs.
+- **Einstein (not Agentforce):** Opportunity Scoring, Lead Scoring, Next Best Action, Einstein Activity Capture — predictive/generative features on standard objects; configured separately from Agent Builder; no topics/actions model.
 
 **Red flag:** assuming an agent bypasses sharing/FLS (it does not); an action that exists but is not linked to a topic (agent can't reach it); pointing an agent at PII without checking the running user's data scope; confusing Einstein feature configuration with Agentforce Agent Builder.
 
@@ -243,7 +227,7 @@ Newest domain. The **permission reasoning is the same access stack as §1.**
 
 ## Decision Scenarios
 
-Five original scenarios covering the highest-value operational gotchas. Each one probes a judgment call where the wrong move looks reasonable until you understand the underlying rule.
+Five original scenarios covering the highest-value operational gotchas. Scenarios 1 and 2 are in this body; Scenarios 3–5 are in [references/scenarios.md](references/scenarios.md) — load when diagnosing sharing-model changes, managed-package mystery writes, or Agentforce access failures.
 
 ---
 
@@ -251,11 +235,11 @@ Five original scenarios covering the highest-value operational gotchas. Each one
 
 > **Situation:** A developer deploys a new custom text field `Preferred_Language__c` on Contact via SFDX pipeline. The CI job reports success. A support agent logs in and the field is absent from the page layout and returns `"Invalid field"` when queried via SOQL. The developer confirms the field exists in Object Manager. What is happening and what is the fix?
 
-> **Competent move:** The field was created but no `<fieldPermissions>` block was included in the permset or profile XML deployed alongside it. SFDX field-meta.xml does not carry FLS; every non-required field starts invisible to everyone — including System Administrators — until a profile or permission set explicitly grants at least Read. Fix: add `<fieldPermissions>` granting `editable`/`readable` to the appropriate profile or permission set and redeploy. Verify by running `SELECT Field, PermissionsRead FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')` (MCP / `sf data query` / Developer Console).
+> **Competent move:** No `<fieldPermissions>` was deployed alongside the field. SFDX `field-meta.xml` does not carry FLS — every non-required field starts invisible to everyone including System Administrators until a profile or permset explicitly grants Read. Fix: add `<fieldPermissions>` (readable + editable) to the permset XML and redeploy.
 
-> **Tempting-but-wrong:** Assume the field was not actually deployed and re-run the deploy, or add it to the page layout. Neither addresses the root cause — the field exists but is FLS-invisible. Adding a missing-FLS field to a page layout produces a layout that renders with the field still absent.
+> **Tempting-but-wrong:** Re-run the deploy or add the field to the page layout. Both leave the root cause untouched — the field exists but is FLS-invisible; a page layout with a missing-FLS field still renders without it.
 
-> **Verify:** Describe the `Contact` object (your Salesforce MCP, `sf sobject describe --sobject Contact`, or Setup → Object Manager → Contact → Fields & Relationships) — if `Preferred_Language__c` appears in the field list, it exists; check `filterable` and `updateable` flags. If the field is absent from describe output for the current user context, FLS is the culprit. After adding `<fieldPermissions>` and redeploying, re-run the SOQL above (MCP / `sf data query` / Developer Console) to confirm the grant landed.
+> **Verify:** Describe the Contact object (MCP / `sf sobject describe --sobject Contact` / Object Manager) — if `Preferred_Language__c` is absent from the field list for the current user context, FLS is the culprit. After deploying the fix, confirm: `SELECT Field, PermissionsRead FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')` (MCP / `sf data query` / Developer Console).
 
 ---
 
@@ -263,47 +247,11 @@ Five original scenarios covering the highest-value operational gotchas. Each one
 
 > **Situation:** A new business rule: when an Opportunity's Stage changes to "Closed Won," automatically set a custom `Close_Fiscal_Quarter__c` formula-derived text field to a calculated value AND create a follow-up Task assigned to the Opportunity owner. How many flows, and of which types?
 
-> **Competent move:** Two separate concerns require two trigger contexts. Setting `Close_Fiscal_Quarter__c` on the *same* Opportunity record — use a **before-save** record-triggered flow: it writes back to the triggering record with zero added DML, is fastest, and runs before the record commits. Creating a Task (a *different* record) — use a **separate after-save** record-triggered flow (or add an after-save path): it runs post-commit and can perform DML on related records. Attempting to create the Task in the before-save context will fail — before-save flows cannot perform DML on other objects.
+> **Competent move:** Two concerns, two trigger contexts. Setting `Close_Fiscal_Quarter__c` on the *same* Opportunity → **before-save** record-triggered flow (zero added DML, runs before commit). Creating a Task on a *different* record → **after-save** record-triggered flow (post-commit DML). A before-save flow cannot perform DML on other objects — attempting it errors.
 
-> **Tempting-but-wrong:** Build a single after-save flow that does both. It works, but setting a field on the Opportunity record from an after-save flow causes an extra DML update on the triggering record (a second save), consuming an additional DML statement and potentially re-triggering other automation. The before-save approach is always preferable for same-record field sets.
+> **Tempting-but-wrong:** One after-save flow that does both. Technically it works, but setting a field from after-save triggers an extra DML update on the Opportunity (a second save), consuming a DML statement and potentially re-triggering other automation. Before-save is always preferable for same-record field sets.
 
-> **Verify:** In Flow Builder, confirm the first flow's type is Record-Triggered with "Before the record is saved" selected and contains no DML elements. Confirm the second uses "After the record is saved." Test with a bulk update of 250+ Opportunities to verify governor limits are not breached.
-
----
-
-**Scenario 3 — Sharing rules cannot restrict; only OWD can lower the floor**
-
-> **Situation:** An org has Opportunity OWD set to Public Read/Write. Sales reps can see each other's deals. A new requirement: reps should only see their own pipeline; managers should still see their team's. An admin proposes creating a sharing rule that "restricts access to the owner only." Is this possible? What is the correct approach?
-
-> **Competent move:** Sharing rules can only **grant** access above the OWD floor — they cannot restrict. The fix is to change the OWD on Opportunity to **Private**, which sets the floor to owner-only visibility. Then use the **role hierarchy** to automatically give managers upward visibility into their subordinates' records (no sharing rule needed — role hierarchy is automatic when OWD < Public Read/Write). If cross-role access is needed beyond the hierarchy, add owner-based or criteria-based sharing rules to open it back up selectively.
-
-> **Tempting-but-wrong:** Create a criteria-based sharing rule that says "share records where Owner = Viewer" — there is no such sharing rule syntax. Or try to use a permission set to restrict record visibility — permission sets are additive on object/field access and have no mechanism to restrict sharing. The only mechanism to *lower* record visibility is to change the OWD.
-
-> **Verify:** After changing OWD, run `SELECT Id, Name FROM Opportunity LIMIT 10` (MCP / `sf data query` / Developer Console) as a rep user (or via a guest/community session) to confirm row-level filtering. Check that managers can still see subordinate records by querying under a manager's user context.
-
----
-
-**Scenario 4 — Mystery field change: managed-package automation**
-
-> **Situation:** Staff report that new Contact records created via a data import have their `Phone` field overwritten with a different number within seconds of saving. No custom trigger or flow in the org's namespace touches `Phone` on Contact after insert. What should the admin investigate first?
-
-> **Competent move:** When a field changes value with no locally-owned automation responsible, **suspect managed-package automation** — Workflow Rules, flows, or triggers in a managed-package namespace that fire on your objects. In this org (likely NPSP), NPSP's Contacts & Organizations package ships a workflow rule that can copy `Phone → MobilePhone` or vice versa based on a preferred-phone picklist value that defaults to "Mobile." Check Setup → Workflow Rules and filter by namespace (look for `npsp__` prefix). Also check Setup → Flows and sort by namespace. Enable an Apex debug log for a System Administrator user, re-trigger the scenario in a sandbox, and inspect the log for triggers and flows in non-default namespaces.
-
-> **Tempting-but-wrong:** Assume the import tool itself is transforming the data and re-test the import. Or check your own org's flows and triggers — they are in the default namespace and are not the culprit. Blaming the visible, known automation before checking managed-package namespaces wastes time.
-
-> **Verify:** In the Apex debug log, search for `WORKFLOW_ACTION` or `FLOW_START_INTERVIEWS` entries. Note the namespace prefix. Once the offending rule is identified, deactivate it in Setup (you can deactivate managed-package Workflow Rules even if you can't edit them). Retest the import.
-
----
-
-**Scenario 5 — Agentforce agent cannot retrieve a record**
-
-> **Situation:** An Agentforce agent is configured in Agent Builder with a Flow-backed action that queries open Cases for a contact. In testing, users report the agent responds "I wasn't able to find any open Cases" even though the Cases exist. The Flow is active and works when invoked manually by a System Administrator. What is the diagnostic approach?
-
-> **Competent move:** The agent runs under a **configured running user context**, not as a System Administrator. The running user's OWD, FLS, and permission sets govern what the agent can see. The most likely cause is that the running user lacks Read on the Case object (object CRUD), cannot see a required filter field due to FLS, or the Cases are owned by others and the OWD on Case is Private with no sharing rule granting the running user access. Diagnostic steps: (1) identify the agent's running user in Agent Builder; (2) check that user's profile and permsets for Case Read access; (3) run the SOQL query the Flow uses as that user to confirm it returns records; (4) check Case OWD and sharing rules.
-
-> **Tempting-but-wrong:** Assume the Flow has a bug because it returns results when run as an admin. Or rebuild the Flow. The Flow itself is correct — the access problem is upstream of it. Elevating the running user to System Administrator "to fix" is a security anti-pattern that bypasses all OWD/FLS/sharing controls for every action the agent can perform.
-
-> **Verify:** Run `SELECT PermissionsRead FROM ObjectPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE IsOwnedByProfile=true AND Profile.Name='<running_user_profile>') AND SObjectType='Case'` (MCP / `sf data query` / Developer Console) to confirm Case Read. Then run the Case SOQL with a `LIMIT 1` filter matching the scenario as the running user context. Check Setup Audit Trail for any recent change to Case OWD.
+> **Verify:** In Flow Builder, confirm the first flow is Record-Triggered with "Before the record is saved" and contains no DML elements; the second uses "After the record is saved." Bulk-test with 250+ Opportunities to confirm governor limits are not breached.
 
 ---
 
@@ -332,12 +280,16 @@ Read this first. Each rule is concrete and imperative.
 - **DO** check Setup Audit Trail (180-day) first when org behavior changes unexpectedly.
 - **DO** verify against the live org (describe objects, run SOQL, list objects, query contacts) before trusting repo XML or a schema file.
 - **DON'T** assume an agent (Agentforce) or dashboard bypasses sharing/FLS — both honor the running user's access.
+- **DON'T** rely on web-to-lead above 500/day or web-to-case above 5,000/day without overflow handling.
+- **DON'T** install an AppExchange package in production first — sandbox first, check security-review badge.
 
 ---
 
-## Study resources & relevance
+## References
 
-Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. For nonprofit/NPSP applications of these rules, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+- [references/study-resources.md](references/study-resources.md) — credential logistics, exam weights, study path, official links.
+- [references/scenarios.md](references/scenarios.md) — Scenarios 3–5 (sharing model tightening, managed-package mystery field change, Agentforce access failure).
+- [references/sales-service-detail.md](references/sales-service-detail.md) — deep detail for Sales Cloud (lead assignment, account models, campaigns), Service Cloud (entitlements, milestones, Omni-Channel, Knowledge), and AppExchange.
 
 ---
 

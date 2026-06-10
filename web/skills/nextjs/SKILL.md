@@ -6,6 +6,7 @@ metadata:
   domain: web
   type: competence-playbook
   status: operational
+  last-reviewed: 2026-06-09
   docs-version: "16.2.7"
   docs-retrieved: "2026-06-07"
 ---
@@ -28,6 +29,9 @@ a cache was not invalidated after a mutation.
 
 This playbook covers the App Router model (the `app/` directory). The Pages Router (`pages/`) is
 a legacy path — do not build new features there.
+
+> **Load this skill when…** building or reviewing a Next.js App Router application; debugging caching, PPR, or streaming behaviour; auditing Server Actions for auth/authz or CSRF exposure; reviewing Proxy (middleware) configuration.
+> **Not this skill:** React fundamentals (hooks, state, RTL testing) → see `react`; Node.js runtime and event-loop concerns → see `nodejs`; TypeScript compiler configuration → see `typescript`.
 
 > **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
 

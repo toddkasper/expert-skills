@@ -6,19 +6,23 @@ metadata:
   exam-code: Plat-Dev-301
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Platform Developer II — Skills Reference
 
 ## Overview
 
-The Salesforce Certified Platform Developer II (PD2 / PDII) certification validates advanced proficiency in designing, building, and optimizing Salesforce applications using Apex, Lightning Web Components, Aura, Visualforce, and the full suite of Salesforce integration and automation tools. It targets experienced developers who write *correct, performant, and maintainable* code at enterprise scale — not just code that compiles.
+The Salesforce Certified Platform Developer II (PD2 / PDII) certification validates advanced proficiency in designing, building, and optimizing Salesforce applications using Apex, Lightning Web Components, Aura, Visualforce, and the full integration and automation stack. It targets developers who write *correct, performant, and maintainable* code at enterprise scale.
 
-The credential has **two parts**: a multiple-choice exam **and four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist). The superbadges replace the legacy Programming Assignment and are still required — both parts must be completed to earn the credential.
+The credential has **two parts**: a multiple-choice exam **and four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist).
 
-**This file is an operational playbook, not an exam outline.** It states the rules as actionable instructions with concrete limits, decision criteria, and anti-patterns to catch in review. Read **Operational Rules Quick Reference** first, then drill into the topic sections.
+**This file is an operational playbook, not an exam outline.** Rules are stated as actionable instructions with concrete limits, decision criteria, and anti-patterns to catch in review.
 
-> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For nonprofit/NPSP applications, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). For org-specific applications, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Load this skill when…** designing or reviewing advanced Apex (design patterns, async chaining, LDV processing); building or debugging REST/Bulk API integrations or Platform Events; optimizing SOQL selectivity or Large Data Volume performance; implementing dynamic Apex with programmatic FLS/CRUD enforcement.
+> **Not this skill:** Apex fundamentals (triggers, basic SOQL, LWC essentials, 75% test coverage) → see `salesforce-platform-developer-1`; declarative config (profiles, Flow, sharing rules) → see `salesforce-administrator`.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -72,9 +76,11 @@ Map<Id, Account> byId = new Map<Id, Account>([SELECT Id FROM Account WHERE Id IN
 
 ### One trigger per object, logic in a handler class
 
-The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-pattern:** two triggers on the same object — execution order between them is undefined, and you get duplicate/conflicting automation. If you find a second trigger on an object, consolidate.
+The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-pattern:** two triggers on the same object — execution order between them is undefined. If you find a second trigger on an object, consolidate.
 
-**Package trigger framework note:** some managed packages own objects through their own trigger framework rather than raw Apex triggers. To add behavior to such an object, plug into the framework's registration mechanism rather than dropping a second raw trigger — which runs outside the framework's ordering and can corrupt the package's automation (e.g. NPSP uses TDTM; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
+**Recursion control:** guard with a static Boolean so a re-entrant save doesn't re-run the handler. Deep dive with patterns and edge cases: [references/recursion-control.md](references/recursion-control.md) — load when diagnosing trigger re-entry or implementing context-scoped guards.
+
+**Package trigger framework note:** some managed packages own objects through their own trigger framework. To add behavior to such an object, plug into the framework's registration mechanism rather than dropping a second raw trigger (e.g. NPSP uses TDTM; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 ### Trigger contexts — pick the right one
 
@@ -85,7 +91,7 @@ The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-patt
 | Create/relate **other** records, roll-ups, send events | `after insert` / `after update` (Id exists) |
 | React to deletes / restore | `before delete` / `after delete` / `after undelete` |
 
-`Trigger.new` is read-write only in `before` contexts; in `after`, it's read-only (assigning to it throws). Use `Trigger.newMap`/`oldMap` keyed by Id for old-vs-new comparison (the "Bulk State Transition" pattern — only act on records whose watched field actually changed).
+`Trigger.new` is read-write only in `before` contexts; in `after`, it's read-only (assigning to it throws). Use `Trigger.newMap`/`oldMap` keyed by Id for old-vs-new comparison (the **Bulk State Transition** pattern — only act on records whose watched field actually changed).
 
 ### Declarative vs. programmatic — choose deliberately
 
@@ -96,19 +102,19 @@ The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-patt
 | Complex branching, recursion control, bulk algorithmic logic, callouts, dynamic SOQL | **Apex Trigger + handler** | Flow can't do callouts inline or complex collection logic safely |
 | Scheduled/async heavy processing | **Batch/Queueable/Scheduled Apex** | Governor headroom + chaining |
 
-**One-automation-per-object principle:** don't have a Flow AND a trigger both mutating the same object on the same event — ordering is hard to reason about and you double the limit consumption. Pick one owner per (object, event).
+**One-automation-per-object principle:** don't have a Flow AND a trigger both mutating the same object on the same event — ordering is hard to reason about and you double the limit consumption.
 
-**Verify before extending:** before adding automation to an object, describe it and check existing flags/automation; on a package-managed org, query the package's handler-registration table to see existing registrations (e.g. `Trigger_Handler__c` for NPSP). If an object uses boolean role flags instead of Record Types to distinguish record kinds, branch on the flags, not RecordTypeId.
+**Verify before extending:** describe the object and check existing automation; on a package-managed org, query the package's handler-registration table (e.g. `Trigger_Handler__c` for NPSP).
 
 ---
 
 ## Error Handling & Transactional Integrity
 
-- **Partial-success DML:** `Database.insert(records, false)` (allOrNone=false) lets good rows commit while bad rows fail; inspect `Database.SaveResult[]` → `.isSuccess()` / `.getErrors()`. Plain `insert` is all-or-nothing and throws `DmlException` on any failure.
-- **Savepoints:** `Savepoint sp = Database.setSavepoint(); ... Database.rollback(sp);` to undo partial work in a complex transaction. Note: setting a savepoint and rolling back still counts against DML statement limits, and rollback resets the savepoint variable.
+- **Partial-success DML:** `Database.insert(records, false)` lets good rows commit while bad rows fail; inspect `Database.SaveResult[]` → `.isSuccess()` / `.getErrors()`. Plain `insert` is all-or-nothing and throws `DmlException` on any failure.
+- **Savepoints:** `Savepoint sp = Database.setSavepoint(); ... Database.rollback(sp);` to undo partial work. Setting and rolling back still counts against DML statement limits.
 - **Surface errors to UI:** `record.addError('msg')` or `record.Field__c.addError('msg')` in a `before` trigger blocks the save and shows the message inline.
-- **Unhandled exceptions roll back the entire transaction** — including prior successful DML in the same transaction. Catch at the boundary, log, decide whether to re-throw.
-- **Capture, don't lose:** when an integration write to Salesforce can fail, persist the failed payload somewhere durable and alert an operator rather than dropping the data — the same instinct PD2 tests via partial-success DML.
+- **Unhandled exceptions roll back the entire transaction** — including prior successful DML. Catch at the boundary, log, decide whether to re-throw.
+- **Capture, don't lose:** when an integration write fails, persist the payload somewhere durable rather than dropping it.
 
 ---
 
@@ -116,14 +122,16 @@ The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-patt
 
 | Tool | Use when | Key limits / notes |
 |---|---|---|
-| `@future(callout=true)` | Fire-and-forget callout, simple primitive args | **No sObject params** (pass Ids/JSON), no chaining, no return, can't call from batch/future. Hard to monitor. Prefer Queueable in new code. |
-| `Queueable` | Async work needing complex state, chaining, or callouts | Pass sObjects/objects via constructor. Implement `Database.AllowsCallouts` for HTTP. Chain via `System.enqueueJob()` in `execute()` — **only 1 child per execute**; depth effectively unlimited but throttled. Monitorable via `AsyncApexJob`. |
-| `Batchable` | >10k records / LDV processing | `start()` returns `Database.QueryLocator` (50M rows). Default 200 records/`execute`; tune scope down for heavy logic. `Database.Stateful` to accumulate state across chunks. Each `execute` gets a fresh set of governor limits. |
+| `@future(callout=true)` | Fire-and-forget callout, simple primitive args | **No sObject params** (pass Ids/JSON), no chaining, no return, can't call from batch/future. Prefer Queueable in new code. |
+| `Queueable` | Async work needing complex state, chaining, or callouts | Pass sObjects/objects via constructor. Implement `Database.AllowsCallouts` for HTTP. Chain via `System.enqueueJob()` in `execute()` — **only 1 child per execute**. Monitorable via `AsyncApexJob`. |
+| `Batchable` | >10k records / LDV processing | `start()` returns `Database.QueryLocator` (50M rows). Default 200 records/`execute`; tune scope down for heavy logic. `Database.Stateful` to accumulate state across chunks. Each `execute` gets fresh governor limits. |
 | `Schedulable` | Time-based kickoff | `System.schedule('name', cronExpr, job)`. Cron is `sec min hr day month weekday [year]`. Query `CronTrigger`/`CronJobDetail`. Usually schedules a Batch/Queueable. |
 
 **Mixed DML error:** you cannot DML a setup object (User, Group, PermissionSetAssignment) and a non-setup object (Contact) in the same synchronous transaction. Workaround: do the setup-object DML in a `@future` method.
 
 **RED FLAG:** synchronous HTTP callout in a trigger/UI path — move it async to avoid the 10s CPU / callout-in-trigger restrictions and to keep the UI responsive.
+
+**Invocable Apex (`@InvocableMethod`):** exposes Apex to Flow. Method must be `static`, in a non-inner class; input/output are `List<T>` (Flow always passes a collection). Process the full input list at once — never SOQL per input. Deep dive with callout rules and `@InvocableVariable` patterns: [references/invocable-apex.md](references/invocable-apex.md) — load when writing or debugging Flow-invoked Apex actions.
 
 ---
 
@@ -133,7 +141,7 @@ The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-patt
 
 A query is **selective** when its `WHERE` filters on an indexed field returning under the threshold: **<10% of rows (first 1M) for standard fields, <33% for custom-indexed fields**, capped at 1M rows examined. Non-selective queries on large objects throw `QueryException: Non-selective query against large object type`.
 
-**Indexed by default:** `Id`, `Name`, `CreatedDate`, `SystemModstamp`, lookup/master-detail fields, `External Id` fields, `Unique` fields. Custom indexes are requested via Salesforce Support.
+**Indexed by default:** `Id`, `Name`, `CreatedDate`, `SystemModstamp`, lookup/master-detail fields, External Id fields, Unique fields. Custom indexes are requested via Salesforce Support.
 
 **Kills the index (forces full scan) — RED FLAGS:**
 - Leading wildcard: `LIKE '%smith'`
@@ -142,7 +150,7 @@ A query is **selective** when its `WHERE` filters on an indexed field returning 
 - Functions/operations on the indexed field in the filter
 - `OR` across mixed indexed/non-indexed fields
 
-**Verify:** use the **Query Plan** tool in Developer Console (or `EXPLAIN` via the REST Query Plan resource) to confirm `Cardinality`/`Leading Operation Type = Index`.
+**Verify:** use the **Query Plan** tool in Developer Console (or `EXPLAIN` via the REST Query Plan resource) to confirm `Leading Operation Type = Index`.
 
 ### SOQL features worth knowing
 
@@ -154,26 +162,26 @@ A query is **selective** when its `WHERE` filters on an indexed field returning 
 
 ### SOSL vs SOQL
 
-Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' IN ALL FIELDS RETURNING Contact(Id,Name), Lead(Id)`). It counts as a single query regardless of objects searched and hits the search index, not the row store. Use **SOQL** when you know the object and are filtering on structured fields.
+Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' IN ALL FIELDS RETURNING Contact(Id,Name), Lead(Id)`). It hits the search index, not the row store. Use **SOQL** when you know the object and are filtering on structured fields.
 
 ---
 
 ## Dynamic Apex & FLS/CRUD Enforcement
 
-- Runtime metadata: `Schema.getGlobalDescribe()`, `obj.getDescribe()`, `field.getDescribe()`. Describes are **not free** — each `getGlobalDescribe()` is expensive; cache results.
+- Runtime metadata: `Schema.getGlobalDescribe()`, `obj.getDescribe()`, `field.getDescribe()`. Describes are **not free** — cache `getGlobalDescribe()` results; each call is expensive.
 - Dynamic SOQL: `Database.query(String)`. **Injection risk** — never concatenate user input; use bind variables (`:var`) or `String.escapeSingleQuotes()`.
 - Dynamic instantiation: `Type.forName('MyClass').newInstance()` (Strategy/Factory patterns).
-- **Programmatic FLS/CRUD checks:** `Schema.sObjectType.Contact.fields.Email.isAccessible()/isUpdateable()/isCreateable()`, or `Security.stripInaccessible()` to drop fields the user can't touch before DML. PD2 expects you to enforce FLS in code that runs `without sharing` or in API context.
+- **Programmatic FLS/CRUD checks:** `Schema.sObjectType.Contact.fields.Email.isAccessible()/isUpdateable()/isCreateable()`, or `Security.stripInaccessible()` to drop fields the user can't touch before DML. PD2 expects FLS enforcement in code that runs `without sharing` or in API context.
 
 ---
 
 ## Sharing & Security
 
-- **Three independent layers:** object CRUD (profile/permset) → field-level security (FLS, profile/permset) → record access (OWD + role hierarchy + sharing rules + manual/Apex shares). All three must pass. **FLS is separate from object access** — granting object access does not grant field access.
-- **Sharing keywords:** `with sharing` (enforce running user's record visibility), `without sharing` (ignore it — use sparingly, for system operations), `inherited sharing` (adopt caller's context; the safe default for reusable library classes).
-- **Apex managed sharing:** insert `AccountShare`/`OpportunityShare`/`MyObject__Share` rows with `RowCause` (use a custom `Apex Sharing Reason` so manual recalculation can find them). Programmatic shares survive role changes only if you maintain them.
+- **Three independent layers:** object CRUD → FLS → record access (OWD + role hierarchy + sharing rules + manual/Apex shares). All three must pass. **FLS is independent of object access.**
+- **Sharing keywords:** `with sharing` (enforce record visibility), `without sharing` (ignore sharing — use sparingly), `inherited sharing` (adopt caller's context; safe default for reusable classes).
+- **Apex managed sharing:** insert `AccountShare`/`OpportunityShare`/`MyObject__Share` rows with a custom `RowCause` (Apex Sharing Reason) so recalculation can find them.
 
-**Deployment gotcha:** SFDX `field-meta.xml` deploys grant **FLS to no one — not even System Admin**. You must list `<fieldPermissions>` in a permission set or profile XML or every query returns *"Invalid field"* even with full object access. Salesforce also rejects `<fieldPermissions>` on `<required>true</required>` fields (*"You cannot deploy to a required field"*) — required fields are always visible/editable, so omit them from `fieldPermissions`. Verify a deploy actually landed FLS with a `PermissionSetAssignment` + `FieldPermissions` query, not by trusting the deploy success message.
+**Deployment gotcha:** SFDX `field-meta.xml` grants **FLS to no one**. You must add `<fieldPermissions>` in a permission set or profile, or every query returns *"Invalid field."* Salesforce rejects `<fieldPermissions>` on `<required>true</required>` fields — omit them. Verify with a `FieldPermissions` SOQL query, not by trusting the deploy success message.
 
 ---
 
@@ -182,9 +190,11 @@ Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' I
 ### Platform Events
 
 - Define as `MyEvent__e`; publish with `EventBus.publish(events)`; subscribe via an **after-insert trigger on the event** (only after-insert is valid), a Flow, or CometD/external subscriber.
-- `publish-after-commit` (default) vs `publish-immediately` behavior; published events are **not rolled back** with the transaction under publish-immediately.
-- `ReplayId` enables durable replay (resume from last consumed event). 72-hour retention (24h standard-volume).
-- Use for **decoupled, fire-and-forget** integration — e.g., record status changes flowing to an external app without tight coupling, the natural evolution over polling.
+- `publish-after-commit` (default): suppressed on rollback. `publish-immediately`: delivered regardless of transaction outcome.
+- `ReplayId` enables durable replay. 72-hour retention (24h standard-volume).
+- Use for decoupled, fire-and-forget integration.
+
+**Change Data Capture (CDC):** publishes change events (`AccountChangeEvent`, `MyObject__ChangeEvent`, etc.) on record changes; subscribe via after-insert trigger on the change-event object. Key payload: `ChangeEventHeader.changeType` (CREATE/UPDATE/DELETE/UNDELETE), `changedFields`, `recordIds`. CDC events are NOT suppressed on transaction rollback — design consumers to be idempotent. Deep dive with enabling, payload, and testing: [references/cdc.md](references/cdc.md) — load when implementing CDC-based integration or debugging delivery behavior.
 
 ### Inbound integration — pick the API
 
@@ -196,11 +206,11 @@ Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' I
 | Several dependent ops in one round-trip | Composite / Composite Graph API |
 | Real-time push to subscribers | Streaming API / Platform Events / CDC |
 
-**Idempotent upsert on an External Id** is the canonical inbound pattern: define a custom field marked External Id and `Unique`, and have the integration client upsert against it. Re-running the same payload then updates rather than duplicates, and lets later related writes re-link to the same record without new write logic.
+**Idempotent upsert on an External Id** is the canonical inbound pattern: define a custom field marked External Id and Unique, and have the integration client upsert against it. Re-running the same payload updates rather than duplicates.
 
 ### Outbound callouts
 
-`Http`/`HttpRequest`/`HttpResponse`. Store endpoints + auth in **Named Credentials** (never hardcode secrets/URLs). Callout limit 100/transaction; total timeout 120s, 10s default per call. **Every callout must be mocked in tests** (`HttpCalloutMock`) — tests cannot make real callouts.
+`Http`/`HttpRequest`/`HttpResponse`. Store endpoints + auth in **Named Credentials** (never hardcode secrets/URLs). Callout limit 100/transaction; total timeout 120s, 10s default per call. **Every callout must be mocked in tests** (`HttpCalloutMock`).
 
 ---
 
@@ -213,23 +223,21 @@ Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' I
 | `@wire(apexMethod, {params})` | Read-only, reactive, **cacheable** data for display. Method must be `@AuraEnabled(cacheable=true)` and side-effect-free. Re-invokes when reactive params (`$param`) change. |
 | Imperative (`import m from '@salesforce/apex/...'; await m({})`) | On-demand fresh data, mutations (DML), or when you need to call in an event handler / control timing. |
 
-`cacheable=true` Apex **cannot do DML**. For mutations, call imperatively (and the method must not be cacheable).
+`cacheable=true` Apex **cannot do DML**. For mutations, call imperatively.
 
 ### Component communication
 
 | Direction | Mechanism |
 |---|---|
-| Parent → child | `@api` properties / `@api` methods (call child method from parent) |
+| Parent → child | `@api` properties / `@api` methods |
 | Child → parent | `this.dispatchEvent(new CustomEvent('name', {detail}))` |
 | Unrelated components | Lightning Message Service: `MessageChannel`, `publish`, `subscribe` |
 
-`@api` = public reactive; bare fields are reactive to reassignment; `@track` only needed for deep mutation of objects/arrays (rarely now). Lifecycle order: `constructor` → `connectedCallback` → `render` → `renderedCallback` (fires after every render — **never** put unguarded state changes here, you'll cause infinite re-render, a classic perf bug).
-
-**Error display:** server errors → `ShowToastEvent`; record-form errors via `lightning-record-edit-form`/`lightning-messages`. Run client-side `reportValidity()` before hitting the server.
+`@api` = public reactive; `@track` only needed for deep mutation of objects/arrays. Lifecycle order: `constructor` → `connectedCallback` → `render` → `renderedCallback` (fires after every render — **never** put unguarded state changes here, causes infinite re-render).
 
 ### Framework selection
 
-LWC (default — fastest, modern) > Aura (only for platform features still requiring it; Aura can host LWC, not vice-versa) > Visualforce (PDF rendering via `renderAs="pdf"`, legacy pages). Don't write new Aura/VF unless a specific platform capability forces it.
+LWC (default) > Aura (only for platform features still requiring it; Aura can host LWC, not vice-versa) > Visualforce (PDF rendering via `renderAs="pdf"`, legacy). Don't write new Aura/VF unless a specific platform capability forces it.
 
 ---
 
@@ -237,44 +245,74 @@ LWC (default — fastest, modern) > Aura (only for platform features still requi
 
 ### Tests
 
-- **75% org-wide coverage required to deploy to production**, every trigger must have *some* coverage. Coverage must be **meaningful — assert outcomes**, don't just execute lines.
-- `Test.startTest()/stopTest()` — gives a fresh set of governor limits inside, and **flushes async jobs** (future/queueable/batch run synchronously at `stopTest()`) so you can assert their results.
-- `@testSetup` — create shared test data once per test class.
-- **`seeAllData=false` is the default and the rule.** Create your own data. `seeAllData=true` only for the rare case of org-config dependencies you cannot insert (e.g., certain standard pricebooks); never for record data.
-- **Mock all callouts:** `Test.setMock(HttpCalloutMock.class, new MyMock())` / `WebServiceMock` for SOAP. Use `StubProvider` for dynamic mock objects without real implementations.
-- **LWC Jest:** `createElement` + `appendChild`, query `shadowRoot.querySelector`, mock `@wire` with `@salesforce/wire-service-jest-util`, simulate with `dispatchEvent`.
+- **75% org-wide coverage required to deploy to production**, every trigger must have *some* coverage. Coverage must be **meaningful — assert outcomes, not just lines**.
+- `Test.startTest()/stopTest()` — fresh governor limits; **flushes async jobs** synchronously at `stopTest()` so you can assert results.
+- **`seeAllData=false` is the rule.** Create your own data. `seeAllData=true` only for unavoidable org-config dependencies.
+- **Mock all callouts:** `Test.setMock(HttpCalloutMock.class, new MyMock())` / `WebServiceMock`. `StubProvider` for dynamic mocks.
+- **LWC Jest:** `createElement` + `appendChild`, `shadowRoot.querySelector`, mock `@wire` with `@salesforce/wire-service-jest-util`.
 
 ### Debugging
 
-Developer Console (logs, Query Plan, checkpoints) · VS Code + Apex Replay Debugger (needs `FINEST` log level to replay) · `System.debug(LoggingLevel.X, msg)` · query stored `ApexLog`. **Never `System.debug` PII** — sensitive data must not land in logs.
+Developer Console (logs, Query Plan, checkpoints) · VS Code + Apex Replay Debugger (needs `FINEST` log level) · `System.debug(LoggingLevel.X, msg)` · query stored `ApexLog`. **Never `System.debug` PII** — sensitive data must not land in logs.
 
 ### Deployment
 
-- SFDX source format under `force-app/main/default/`; `sf project deploy start` / `retrieve start`. **Run commands from the SFDX project root** (the directory containing `sfdx-project.json`), not a parent repo root, or you get `InvalidProjectWorkspaceError`.
-- Deploy order dependencies: objects before fields, fields before the permsets that reference them, profiles before users.
-- Sandboxes: Developer (config only) < Developer Pro < Partial Copy (sample data) < Full (everything, prod-clone). Scratch orgs (source-driven, ephemeral, shape-defined) for feature dev.
-- **Metadata-cache surprise:** adding fields to an existing Quick Action via SFDX updates the metadata but does **not** always invalidate the runtime Quick Action cache that drives Lightning contextual tabs (the `console:relatedRecord` component) — even after logout/login. Cache-bust by editing any non-field-list metadata on the QA (`<description>`/`<label>`/`<layoutSectionStyle>`) and redeploying; Salesforce treats that as a structural change and flushes the cache.
+- `sf project deploy start` / `retrieve start`. **Run from the SFDX project root** (directory containing `sfdx-project.json`) or get `InvalidProjectWorkspaceError`.
+- Deploy order: objects before fields, fields before the permsets that reference them.
+- Sandboxes: Developer < Developer Pro < Partial Copy < Full (prod-clone). Scratch orgs for feature dev.
+- **Quick Action cache:** adding fields via SFDX does NOT invalidate the runtime QA cache — even after logout/login. Cache-bust by editing non-field-list metadata (`<description>`) and redeploying.
 
 ---
 
 ## Performance & Large Data Volumes
 
 - **Selectivity first** (see SOQL section) — the #1 LDV lever.
-- **CPU/heap:** build strings with `List<String>` + `String.join()` (not `+=` in a loop); `Map`/`Set` for lookups, not nested loops; hoist invariant work out of loops; null out large collections you're done with to free heap (6MB sync / 12MB async).
-- **LDV tools:** Skinny Tables (Support-created, denormalized read acceleration) · custom indexes (Support) · Big Objects (`__b`, billions of immutable rows, Async SOQL) · archiving · avoid **owner skew** (one user owning >10k records causes sharing-recalc lock contention) and **lookup/account skew** (many children under one parent → record-lock contention on parallel DML).
-- **N+1 detection — RED FLAG:** query inside loop, `SOQL_QUERIES` count scaling with input size, `List.contains()` in a loop, repeated `getGlobalDescribe()`.
-- **UI perf:** prefer cached `@wire` over repeated imperative calls; lazy-load; keep `renderedCallback` cheap and idempotent.
+- **CPU/heap:** build strings with `List<String>` + `String.join()` (not `+=` in loop); `Map`/`Set` for lookups; null out large collections when done (6MB sync / 12MB async).
+- **LDV tools:** Skinny Tables · custom indexes (both via Support) · Big Objects (`__b`, billions of rows, Async SOQL) · archiving.
+- **Skew — RED FLAG:** owner skew (one user owning >10k records → sharing-recalc lock contention); lookup skew (many children under one parent → DML lock contention).
+- **N+1 detection:** query/DML inside loop, SOQL count scaling with input, `List.contains()` in loop, repeated `getGlobalDescribe()`.
+- **UI perf:** prefer cached `@wire`; keep `renderedCallback` cheap and idempotent.
 
 ---
 
 ## Advanced Fundamentals
 
 - **Custom Metadata Types vs Custom Settings:**
-  - **CMT (`__mdt`):** deployable, packageable, queryable in SOQL **without consuming the SOQL governor limit** (cached). Use for configuration that ships with the app / varies by environment. Managed packages commonly store config in CMTs (e.g. NPSP's `Trigger_Handler__mdt` and relationship config). Write programmatically via `Metadata.Operations.enqueueDeployment` (async).
-  - **Custom Settings:** `List` (global constants) or `Hierarchy` (per-profile/per-user fallback). In-memory, no SOQL cost via `getInstance()/getValues()`. Use for per-user/per-profile runtime toggles.
-  - **Decision:** configuration that needs deployment/packaging/relationships → CMT. Per-user/profile runtime override → Hierarchy Custom Setting.
+  - **CMT (`__mdt`):** deployable, packageable, SOQL-queryable **without consuming the SOQL governor limit** (cached). Use for configuration that ships with the app.
+  - **Custom Settings:** `List` (global constants) or `Hierarchy` (per-profile/per-user). In-memory via `getInstance()/getValues()`, no SOQL cost.
+  - **Decision:** needs deployment/packaging/relationships → CMT. Per-user/profile runtime toggle → Hierarchy Custom Setting.
 - **Multi-currency:** `CurrencyIsoCode` on records; `DatedConversionRate` for historical rates; guard logic with `UserInfo.isMultiCurrencyOrganization()`; never hardcode currency math.
-- **Design patterns to recognize/apply:** Singleton (one instance/transaction, avoid re-querying), Strategy (swap algorithm at runtime), Decorator (wrap an sObject for UI), Bulk State Transition (act only on changed records via old/new maps), Facade (simplify a complex subsystem), and the enterprise **Service / Selector / Domain** layering (fflib).
+- **Design patterns:** Singleton (one instance/transaction), Strategy (swap algorithm at runtime), Decorator (wrap sObject for UI), Bulk State Transition (act only on changed records via old/new maps), Facade, and enterprise **Service / Selector / Domain** layering (fflib).
+
+---
+
+## Decision Scenarios
+
+The two scenarios below cover the highest-value PD2 operational gotchas. Additional scenarios: [references/scenarios.md](references/scenarios.md) — load for platform event rollback, Flow/trigger recursion, and dynamic SOQL injection patterns.
+
+---
+
+**Scenario 1 — Async chaining and the "one child per execute" rule**
+
+> **Situation:** A nightly data-quality job must process 2 million Contact records in stages: first normalize phone formats, then deduplicate, then update a roll-up on Account. A developer proposes three separate Batch Apex jobs chained by calling `Database.executeBatch(new DeduplicateBatch())` at the end of the phone-format batch's `finish()` method.
+>
+> **Competent move:** Chaining from `finish()` is the correct Batchable pattern — `finish()` runs in a fresh transaction, so `Database.executeBatch` there is allowed and does not violate the "one Queueable child per execute" rule (that applies to Queueable, not Batch). Model each stage as its own `Batchable` class; pass state via `Database.Stateful` or a shared Custom Object. Tune scope size conservatively (50–100) for SOQL-heavy stages.
+>
+> **Tempting-but-wrong:** Calling `System.enqueueJob(...)` from inside a Batch `execute()` — blocked; only allowed from `finish()`. Also: a developer may try chaining multiple Queueable children from one `execute()`, but each execute may enqueue **exactly one** child.
+>
+> **Verify:** Check `AsyncApexJob` records after a test run — each stage should appear as a separate job with `Status = Completed`. In unit tests, wrap each stage in `Test.startTest()/stopTest()` to force synchronous execution and assert intermediate state.
+
+---
+
+**Scenario 2 — FLS after a successful SFDX deploy**
+
+> **Situation:** A developer deploys a new custom field `Loan_Rate__c` on the Opportunity object via SFDX source push. The deploy log shows `Deploy Succeeded`. The developer then writes an Apex class that queries `Loan_Rate__c` and runs it as a System Administrator. The query returns `null` for every row even though the field has data in the org.
+>
+> **Competent move:** SFDX field metadata grants the field's existence — it does **not** grant FLS to any profile or permission set, including System Administrator. Add an explicit `<fieldPermissions>` entry (`readable: true`, `editable: true`) to a permission set and deploy it. Verify with `SELECT Id, Field, PermissionsRead FROM FieldPermissions WHERE SobjectType = 'Opportunity' AND Field = 'Opportunity.Loan_Rate__c'`.
+>
+> **Tempting-but-wrong:** Assuming System Administrator bypasses FLS in Apex queries. It does not — fields the running user can't read are stripped from query results *silently* (returning `null`, not an error, making this bug hard to spot). Also: adding `<fieldPermissions>` for a `<required>true</required>` field fails deploy — required fields are always accessible; omit them.
+>
+> **Verify:** Query `FieldPermissions` in Developer Console or via the REST API. A missing row means no permission was granted — the deploy succeeded at the metadata layer but FLS was never assigned.
 
 ---
 
@@ -305,131 +343,13 @@ Read this first. Each is imperative and concrete.
 
 ---
 
-## Recursion Control in Triggers
+## References
 
-A trigger fires once per DML statement on the object. If your `after update` handler updates the same object, that fires the trigger again — potentially looping until a governor limit kills it. The standard fix: a static Boolean guard in a separate utility class.
-
-```apex
-public class TriggerGuard {
-    public static Boolean hasRun = false;
-}
-// In handler:
-if (TriggerGuard.hasRun) return;
-TriggerGuard.hasRun = true;
-// ... logic ...
-```
-
-Static variables reset per transaction, so the guard is scoped to one execution chain. **Edge case:** if you intentionally need the trigger to fire twice (e.g., initial insert then a follow-up update), scope the guard to context (`before insert`, `after update`) rather than a single Boolean.
-
-**Package framework note:** some managed-package trigger frameworks (e.g. NPSP's TDTM) have built-in recursion detection. Handlers plugged into such a framework only need an additional guard if they themselves issue a DML that would re-fire the same handler slot.
-
----
-
-## Invocable Apex — Bridging Flow and Code
-
-When a Flow needs logic that exceeds its declarative capabilities (complex loops, callouts, collection algebra), expose an Apex method to Flow via `@InvocableMethod`.
-
-```apex
-public class RateCalculator {
-    @InvocableMethod(label='Calculate Rates' description='Computes tiered rates for opportunities')
-    public static List<Decimal> calculate(List<Id> oppIds) { ... }
-}
-```
-
-Rules that trip developers:
-- The method must be `static`, `public`/`global`, in a non-inner class.
-- Input/output are **`List<T>`** — Flow passes a collection even for a single record.
-- Complex inputs/outputs use an inner class whose fields are annotated `@InvocableVariable`.
-- **Callouts from Flow-invoked Apex:** allowed, but the Flow must call the action in an asynchronous path (Screen Flow pause / scheduled path) or the org must permit sync callouts in the path. Test with `HttpCalloutMock` exactly as you would in any Apex test.
-- **Bulkification:** the method receives all records in the batch at once. Process as a collection, not one-by-one.
-
----
-
-## Change Data Capture (CDC)
-
-CDC publishes change events (`AccountChangeEvent`, `ContactChangeEvent`, custom-object `MyObject__ChangeEvent`) on the change-event bus whenever records are created, updated, deleted, or undeleted in Salesforce.
-
-Consume via:
-- An **after-insert trigger on the change-event object** (same as platform events).
-- A CometD subscriber / external system.
-
-Key payload fields: `ChangeEventHeader.changeType` (`CREATE`, `UPDATE`, `DELETE`, `UNDELETE`), `ChangeEventHeader.changedFields` (which fields actually changed), and `ChangeEventHeader.recordIds` (the affected record Ids).
-
-**Design use:** CDC is the preferred real-time data-replication pattern for external systems that need a near-realtime copy of Salesforce data. It replaces polling (`SELECT … WHERE LastModifiedDate > :checkpoint`) and is more reliable than outbound messages for high-volume objects.
-
-**Gotcha:** CDC change events are **not** rolled back if the originating transaction rolls back — the event was already committed. Design downstream consumers to be idempotent.
-
----
-
-## Decision Scenarios
-
-These scenarios target the highest-value operational gotchas — places where a plausible choice turns out to be wrong in a non-obvious way. They are original teaching material, not exam questions.
-
----
-
-**Scenario 1 — Async chaining and the "one child per execute" rule**
-
-> **Situation:** A nightly data-quality job must process 2 million Contact records in stages: first normalize phone formats, then deduplicate, then update a roll-up on Account. A developer proposes three separate Batch Apex jobs chained by calling `Database.executeBatch(new DeduplicateBatch())` at the end of the phone-format batch's `finish()` method.
-
-> **Competent move:** Chaining from `finish()` is the correct Batchable pattern — `finish()` runs in a fresh transaction context, so calling `Database.executeBatch` there is allowed and does not violate the "one Queueable child per execute" restriction (that rule applies to Queueable, not Batch). Model each stage as its own `Batchable` class and pass state between them via a shared Custom Object or `Database.Stateful`. Set scope size conservatively (50–100 records per execute) for the deduplication stage where per-record SOQL is heavier.
-
-> **Tempting-but-wrong:** Calling `System.enqueueJob(new DeduplicateQueueable(...))` from inside a Batch `execute()` method. This is blocked — you cannot enqueue a Queueable from within a batch execute context (only from `finish()`). A developer who confuses the restriction may also try chaining a second Queueable from within a Queueable's `execute()`, thinking they can fan out; in fact each Queueable execute may enqueue **exactly one** child, so fan-out requires stacking, not parallel spawning.
-
-> **Verify:** Check `AsyncApexJob` records after a test run — each stage should appear as a separate job with `Status = Completed`. In unit tests, wrap each stage in `Test.startTest()/stopTest()` to force synchronous execution and assert intermediate state.
-
----
-
-**Scenario 2 — FLS after a successful SFDX deploy**
-
-> **Situation:** A developer deploys a new custom field `Loan_Rate__c` on the Opportunity object via SFDX source push. The deploy log shows `Deploy Succeeded`. The developer then writes an Apex class that queries `Loan_Rate__c` and runs it as a System Administrator. The query returns `null` for every row even though the field has data in the org.
-
-> **Competent move:** The field metadata XML in SFDX grants the field's existence — it does **not** automatically grant FLS to any profile or permission set, including System Administrator. Create or update a permission set metadata file with an explicit `<fieldPermissions>` entry (`readable: true`, `editable: true`) for `Opportunity.Loan_Rate__c` and deploy it. After the deploy, verify with `SELECT Id, Field, PermissionsRead FROM FieldPermissions WHERE SobjectType = 'Opportunity' AND Field = 'Opportunity.Loan_Rate__c'`.
-
-> **Tempting-but-wrong:** Assuming the System Administrator profile bypasses FLS in Apex queries. It does not — Apex running in the default `without sharing` context still respects FLS, and fields the running user's profile cannot read are stripped from query results silently (they return `null`, not an error, which is why this bug is hard to spot). A developer may also try adding `<fieldPermissions>` for a field marked `<required>true</required>` in the object XML — Salesforce rejects this deployment with a metadata error ("You cannot deploy to a required field"). Required fields are always accessible; omit them.
-
-> **Verify:** Query `FieldPermissions` in Developer Console or via the REST API. A missing row means no permission was granted — the deploy succeeded at the metadata layer but FLS was never assigned.
-
----
-
-**Scenario 3 — Platform event publish timing and transaction rollback**
-
-> **Situation:** An Apex trigger on Order uses `EventBus.publish(new Fulfillment_Request__e(...))` to notify a downstream fulfillment system. In testing, the developer discovers that when the Order DML fails (a validation rule fires), the fulfillment system still occasionally receives the event and tries to fulfill a non-existent Order.
-
-> **Competent move:** By default, platform events published via `EventBus.publish()` use **publish-after-commit** semantics — the event is only delivered if the triggering transaction commits successfully. If the Order DML fails and rolls back, the event is suppressed. The developer should confirm the event definition's `Publish Behavior` is set to `Publish After Commit` (the default). If they are using `publish-immediately` (explicit opt-in on the event definition), the event fires regardless of transaction outcome — which is the cause of the phantom fulfillment requests. Switch to `Publish After Commit`.
-
-> **Tempting-but-wrong:** Wrapping the publish in a try/catch and checking the `Database.SaveResult` from `EventBus.publish()` to decide whether to proceed. `EventBus.publish()` returns save results, but a "success" result only means the event was *accepted into the bus*, not that the parent transaction will commit. The downstream ordering problem is about publish behavior (when delivery occurs relative to commit), not about whether the publish call itself succeeded.
-
-> **Verify:** Set `Publish Behavior` on the event definition to `Publish After Commit` in Setup → Platform Events. Write an Apex test that inserts a record, publishes the event, then forces a rollback via a `Database.rollback(savepoint)`, and assert the subscriber trigger does **not** execute (use a static counter in the subscriber trigger, assert it remains 0 after `Test.stopTest()`).
-
----
-
-**Scenario 4 — Recursion from a Record-Triggered Flow and an Apex trigger on the same object**
-
-> **Situation:** An Account object has both a Record-Triggered Flow (fires on update, sets a field) and an Apex trigger (fires on update, does roll-up logic). In production, some Account updates cause a `System.LimitException: Too many SOQL queries: 101` error, but only when both automations are active.
-
-> **Competent move:** The Flow's field update fires the Apex trigger a second time (Flow DML counts as a new trigger invocation). The Apex trigger's SOQL queries are then being consumed twice per original update — if they were already near the 100-limit, the second invocation pushes over. Apply the "one automation owner per (object, event)" principle: pick one owner. If both are needed, add a recursion guard in the Apex trigger (`TriggerGuard.hasRun`) so the second invocation from the Flow's DML exits immediately. Alternatively, refactor the Flow update into the Apex handler and remove the Flow to eliminate the double-fire.
-
-> **Tempting-but-wrong:** Increasing the SOQL budget by moving queries into a Queueable to "buy headroom." This masks the root cause — the trigger is still firing twice, consuming CPU and DML headroom twice — and adds async complexity. The fix is to eliminate the double-invocation, not to absorb it with async headroom.
-
-> **Verify:** Enable Debug Logs at `APEX_CODE: FINEST` during a test update. Count how many times the trigger handler's entry log line appears — it should appear once per DML. If it appears twice, the recursion is confirmed and the guard is needed.
-
----
-
-**Scenario 5 — Dynamic SOQL injection via concatenated filter**
-
-> **Situation:** A developer writes an Apex REST endpoint that accepts a `status` parameter from the request body and builds a SOQL query: `String q = 'SELECT Id FROM Order__c WHERE Status__c = \'' + status + '\''; List<Order__c> results = Database.query(q);`. A security review flags this as a critical vulnerability.
-
-> **Competent move:** Use a bind variable to parameterize the filter: `String q = 'SELECT Id FROM Order__c WHERE Status__c = :status'; List<Order__c> results = Database.query(q);`. Apex bind variables in dynamic SOQL are never concatenated into the query string — the platform substitutes them safely, preventing injection. Where bind variables cannot be used (e.g., dynamic field names in the SELECT clause), sanitize with `String.escapeSingleQuotes()` before concatenation. Also add `WITH USER_MODE` to enforce FLS/sharing: `'SELECT Id FROM Order__c WHERE Status__c = :status WITH USER_MODE'`.
-
-> **Tempting-but-wrong:** Validating the `status` value against an allowlist in Apex before concatenating it. Allowlist validation is a useful defense-in-depth measure but should never replace parameterization — an allowlist can be bypassed if the list is incorrect, or if a future code change adds another concatenated field without updating the allowlist. The platform's bind variable mechanism is the correct primary defense.
-
-> **Verify:** Write a test that passes a value like `' OR '1'='1` as the status parameter and assert it throws an exception or returns 0 rows (not all rows). With bind variables, the value is treated as a literal string, so the injected SQL logic is inert.
-
----
-
-## Study resources & relevance
-
-Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path. For nonprofit/NPSP applications of these rules, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+- [references/study-resources.md](references/study-resources.md) — credential logistics, study path, official links, superbadge requirements.
+- [references/recursion-control.md](references/recursion-control.md) — static Boolean guard patterns, context-scoped guards, package framework interaction.
+- [references/invocable-apex.md](references/invocable-apex.md) — `@InvocableMethod` signature rules, callout paths, bulkification, testing patterns.
+- [references/cdc.md](references/cdc.md) — Change Data Capture: enabling, payload structure, rollback behavior, Apex testing.
+- [references/scenarios.md](references/scenarios.md) — additional decision scenarios (platform event rollback, Flow/trigger recursion, dynamic SOQL injection).
 
 ---
 

@@ -5,24 +5,21 @@ metadata:
   credential: Salesforce Certified Technical Architect
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Certified Technical Architect (CTA) — Skills Reference
 
-> This file is an **operational playbook**, not an exam outline. Each section states
-> the actual rule, the concrete numbers, the decision criteria, and the anti-patterns
-> to catch in review. When you make an architecture or implementation decision,
-> apply these rules and use them to catch your own mistakes. Verify assumptions
-> against the live org with describe/SOQL tooling before writing a mapper or trusting
-> a UI tool's "success."
-
 ## Overview
 
-The Salesforce Certified Technical Architect (CTA) is the pinnacle credential in the Salesforce ecosystem, held by fewer than 600 professionals globally. It validates the ability to design and implement secure, high-performance, integrated solutions on the Salesforce Lightning Platform at enterprise scale — and to defend those decisions under challenge before a panel of senior peers. Unlike every other Salesforce certification, the CTA is not a multiple-choice exam; it is a live architectural defense before three to four sitting CTAs who probe trade-offs, attack weak decisions, and score independently across seven domains.
+The Salesforce Certified Technical Architect (CTA) is the pinnacle credential in the Salesforce ecosystem. It validates the ability to design and implement secure, high-performance, integrated solutions on the Salesforce Lightning Platform at enterprise scale — and to defend those decisions under challenge before a panel of senior peers. Unlike every other Salesforce certification, the CTA is not a multiple-choice exam; it is a live architectural defense before three to four sitting CTAs who probe trade-offs, attack weak decisions, and score independently across seven domains.
 
-The credential targets senior Salesforce architects with 5+ years of implementation experience, 3+ years in an architect role, and 2+ years leading Lightning Platform engagements. Earning it requires first completing the full Application Architect and System Architect credential stacks (eight underlying certifications), then passing a two-stage review board. Exam fees alone total $6,000; all-in cost including coaching and workshops commonly reaches $8,000–$20,000. Preparation typically spans 12–24 months after prerequisites are met.
+**This file is an operational playbook, not an exam outline.** Each section states the actual rule, the concrete numbers, the decision criteria, and the anti-patterns to catch in review. When you make an architecture or implementation decision, apply these rules and use them to catch your own mistakes. Verify assumptions against the live org with describe/SOQL tooling before writing a mapper or trusting a UI tool's "success."
 
-The value of CTA-domain thinking is operational, not just the badge: it is exactly the discipline that keeps an integration pipeline correct, secure, and within governor limits. The rules below are written to be applied at decision time.
+> **Load this skill when…** designing cross-cloud or multi-org architecture; reviewing integration patterns (API choice, auth flow, idempotency); evaluating org strategy (single vs. multi-org); reviewing security models at the architecture level (SSO/OAuth, identity federation, FLS design across systems).
+> **Not this skill:** single-cloud configuration (cases, flows, console) → see the cloud-consultant skills; Apex/LWC coding → see `salesforce-platform-developer-1` / `salesforce-platform-developer-2`.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -49,16 +46,13 @@ Credential logistics and study path: see [references/study-resources.md](referen
 | Callouts | 100 | 100 |
 | Callout timeout (total) | 120 s | 120 s |
 
-A REST/Bulk integration that upserts from an external system is bound by **API limits**, not Apex limits — but any **trigger/Flow Apex** that fires on a record change IS bound by the table above. When approval automation creates a parent record plus several child/relationship records in one transaction, that is multiple DML targets in one transaction; bulk-safe design matters even at low volume, because backfills re-toggle many records at once.
+A REST/Bulk integration that upserts from an external system is bound by **API limits**, not Apex limits — but any **trigger/Flow Apex** that fires on a record change IS bound by the table above. When approval automation creates a parent record plus several child/relationship records in one transaction, that is multiple DML targets; bulk-safe design matters even at low volume, because backfills re-toggle many records at once.
 
-**Document management: files go to object storage, references go to Salesforce.** A sound rule for sensitive-document systems is to keep file bytes in external object storage (e.g. S3 with customer-managed encryption) and store only the key/reference in Salesforce — never file contents in Salesforce or in a NoSQL cache. When you DO surface a document inside Salesforce, the correct path is `ContentVersion` (the file bytes) → `ContentDocumentLink` (junction to the record). One `ContentDocument` can link to many records via multiple `ContentDocumentLink` rows — this is exactly how a late document upload re-links to both an application record and the related Contact.
+**Document management: files go to object storage, references go to Salesforce.** Keep file bytes in external object storage (e.g. S3 with customer-managed encryption) and store only the key/reference in Salesforce. When you DO surface a document inside Salesforce, use `ContentVersion` → `ContentDocumentLink` (junction to the record). One `ContentDocument` can link to many records via multiple `ContentDocumentLink` rows.
 
-**Anti-patterns / red flags:**
-- Proposing a second org "for the portal" or "for testing" — the sandbox tier covers that.
-- Storing file blobs as base64 in a long text field or in a NoSQL cache.
-- Designing approval automation that loops record-by-record instead of operating on the trigger's collection.
+**Red flags:** second org "for the portal" (sandbox covers it); file blobs as base64 in a long-text field; approval automation that loops record-by-record.
 
-**Verify:** enumerate the custom-object inventory before assuming a custom object exists; describe the object to confirm field count and types before writing a mapper.
+**Verify:** enumerate the custom-object inventory before assuming an object exists; describe the object to confirm field count and types before writing a mapper.
 
 ---
 
@@ -70,89 +64,70 @@ A REST/Bulk integration that upserts from an external system is bound by **API l
 
 **Use Permission Sets / Permission Set Groups, not Profiles, for grants.** Profiles are legacy. New access goes in a permission set so it is composable and removable without touching a user's base profile.
 
-**JWT Bearer flow is the right pattern for a headless server → Salesforce integration.** It is server-to-server with no interactive login and no refresh-token storage. The private RSA key should live in a secrets store (e.g. SSM SecureString), never in env vars at rest, and be rotated annually.
+**JWT Bearer for headless server → SF integration.** Server-to-server, no interactive login, no refresh-token storage. Private RSA key in a secrets store (e.g. SSM SecureString), never in env vars, rotated annually.
 
 OAuth flow decision table:
 
 | Scenario | Flow |
 |---|---|
-| Server-to-server, no user (headless sweep/sync job) | **JWT Bearer** |
-| Web app with backend that can keep a secret | Web Server (auth code) + PKCE |
+| Server-to-server, no user | **JWT Bearer** |
+| Web app with backend secret | Web Server (auth code) + PKCE |
 | SPA / mobile, no secret | Auth code + PKCE (never implicit/User-Agent) |
 | Machine client with its own SF identity | Client Credentials |
 
-**External Client App (ECA) permission assignment lives on the ECA, not the permission set.** In modern org configs, Connected App *creation* can be blocked (Salesforce returns *"You can't create a connected app… contact Customer Support"*), pushing you to an **External Client App**. The classic Permission Set "Assigned Connected Apps" page does NOT authorize ECA usage. The working path is: **ECA detail → Policies tab → Edit → App Policies → Select Permission Sets.** Browser-AI tools will edit the wrong page and report success — verify via API before trusting it. Note also that an ECA's Consumer Key is UI-only (behind email verification) and not exposed via any API.
+**External Client App (ECA) permission assignment lives on the ECA, not the permission set.** Connected App *creation* can be blocked in modern orgs, pushing you to an ECA. The classic "Assigned Connected Apps" section on a permset page does NOT govern ECAs. Working path: **ECA detail → Policies tab → Edit → App Policies → Select Permission Sets.** Browser-AI tools edit the wrong page and report success — verify via `SetupEntityAccess` query before trusting it. An ECA's Consumer Key is UI-only (behind email verification) and not exposed via any API.
 
-**No PII or sensitive data in logs. Ever.** Log record IDs and identity subject IDs only — never names, addresses, DOB, medical/financial fields, or file contents. A log line that interpolates a Contact field is a red flag to reject in review.
+**No PII or sensitive data in logs. Ever.** Log record IDs and identity subject IDs only.
 
-**Anti-patterns / red flags:**
-- Assuming object access implies field access (the #1 FLS scar).
-- Adding `<fieldPermissions>` for a required field (deploy will fail).
-- Implicit/User-Agent OAuth flow for any new client.
-- Trusting an ECA assignment because a UI tool said "success" without API verification.
-- Any new field that writes to Contact but is missing from a FLS permset.
+**Red flags:** assuming object access implies field access; `<fieldPermissions>` on a required field (deploy fails); implicit/User-Agent OAuth flow; trusting a UI tool's "success" on ECA assignment; new Contact-writing field missing from FLS permset.
 
-**Verify:** after deploying a field, SOQL-select it — an *"Invalid field"* error means FLS is missing, not that the field failed to create. Confirm a permset assignment landed by querying `PermissionSetAssignment` / `SetupEntityAccess` rather than reading a UI page.
+**Verify:** after deploying a field, SOQL-select it — *"Invalid field"* = FLS missing, not deploy failure. Confirm permset assignment via `PermissionSetAssignment` / `SetupEntityAccess`, not the UI.
 
 ---
 
 ## Data — operational rules
 
-**A single object + a `Type__c` discriminator can beat one-object-per-variant.** Using one object with a type picklist (e.g. application variants) rather than several near-identical objects keeps the Apex mapper, IaC, and schema-sync simple. The trade-off is a wide object; pair with Record Types for per-type page layouts when needed. Choose deliberately and record the decision so it isn't relitigated.
+**Single object + `Type__c` discriminator over one-object-per-variant** when variants are structurally similar — keeps mapper, IaC, and schema-sync simple. Trade-off: wide object. Pair with Record Types for per-type page layouts.
 
-**Discrete columns over JSON when staff need to report.** Make type-specific fields real columns, not a JSON blob, whenever the stakeholder requirement is reportability ("we need to run reports on it"). Use JSON only for genuinely free-form, never-reported nested data (e.g. a companions/contacts array that automation then extracts into discrete fields on approval).
+**Discrete columns over JSON when staff need to report.** JSON only for genuinely free-form, never-reported nested data.
 
-**String field max-lengths must come from a generated schema, never hand-picked.** Any input-validation (e.g. Zod) string field that ultimately writes to a Salesforce field on approval should derive its `max(...)` from a generated length constant (and picklist enums from a generated picklist constant), produced by a sync script that reads the org's metadata. **Never hand-edit the generated files.** When SF metadata changes, regenerate and commit. Apex truncation (a `fit()`-style helper) is a last-line fallback for legacy/direct-API records, NOT a substitute for validating at the form/service boundary — silent truncation is data loss.
+**String field max-lengths from a generated schema, never hand-picked.** Derive `max(...)` from a sync script reading the org's metadata. Never hand-edit the generated files. Apex truncation is a last-line fallback for legacy/direct-API records, NOT a substitute for boundary validation.
 
-**Lookup `relationshipName` must be unique per parent object.** Two lookups to the same parent object cannot share a `relationshipName` (deploy fails: *"Duplicate relationship name"*). Use role-specific suffixes. SOQL parent traversal (`Parent__r.Name`) keys on the **field name**, not `relationshipName`, so renaming the relationship is safe.
+**Lookup `relationshipName` must be unique per parent object.** Two lookups to the same parent can't share a `relationshipName` (deploy fails: *"Duplicate relationship name"*). Use role-specific suffixes. SOQL traversal keys on field name, not relationshipName, so renaming is safe.
 
-**Selective SOQL at volume.** Filter on indexed fields (Id, Name, external IDs, lookups, audit fields, custom-indexed). A non-selective query over a Large Data Volume object hits the *"non-selective query against large object"* error at ~200k+ rows. Keep the idempotency external ID indexed and filter on it.
-
-**Master-detail vs lookup decision:**
+**Selective SOQL at volume.** Filter on indexed fields. A non-selective query over an LDV object hits the *"non-selective query against large object"* error at ~200k+ rows.
 
 | Need | Choice |
 |---|---|
-| Roll-up summaries, cascade delete, child can't exist alone | Master-detail |
-| Independent lifecycle, optional parent, cross-object reparenting | Lookup |
-| Long-lived person record + immutable audit record referencing it | Lookup |
+| Roll-up summaries, cascade delete, child must have parent | Master-detail |
+| Independent lifecycle, optional parent, reparenting | Lookup |
 
-**Anti-patterns / red flags:**
-- Hand-editing a generated schema file (it's generated).
-- A Zod `max()` literal number that doesn't trace to the generated length constant.
-- Two lookups to the same object sharing a `relationshipName`.
-- Relying on Apex truncation as the primary length guard instead of boundary validation.
+**Red flags:** hand-editing a generated schema file; a `max()` literal not tracing to a generated constant; two lookups to the same object sharing a `relationshipName`; Apex truncation as the primary length guard.
 
-**Verify:** describe `Contact` (or the target object) to read current field length / picklist values before changing a form field; if they differ from the generated file, the file is stale — regenerate. SOQL-spot-check that external-ID upsert idempotency held (no duplicate records for one logical submission).
+**Verify:** describe the target object to read current field length / picklist values before changing a form field; if they differ from the generated file, regenerate. SOQL-spot-check external-ID upsert idempotency (no duplicates on retry).
 
 ---
 
 ## Solution Architecture — operational rules
 
-**Declarative-first, escalate to code only when declarative genuinely can't do it.** Default to configuration; reach for Apex when you need bulk-safe complex logic, callouts with rollback, or behavior that Flow can't express cleanly. Be ready to answer "why not Flow?" and "why not Apex?" for every choice.
-
-Automation tool selection:
+**Declarative-first, escalate to code only when declarative genuinely can't do it.** Default to configuration; reach for Apex when you need bulk-safe complex logic, callouts with rollback, or behavior Flow can't express cleanly.
 
 | Need | Use | Avoid |
 |---|---|---|
-| Field-level data-entry constraint | Validation Rule | a trigger |
-| Record-change automation, declarative | Record-Triggered Flow | Workflow Rules / Process Builder (both deprecated) |
-| Screen-guided user input | Screen Flow | custom LWC unless UX demands it |
-| Scheduled batch logic | Schedule-Triggered Flow or Batch Apex | future methods in a loop |
-| Complex multi-object logic, bulk DML, callouts-with-rollback | Apex (trigger handler / Queueable) | overstuffed giant Flow |
+| Field data-entry constraint | Validation Rule | trigger |
+| Record-change automation | Record-Triggered Flow | Workflow Rules / Process Builder (deprecated) |
+| Screen-guided input | Screen Flow | custom LWC unless UX demands it |
+| Scheduled batch | Schedule-Triggered Flow or Batch Apex | future methods in a loop |
+| Complex multi-object, callouts | Apex handler / Queueable | overstuffed Flow |
 | Approval routing | Approval Process / Flow | hand-rolled status Apex |
 
-**One trigger per object, logic in a handler class.** Triggers must be bulk-safe: no SOQL/DML inside a `for` loop. Query once into a `Map<Id, SObject>`, iterate in memory, collect into a `List`, DML once. Recursion-guard with a static boolean. Approval handlers that copy fields to a Contact should be **additive** — role flags are OR-merged, never overwritten to `false` on re-approval.
+**One trigger per object, logic in a handler class.** Bulk-safe: no SOQL/DML inside a `for` loop. Query once into a `Map`, iterate in memory, collect into a `List`, DML once. Recursion-guard with a static boolean. Approval handlers copying fields to a Contact must be **additive** — role flags OR-merged, never overwritten to `false` on re-approval.
 
-**Design around the managed package, don't fight it.** Managed packages ship their own triggers/automation in namespaced Apex you cannot edit; design your automation to coexist. A common scar: a managed workflow rule silently overwrites a standard field on every insert (e.g. NPSP copies `Phone → MobilePhone` on every Contact insert). The fix is a config change — deactivate the managed workflow rule in Setup — not code. Always suspect managed-package automation when a field changes value with no code of yours touching it. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP-specific automation details.
+**Design around the managed package, don't fight it.** Managed packages ship their own triggers/automation in namespaced Apex you cannot edit — design your automation to coexist. When a field changes value with no code of yours touching it, suspect managed-package automation first. The fix is usually deactivating the offending rule in Setup, not writing counter-code. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP specifics.
 
-**Quick Action cache-bust trick.** Adding fields to an existing Quick Action via SFDX updates the metadata, but the runtime QA cache (driving Lightning contextual tabs via `console:relatedRecord`) often does NOT invalidate — even after logout/login. The new fields are silently absent with no error. Fix: edit any non-field-list metadata on the QA (`<description>`, `<label>`, `<layoutSectionStyle>`) and redeploy; SF treats it as a structural change and flushes the cache.
+**Quick Action cache-bust trick.** Adding fields to an existing Quick Action via SFDX updates the metadata, but the runtime QA cache does NOT invalidate — even after logout/login. New fields are silently absent. Fix: edit any non-field-list metadata on the QA (`<description>`, `<label>`, `<layoutSectionStyle>`) and redeploy; SF treats it as a structural change and flushes the cache.
 
-**Anti-patterns / red flags:**
-- SOQL or DML inside a `for` loop body (the cardinal bulkification sin).
-- More than one trigger on the same object.
-- A new deprecated Workflow Rule or Process Builder.
-- Overwriting a Contact role flag to `false` on a re-approval (must be additive).
-- Adding QA fields and not seeing them render — then concluding the deploy failed, when it's the QA cache.
+**Red flags:** SOQL or DML inside a `for` loop; more than one trigger on the same object; new Workflow Rule or Process Builder; overwriting a Contact role flag to `false` on re-approval (must be additive); adding QA fields and not seeing them render (cache, not deploy failure).
 
 **Verify:** describe the object to confirm a new field exists and is the right type after deploy; query a real Contact to confirm approval automation set role flags and mirrored fields correctly; run a report / SOQL to confirm staff-facing reportability of discrete columns.
 
@@ -170,20 +145,15 @@ Automation tool selection:
 | External system pushes into SF | Remote Call-In | inbound REST, Bulk API |
 | Near-real-time SF→external on change | Event-driven, no polling | Change Data Capture / Platform Events |
 
-**Idempotency via external-ID upsert is mandatory.** Upsert keyed on a stable external ID (e.g. a submission ID) so a retried job does not create duplicates. Any new write path must reuse that key — a late re-link by the same external ID needs no new SF write logic.
+**Idempotency via external-ID upsert is mandatory.** Upsert keyed on a stable external ID so a retried job does not create duplicates. Any new write path must reuse that key — a late re-link by the same external ID needs no new SF write logic.
 
-**Resilience: on SF write failure, persist and alert — do not silently drop.** A sound pattern: the caller catches the SF error, writes the full payload to durable storage (e.g. object storage), and alerts staff; a converter turns it into an import-ready row for manual recovery. Consider 3-try exponential backoff before falling to manual. Never let a write succeed to the user but vanish before reaching Salesforce with no trace.
+**Resilience: on SF write failure, persist and alert — do not silently drop.** Catch the SF error, write the full payload to durable storage, alert staff, enable manual recovery. 3-try exponential backoff before falling to manual. Never let a user-facing success vanish before reaching Salesforce.
 
-**API-limit awareness for the integration user.** Bulk API 2.0 is the right tool for any multi-thousand-row load (imports, backfills); it batches server-side and respects daily API limits far better than row-by-row REST. The daily API request allowance scales with licenses — design imports to use Bulk, not thousands of individual REST upserts.
+**Bulk API 2.0 for multi-thousand-row loads.** Daily API allowance scales with licenses — design imports to use Bulk, not thousands of individual REST upserts.
 
-**Authentication for outbound SF→external callouts: Named Credentials + External Credentials.** Never hard-code endpoints or secrets in Apex. (Inbound, headless integrations use JWT Bearer; outbound-from-SF uses Named Credentials.)
+**Outbound SF→external callouts: Named Credentials + External Credentials.** Never hard-code endpoints or secrets in Apex.
 
-**Anti-patterns / red flags:**
-- Row-by-row REST upserts where Bulk API 2.0 belongs.
-- A write path that doesn't key on the external ID (breaks idempotency, risks duplicates).
-- A submit flow that can lose data on SF failure with no durable fallback + staff alert.
-- Polling Salesforce on a timer where CDC/Platform Events would deliver on change.
-- Endpoints or credentials hard-coded in Apex instead of Named Credentials.
+**Red flags:** row-by-row REST where Bulk API belongs; write path without external-ID key (breaks idempotency); SF write failure with no durable fallback; polling on a timer where CDC/Platform Events would deliver on change; hard-coded endpoints in Apex.
 
 **Verify:** after a test write, SOQL-confirm exactly one record landed for the external ID; re-run the job and confirm the count stays at one (idempotency proof). A fast JWT smoke chain (auth → describe → upsert idempotency → cleanup) should run after any metadata or cert change.
 
@@ -191,28 +161,23 @@ Automation tool selection:
 
 ## Development Lifecycle & Deployment — operational rules
 
-**SFDX is source of truth; deploy from the SFDX project root.** All `sf project …` commands must run from the SFDX project root or they fail with *"InvalidProjectWorkspaceError"*. The metadata under `force-app/main/default/` is canonical; the org is downstream of it.
+**SFDX is source of truth; deploy from the SFDX project root.** All `sf project …` commands must run from the SFDX project root or they fail with *"InvalidProjectWorkspaceError"*.
 
 **Apex requires ≥75% code coverage org-wide to deploy to production** (and every trigger must have at least some coverage). Test with `Test.startTest()`/`Test.stopTest()` to get a fresh set of governor limits and force async to run; use `@TestSetup` for shared fixtures; mock callouts with `HttpCalloutMock`. Tests must assert behavior, not just execute lines.
 
 **Treat production Salesforce as off-limits for incidental deploys; do metadata work in a sandbox.** Production cutover is a separate, planned, documented event, not an incidental deploy.
 
-**Run a smoke test after any metadata, cert, or sandbox change.** A fast JWT/metadata smoke script catches the FLS, required-field, relationshipName, and JWT gotchas at the layer they bite, in seconds. Keep a known-good end-to-end baseline (e.g. an E2E harness count) and treat regressions as blockers.
+**Run a smoke test after any metadata, cert, or sandbox change.** A fast JWT/metadata smoke script catches the FLS, required-field, relationshipName, and JWT gotchas at the layer they bite, in seconds. Keep a known-good end-to-end baseline and treat regressions as blockers.
 
-**Sandbox-bringup gotchas to pre-empt:** some org policies require a Public Group (with the admin as member) before sandbox creation. Managed packages (e.g. NPSP) must be installed before metadata deploy in sandboxes that depend on them. Partial-copy sandboxes carrying managed-package data can fire package automation unexpectedly on load — plan for this in any managed-package org.
+**Sandbox-bringup gotchas to pre-empt:** some org policies require a Public Group (with the admin as member) before sandbox creation. Managed packages (e.g. NPSP) must be installed before metadata deploy in sandboxes that depend on them. Partial-copy sandboxes carrying managed-package data can fire package automation unexpectedly on load.
 
 **Destructive changes need a plan.** Field deletion, permset removal, and JSON-to-discrete migrations can drop data. Sequence: backfill → verify → destructive deploy → re-verify. Never destructive-deploy before the data it would orphan has been migrated.
 
-**Commit-and-push discipline.** After each completed logical change: verify lint + build pass, then commit with a Conventional Commit message and push. Never commit broken code. Branch first if on the default branch.
+**Commit-and-push discipline.** After each completed logical change: lint + build pass, then commit (Conventional Commit) and push. Never commit broken code. Branch first if on the default branch.
 
-**Anti-patterns / red flags:**
-- Running `sf project deploy` from the repo root instead of the SFDX root.
-- An incidental change against production Salesforce.
-- A destructive metadata deploy with no backfill/verification step ahead of it.
-- Apex shipped with line-touching tests that assert nothing.
-- Skipping the smoke test after a cert rotation or metadata change.
+**Red flags:** `sf project deploy` from repo root (not SFDX root); incidental change against production; destructive deploy without prior backfill; Apex tests that only execute lines without assertions; skipping smoke test after cert rotation.
 
-**Verify:** describe/SOQL post-deploy to confirm metadata landed AND is queryable (catches the FLS-missing case the deploy itself won't surface). Confirm idempotency and role-flag correctness before considering a change done.
+**Verify:** describe/SOQL post-deploy to confirm metadata landed AND is queryable (catches missing FLS that the deploy itself won't surface). Confirm idempotency and role-flag correctness before considering a change done.
 
 ---
 
@@ -229,15 +194,11 @@ Automation tool selection:
 | SF → external app (SF as IdP) | Outbound SAML | Reversed direction — SF issues; external app consumes |
 | Legacy / no external IdP | Salesforce identity only | No delegation needed; avoid unless truly standalone |
 
-**Delegated Authentication pushes the password check to an external web service you own.** It replaces Salesforce's own check; the credential never lives in Salesforce at all. Use only when a corporate directory must remain the sole credential store and SAML is not feasible.
+**Delegated Authentication** replaces Salesforce's own password check with an external web service you own. Use only when a corporate directory must remain the sole credential store and SAML is not feasible. Endpoint must have an IP allowlist.
 
-**Experience Cloud sharing is Experience-only.** Guest user OWD controls what an unauthenticated visitor can read/write; authenticated community users follow standard sharing plus sharing sets or share groups. Never grant a Guest User write access to objects beyond what the experience explicitly requires — that is an audit finding.
+**Experience Cloud:** Guest user OWD controls unauthenticated access; authenticated users follow standard sharing + sharing sets / share groups. Never grant a Guest User write access beyond what the experience explicitly requires — audit finding.
 
-**Anti-patterns / red flags:**
-- Mixing up SF-as-SP (inbound SSO) and SF-as-IdP (outbound) directions.
-- Relying on Role Hierarchy for lateral data access (it's upward only).
-- Guest User with edit/delete on sensitive objects.
-- Delegated Auth endpoint that can be called without IP allowlist.
+**Red flags:** confusing SF-as-SP (inbound) with SF-as-IdP (outbound); relying on Role Hierarchy for lateral access (upward only); Guest User with edit/delete on sensitive objects; Delegated Auth endpoint without IP allowlist.
 
 ---
 
@@ -247,9 +208,9 @@ Automation tool selection:
 
 **MuleSoft is a managed middleware layer, not glue code.** Use MuleSoft (Anypoint) when you need an enterprise API mesh: multi-protocol transformation, centralized auth enforcement, reusable APIs across systems. Avoid when the integration is a single point-to-point SF→system sync — Named Credentials + Queueable or a simple Lambda covers that with far less overhead.
 
-**Data Cloud (formerly CDP) owns the Unified Profile.** When the requirement is a 360 customer profile across Marketing Cloud, Commerce Cloud, and CRM, Data Cloud is the architectural answer, not custom ETL. Data Streams ingest, Identity Resolution merges, Calculated Insights publish back to CRM. For an AI use-case, Agentforce Agents consume Data Cloud Unified Profiles via grounding — not raw SOQL across systems.
+**Data Cloud (formerly CDP) owns the Unified Profile.** When the requirement is a 360 customer profile across Marketing Cloud, Commerce Cloud, and CRM, Data Cloud is the architectural answer, not custom ETL. Data Streams ingest, Identity Resolution merges, Calculated Insights publish back to CRM. For an AI use-case, Agentforce Agents consume Data Cloud Unified Profiles via grounding.
 
-**Marketing Cloud integration pattern:** Marketing Cloud Connect links a single Business Unit to a single SF org. Synchronized Data Extensions mirror standard CRM objects (Contact, Lead, Campaign). For custom objects, use Automation Studio + API or Data Cloud as the bridge. Never assume Marketing Cloud SQL queries run in real-time against CRM data — they run on synchronized copies.
+**Marketing Cloud integration pattern:** Marketing Cloud Connect links a single Business Unit to a single SF org. Synchronized Data Extensions mirror standard CRM objects. For custom objects, use Automation Studio + API or Data Cloud as the bridge. Never assume Marketing Cloud SQL queries run in real-time against CRM data — they run on synchronized copies.
 
 **Anti-patterns / red flags:**
 - Proposing MuleSoft for a simple one-to-one SF↔system sync.
@@ -257,129 +218,86 @@ Automation tool selection:
 - Assuming Marketing Cloud sees live CRM data — it sees synchronized copies.
 - A Well-Architected presentation that ignores the Easy or Adaptable axes.
 
----
-
-## Communication — operational rules
-
-**Frame every decision as "we chose X over Y because Z, accepting risk R."** Don't cite "Salesforce best practice" as the reason — name the trade-off. Example: "Single application object with a type discriminator over several objects, because it keeps the Apex mapper and schema-sync simple; accepting a wide object."
-
-**Translate to the audience.** For a non-technical executive or board, express decisions in cost, risk, and time-saved terms — not governor limits. Keep the FLS/limits depth for technical readers. The same decision needs two framings.
-
-**Surface blockers early with a proposed mitigation, never just "blocked."** Licensing gaps, approaching limits, an ECA Consumer Key that's UI-only and behind email verification (no scriptable path) — flag these the moment they appear, with the workaround.
-
-**Record decisions so they aren't relitigated.** A "decisions worth not relitigating" log plus a session log is a lightweight ADR mechanism — when you settle a trade-off, write it down.
-
-**Anti-patterns / red flags:**
-- "Best practice" with no stated trade-off.
-- Same technical depth for the board and for engineers.
-- Reporting a blocker with no proposed path forward.
+Deep dive with worked examples on Well-Architected framing, communication patterns, and stakeholder-facing trade-off presentation: [references/communication-well-architected.md](references/communication-well-architected.md) — load when preparing architectural defense presentations or stakeholder communication plans.
 
 ---
 
-## Decision scenarios
+## Decision Scenarios
 
-Five original teaching scenarios covering the highest-value operational gotchas across CTA domains.
+Five original scenarios covering the highest-value operational gotchas across CTA domains. Scenarios 3–5 are in [references/scenarios.md](references/scenarios.md) — load them when working through trigger bulkification failures, ECA assignment gotchas, or multi-cloud Data Cloud decisions.
 
 ---
 
 **Scenario 1 — FLS invisible after deploy**
 
-**Situation:** A developer deploys a new custom field `Application__c.ReviewScore__c` via SFDX and confirms the deploy succeeded. A test SOQL query immediately returns `"INVALID_FIELD: No such column 'ReviewScore__c' on entity 'Application__c'"`. The field definitely exists in the org's Setup UI.
+**Situation:** A developer deploys `Application__c.ReviewScore__c` via SFDX. Deploy succeeds. SOQL immediately returns `"INVALID_FIELD: No such column 'ReviewScore__c' on entity 'Application__c'"`. The field exists in Setup UI.
 
-**Competent move:** Recognize this as the FLS gap, not a deployment failure. The field-meta.xml carries no FLS by default — the field exists but is visible to no profile/permset yet. Add the field to the relevant permission set's `<fieldPermissions>` (with both `<readable>true</readable>` and `<editable>true</editable>` for non-required fields), deploy the permset, then re-run the SOQL.
+**Competent move:** This is the FLS gap, not a deployment failure. `field-meta.xml` carries no FLS — the field exists but is visible to no one. Add it to the relevant permset's `<fieldPermissions>` (`<readable>true</readable>` + `<editable>true</editable>`), deploy the permset, re-run the SOQL.
 
-**Tempting-but-wrong:** Re-deploy the field or check the field's `required` flag. Neither helps. The deploy didn't fail; the field is present. The missing layer is FLS, which is a separate metadata artifact from the field itself.
+**Tempting-but-wrong:** Re-deploy the field, or check the `required` flag. Neither helps — the field is present; the missing layer is FLS.
 
-**Verify:** Run `SELECT ReviewScore__c FROM Application__c LIMIT 1` as the integration user. Error means FLS still missing. Success, even returning null, confirms FLS is granted. Query `SetupEntityAccess` to confirm the permset assignment landed.
+**Verify:** `SELECT ReviewScore__c FROM Application__c LIMIT 1` as the integration user — error = FLS still missing; null result = FLS granted. Query `SetupEntityAccess` to confirm the permset assignment landed.
 
 ---
 
 **Scenario 2 — OWD + Role Hierarchy misread as lateral sharing**
 
-**Situation:** A regional manager needs read access to all Opportunities owned by members of her peer region's role — a lateral relationship, not a reporting one. The architect proposes: "OWD = Private; her role sits at the same tier as the peer role. The Role Hierarchy will propagate access upward through the org, so her manager will also see both regions. That satisfies the requirement."
+**Situation:** A regional manager needs read access to Opportunities owned by a *peer* region's role — lateral, not reporting. The architect proposes: "OWD = Private; roles at the same tier; Role Hierarchy propagates access, so her manager sees both regions. Requirement satisfied."
 
-**Competent move:** Role Hierarchy propagates access upward through the hierarchy (parent roles see what child roles own), not sideways. The regional manager's role does not inherit records owned by a peer role. The correct mechanism is a **Sharing Rule** of type "owned by members of a Role" pointing at the source role, granting read to the target role. This is lateral access — precisely what Sharing Rules exist for.
+**Competent move:** Role Hierarchy propagates access **upward** (parent sees child's records), not sideways. Peer roles don't inherit each other. The correct mechanism is a **Sharing Rule** ("owned by members of Role X, share to Role Y"). The manager above both regions gains access via hierarchy automatically; peers need an explicit sharing rule.
 
-**Tempting-but-wrong:** Treating Role Hierarchy as a general "nearby roles can see each other" mechanism. It is strictly upward. A manager who reports above both regions will gain access via hierarchy, but peer roles will not — designing the solution on this assumption silently breaks the requirement.
+**Tempting-but-wrong:** Treating Role Hierarchy as "nearby roles share access" — strictly upward. Designing on this assumption silently breaks lateral access requirements.
 
-**Verify:** After configuring the Sharing Rule, log in as a user in the target role and SOQL-query an Opportunity owned by a user in the source role. Confirm visibility. Confirm the reverse direction does not automatically apply unless a reciprocal rule exists.
-
----
-
-**Scenario 3 — Trigger bulkification failure on backfill**
-
-**Situation:** An `OpportunityLineItem` after-insert trigger runs a SOQL query and a DML update inside a `for (OpportunityLineItem item : Trigger.new)` loop to sync a pricing field to the parent Opportunity. In unit tests (1–2 records) everything passes. A data backfill loads 5,000 records at once and the org hits `"System.LimitException: Too many SOQL queries: 101"` and rolls back.
-
-**Competent move:** Rewrite the trigger to be bulk-safe: collect all parent Opportunity IDs from `Trigger.new` into a `Set<Id>`, query all parents in a single SOQL into a `Map<Id, Opportunity>`, compute updates in memory, then perform a single DML on the collected list. Move logic into a handler class. Add a static boolean recursion guard if the trigger could fire on the Opportunity update it makes.
-
-**Tempting-but-wrong:** Increasing the batch size to "something smaller" or switching to a future method. A future method moves the problem to async but does not fix the per-iteration SOQL — and a future called inside a trigger iterating 5,000 records will hit the future call limit (50 per transaction). The root fix is bulkification, not async deferral.
-
-**Verify:** After refactoring, write a test that inserts 200 `OpportunityLineItem` records in a single `insert` call and assert that `Limits.getQueries()` remains well below 100 after the trigger fires. Run the test with `Test.startTest()`/`Test.stopTest()` to isolate the trigger's limit consumption.
-
----
-
-**Scenario 4 — ECA assignment confirmed by UI, integration fails**
-
-**Situation:** A developer configures a JWT Bearer integration using an External Client App. They grant access by going to the Permission Set detail page, clicking "Assigned Connected Apps," selecting the ECA, and clicking Save. The UI confirms the assignment. The integration service calls the token endpoint and receives `"invalid_client_id"`.
-
-**Competent move:** The classic ECA trap. The "Assigned Connected Apps" section on a Permission Set page does NOT govern External Client Apps — it is for legacy Connected Apps only. For an ECA, the assignment path is: **ECA detail page → Policies tab → Edit → App Policies → Select Permission Sets → add the permset → Save**. Go directly there and make the assignment; do not rely on the permset page.
-
-**Tempting-but-wrong:** Re-generating the Consumer Key or re-uploading the certificate. The credential itself is fine — the error is an authorization gap, not a credential mismatch. Also wrong: trusting the UI confirmation on the permset page; the UI accepted the action but it had no effect for an ECA.
-
-**Verify:** After correcting the assignment on the ECA Policies tab, run the JWT token flow end-to-end: sign the assertion, POST to the token endpoint, confirm a `200` with an `access_token`. Then SOQL-query `SetupEntityAccess` where `SetupEntityType = 'ExternalClientApplication'` to confirm the record exists, rather than reading any UI page.
-
----
-
-**Scenario 5 — Multi-cloud architecture: Data Cloud vs. custom ETL**
-
-**Situation:** A retail enterprise has customer purchase data in Commerce Cloud, engagement data in Marketing Cloud, and service cases in Sales/Service Cloud. A VP asks for a "360-degree customer view" with AI-driven next-best-action surfaced to service reps. The architect proposes building a nightly ETL to copy all three data sources into a custom `UnifiedCustomer__c` object in the CRM and run a batch Apex job to score customers.
-
-**Competent move:** This is a canonical Data Cloud use case, not a custom ETL problem. Data Cloud's Data Streams ingest from all three clouds natively; Identity Resolution creates a Unified Individual profile by matching on email/phone/cookie; Calculated Insights derive the scoring metric; and Agentforce Agents or Einstein Next Best Action consume the Unified Profile via grounding — zero custom ETL, no stale batch copies, no custom object to maintain. Propose Data Cloud as the architectural layer and explain why: out-of-box connectors, Identity Resolution replaces hand-rolled dedup logic, and it is the platform's intended 360-profile answer.
-
-**Tempting-but-wrong:** The custom ETL + batch Apex design is not wrong in isolation, but it ignores the platform capability that exists for this exact requirement. In a board session, proposing custom-built solutions where a Salesforce product directly covers the need — without even mentioning that product — is scored as an architectural gap. The temptation is to solve the technical problem; the correct instinct is to first ask "is there a platform answer?"
-
-**Verify:** Confirm Data Cloud licensing is included or procured before committing to this architecture — it is a separate SKU. Validate that the specific Commerce Cloud and Marketing Cloud connectors (Data Streams) cover the data sources in the scenario. Then prototype a Data Stream and Identity Resolution ruleset in a sandbox before presenting the design as final.
+**Verify:** After adding the Sharing Rule, SOQL as a user in the target role for an Opportunity owned by a user in the source role. Confirm the reverse direction does not automatically apply without a reciprocal rule.
 
 ---
 
 ## Operational Rules Quick Reference
 
-Read this first. Each is imperative and concrete.
-
-- **DO** treat governor limits as design inputs: 100 SOQL / 50k rows / 150 DML / 10k DML rows / 10s CPU per sync transaction.
-- **DON'T** put SOQL or DML inside a `for` loop — query into a Map, DML once. This is the #1 review red flag.
-- **DO** add `<fieldPermissions>` to a permset for every new non-required custom field — SFDX field-meta grants FLS to no one.
-- **DON'T** add `<fieldPermissions>` for a `<required>true</required>` field — the deploy will fail.
-- **DO** use Permission Sets / Permission Set Groups for all new access; Profiles are legacy.
-- **DON'T** assume object access implies field access — they are separate gates.
-- **DO** use JWT Bearer for a headless service→SF integration; key in a secrets store, rotated annually.
-- **DO** assign External Client App access on the ECA (Policies → App Policies → Select Permission Sets), not on the permset page.
-- **DON'T** trust a UI tool's "success" on an ECA assignment — verify via `PermissionSetAssignment` / `SetupEntityAccess`.
-- **DO** key every SF write on a stable external ID for idempotent upsert; verify exactly one record after a retried job.
-- **DON'T** do row-by-row REST for bulk loads — use Bulk API 2.0.
-- **DO** persist failed writes to durable storage + alert staff; never silently drop a SF write failure.
-- **DO** source string `max()` lengths from a generated length constant; regenerate via the schema-sync script.
-- **DON'T** hand-edit the generated schema file, and don't rely on Apex truncation as the primary length guard.
-- **DO** give each lookup to the same parent a unique `relationshipName` (role-suffixed).
-- **DO** keep one trigger per object with logic in a bulk-safe handler; make role-flag writes additive, never overwriting to false.
-- **DON'T** create new Workflow Rules or Process Builders — they're deprecated; use Record-Triggered Flow or Apex.
-- **DO** suspect managed-package automation when a field changes with no code of yours involved (e.g. NPSP `npe01`; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
-- **DO** bust the Quick Action cache by editing non-field metadata (`<description>`) and redeploying when new QA fields don't render.
-- **DO** run all `sf project` commands from the SFDX project root, never the repo root.
-- **DON'T** make incidental deploys to production Salesforce — sandbox only; cutover is a separate planned event.
-- **DON'T** destructive-deploy before backfilling and verifying the data it would orphan.
-- **DO** run a JWT/metadata smoke test after any metadata/cert/sandbox change; keep the E2E baseline green.
+- **DO** treat governor limits as design inputs: 100 SOQL / 50k rows / 150 DML / 10k DML rows / 10s CPU sync.
+- **DON'T** put SOQL or DML inside a `for` loop — query into a Map, DML once. #1 review red flag.
+- **DO** add `<fieldPermissions>` in a permset for every new non-required custom field — SFDX field-meta grants FLS to no one.
+- **DON'T** add `<fieldPermissions>` for a `<required>` field — deploy will fail.
+- **DON'T** assume object access implies field access — separate gates.
+- **DO** use Permission Sets / Groups for all new access; Profiles are legacy.
+- **DO** use JWT Bearer for headless service→SF; RSA key in secrets store, rotated annually.
+- **DO** assign ECA access on the ECA Policies tab (not the permset "Assigned Connected Apps" page).
+- **DON'T** trust a UI "success" on ECA assignment — verify via `SetupEntityAccess` query.
 - **DON'T** log PII or sensitive data — record IDs and identity subjects only.
-- **DO** verify metadata is *queryable* post-deploy (SOQL), not just that it "deployed" — that catches missing FLS.
+- **DO** key every SF write on a stable external ID for idempotent upsert; verify count stays at one after retry.
+- **DON'T** row-by-row REST for bulk loads — use Bulk API 2.0.
+- **DO** persist failed writes to durable storage + alert staff; never silently drop.
+- **DO** source string `max()` lengths from a generated constant; never hand-edit the generated schema file.
+- **DON'T** use Apex truncation as the primary length guard — validate at the boundary.
+- **DO** give each lookup to the same parent a unique `relationshipName` (role-suffixed).
+- **DO** one trigger per object, bulk-safe handler; role-flag writes additive, never overwrite to false.
+- **DON'T** create new Workflow Rules or Process Builders — deprecated; use Flow or Apex.
+- **DO** suspect managed-package automation when a field changes with no code of yours involved.
+- **DO** bust the QA cache by editing non-field metadata (`<description>`) and redeploying when QA fields don't render.
+- **DO** run `sf project` commands from the SFDX project root only.
+- **DON'T** make incidental deploys to production; sandbox only, cutover is a planned event.
+- **DON'T** destructive-deploy before backfilling and verifying the data it would orphan.
+- **DO** run a JWT/metadata smoke test after any metadata/cert/sandbox change.
+- **DO** verify metadata is *queryable* post-deploy (SOQL) — catches missing FLS the deploy won't surface.
+- **DO** score every design against Trusted / Easy / Adaptable; name any axis sacrificed.
+- **DON'T** propose MuleSoft for a simple one-to-one SF↔system sync.
+- **DON'T** assume Marketing Cloud sees live CRM data — synchronized copies only.
+- **DO** frame every architecture decision as "chose X over Y because Z, accepting risk R."
 
-> For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> For org-specific applications of these rules, see a per-org appendix in your own project, referenced from a CLAUDE.md.
 
 ---
 
-## Study resources & relevance
+## References
 
-Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+- [references/study-resources.md](references/study-resources.md) — credential logistics, prerequisites, and study path.
+- [references/scenarios.md](references/scenarios.md) — Decision Scenarios 3–5: trigger bulkification failure, ECA assignment gotcha, and multi-cloud Data Cloud vs. custom ETL.
+- [references/communication-well-architected.md](references/communication-well-architected.md) — stakeholder communication patterns, architectural defense framing, and extended Well-Architected trade-off examples.
+
+For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 
-*Independent educational content to upskill AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by Salesforce, Inc. or any certification body. "Salesforce," "Salesforce Certified Technical Architect," "CTA," "NPSP," "Agentforce," "MuleSoft," "Data Cloud," and all related trademarks and product names are the property of their respective owners and are used here solely for identification purposes. Content is provided as-is for guidance only — verify all rules, limits, fees, and procedures against official Salesforce documentation and your live org before acting. No certification outcome is implied or guaranteed. Governor limits, exam fees, and product capabilities are subject to change; check the official exam guide and release notes for current values.*
+## Disclaimer
+
+Independent educational content to upskill AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by Salesforce, Inc. or any certification body. "Salesforce," "Salesforce Certified Technical Architect," "CTA," "NPSP," "Agentforce," "MuleSoft," "Data Cloud," and all related trademarks and product names are the property of their respective owners and are used here solely for identification purposes. Content is provided as-is for guidance only — verify all rules, limits, fees, and procedures against official Salesforce documentation and your live org before acting. No certification outcome is implied or guaranteed. Governor limits, exam fees, and product capabilities are subject to change; check the official exam guide and release notes for current values.

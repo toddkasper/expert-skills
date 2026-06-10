@@ -6,7 +6,7 @@ metadata:
   domain: web
   type: competence-playbook
   status: active
-  last-updated: 2026-06-07
+  last-reviewed: 2026-06-09
 ---
 
 # React Native + Expo — Skills Reference
@@ -20,6 +20,9 @@ Key shifts from the web:
 - Two threads that must stay unblocked — the JS thread and the UI/main thread; dropped frames come from overloading either
 - New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory from Expo SDK 55+)
 - Ship cycle is different — JS-only changes can be pushed OTA via EAS Update; anything touching native code requires a new store binary
+
+> **Load this skill when…** building or reviewing a React Native or Expo mobile app; debugging dropped frames, list performance, or native module integration; working with EAS Build/Submit/Update or the New Architecture; handling iOS/Android platform differences or permissions.
+> **Not this skill:** core React hooks, state, and testing patterns → see `react`; this skill covers mobile deltas only.
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md). Load that file when looking up official docs or library links.
 

@@ -5,6 +5,8 @@ metadata:
   credential: OpenJS Node.js Application Developer (JSNAD) / Services Developer (JSNSD) — both retired September 30, 2025
   domain: web
   type: certification-playbook
+  status: operational
+  last-reviewed: 2026-06-09
   blueprint: JSNAD / JSNSD curriculum (retired Sep 2025 — used as competence map only)
 ---
 
@@ -13,6 +15,9 @@ metadata:
 ## Overview
 
 A strong Node.js engineer reasons about the runtime, not just the library. That means understanding how the event loop schedules work, how to move data through streams without blowing memory, how modules resolve at runtime vs at build time, and how to keep services secure against injection and header-based attacks. The retired OpenJS exams (JSNAD and JSNSD) are used here only as a public competence map — they defined what practitioners must know without being about the exam itself.
+
+> **Load this skill when…** writing or reviewing Node.js services, CLIs, or Lambda handlers; debugging event-loop blocking or stream backpressure issues; auditing HTTP security (injection, Helmet, JWT); reviewing module/packaging configuration (ESM, exports map, npm ci).
+> **Not this skill:** React UI concerns → see `react`; Next.js framework (App Router, Server Actions) → see `nextjs`; TypeScript type-system questions → see `typescript`; React Native/mobile runtime → see `react-native`.
 
 > **Deeper context:** Study resources, certification history, and learning paths live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path. Sibling skills: `typescript`, `react`, `nextjs`, `react-native`.
 

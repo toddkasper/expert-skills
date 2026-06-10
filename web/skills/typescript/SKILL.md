@@ -6,6 +6,7 @@ metadata:
   domain: web
   type: competence-playbook
   status: active
+  last-reviewed: 2026-06-09
   anchored-to: TypeScript Handbook + official release notes (typescriptlang.org)
 ---
 
@@ -23,6 +24,9 @@ release notes.
 inference, narrowing, generics, configuration, and declaration files. Framework usage (React JSX,
 Next.js server components, Node.js APIs) is deferred to the sibling skills (`react`, `nextjs`,
 `nodejs`).
+
+> **Load this skill when…** designing or reviewing type models (discriminated unions, generics, mapped types); configuring `tsconfig.json` (strictness, module resolution, project references); authoring or fixing `.d.ts` declaration files; migrating a JavaScript codebase to TypeScript.
+> **Not this skill:** React component and hook typing → see `react`; Node.js API typing in the context of building a service → see `nodejs`; Next.js server-component typing → see `nextjs`; React Native/Expo typing → see `react-native`.
 
 > Study resources and version history live in
 > [references/study-resources.md](references/study-resources.md) — load that file when planning

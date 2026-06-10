@@ -6,6 +6,9 @@ metadata:
   exam-code: SCS-C03
   domain: aws
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
   blueprint: SCS-C03 (December 2025)
 ---
 
@@ -16,6 +19,9 @@ metadata:
 The AWS Certified Security – Specialty credential (exam code SCS-C03, launched December 2, 2025) validates specialized competence in designing, implementing, and operating security controls across AWS environments. It targets practitioners with several years of hands-on AWS security experience who configure threat detection pipelines, write and audit IAM policies, architect network defenses, design encryption strategies, and build multi-account governance guardrails.
 
 This file is an **operational playbook, not an exam outline**. Each section states the rules an agent must apply when doing AWS security work: the decision criteria, concrete limits, anti-patterns to catch in review, and verification steps. The guiding principle throughout: **verify against the live account — never assume from documentation alone** because effective permissions result from combining multiple policy types, and a single missing allow or extra deny changes the outcome.
+
+> **Load this skill when…** designing or reviewing IAM policies, permission boundaries, SCPs, or RCPs; configuring threat detection (GuardDuty, Security Hub, Detective, Security Lake); implementing KMS encryption strategy or Secrets Manager rotation; auditing network defenses (WAF, Shield, PrivateLink, NACLs) or building incident-response and containment automation.
+> **Not this skill:** pipeline/IaC delivery, deployment strategies, or observability stacks → see `aws-devops-engineer-professional`; enterprise architecture trade-offs, migration planning, or cross-account network design → see `aws-solutions-architect-professional`.
 
 > **Study resources** (official guides, service docs, study sequencing, SCS-C02→SCS-C03 changes) live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path.
 

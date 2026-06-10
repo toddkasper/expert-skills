@@ -6,6 +6,9 @@ metadata:
   exam-code: JS-Dev-101
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce JavaScript Developer I — Skills Reference
@@ -30,6 +33,9 @@ and the *red flags* to catch in review. The rules apply to any JavaScript surfac
 front-ends, Node/Lambda back-ends, SFDX automation scripts — not just LWC authoring. Where
 relevant, sections note how to verify field/record assumptions against a live Salesforce org
 using describe/SOQL tooling before parsing a response or wiring a component.
+
+> **Load this skill when…** writing or reviewing Lightning Web Components (LWC) front-end code; auditing JavaScript for coercion bugs, `this`-binding errors, unhandled Promise rejections, or XSS vectors; reasoning about the async/event loop, closures, or prototypes; or working with Node.js, Jest/Vitest, or LWC-Jest testing.
+> **Not this skill:** Apex triggers, classes, or server-side Salesforce logic → see `salesforce-platform-developer-1`.
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 

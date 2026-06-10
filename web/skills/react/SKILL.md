@@ -6,7 +6,7 @@ metadata:
   domain: web
   type: competence-playbook
   status: operational
-  last-reviewed: 2026-06-07
+  last-reviewed: 2026-06-09
 ---
 
 # React — Skills Reference
@@ -16,6 +16,9 @@ metadata:
 No vendor certification exists for React. This playbook encodes the working competence applied when building, reviewing, or debugging a React application — anchored entirely on official React documentation (react.dev) and broadly accepted community best practices. Anchor all claims to react.dev; verify against it before acting.
 
 **Scope of this skill:** React itself — components, hooks, state, rendering, data-fetching patterns, accessibility, and testing. Framework concerns (Next.js App Router, Server Components, Expo) are deferred to the `nextjs` and `react-native` sibling skills.
+
+> **Load this skill when…** writing or reviewing React components, hooks, or state architecture; debugging re-renders, stale closures, or effect dependencies; auditing accessibility (ARIA, focus management); writing or fixing React Testing Library tests.
+> **Not this skill:** Next.js App Router, Server/Client Components, Server Actions → see `nextjs`; React Native / Expo mobile apps → see `react-native`.
 
 > Study resources and data-fetching library links live in [references/study-resources.md](references/study-resources.md).
 

@@ -6,6 +6,9 @@ metadata:
   exam-code: GH-200
   domain: github
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
   blueprint: January 2026 revision
 ---
 
@@ -16,6 +19,9 @@ metadata:
 The GitHub Actions certification (exam GH-200) validates that a practitioner can design, implement, and maintain automation workflows using GitHub Actions at individual, organizational, and enterprise scale. It covers five competency areas: workflow authoring, workflow consumption and troubleshooting, custom action development, enterprise management of runners and policies, and security hardening.
 
 **This file is an operational playbook, not an exam outline.** Each section states the rules an agent must apply when building or reviewing Actions automation: the concrete syntax constraints, the security invariants, the decision criteria for picking a pattern, and the anti-patterns to catch in review.
+
+> **Load this skill when…** authoring or reviewing GitHub Actions workflow YAML; designing reusable workflows, composite actions, or custom JS/Docker actions; configuring self-hosted runners, OIDC cloud auth, or enterprise runner/policy governance; or hardening an Actions pipeline against script-injection and supply-chain risks.
+> **Not this skill:** this skill covers CI/CD workflow authoring, not general Git/GitHub repository administration, branch protection configuration without Actions, or application code written in the repository.
 
 > **Deeper context:** Study resources, official links, and domain weight details live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
 

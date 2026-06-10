@@ -6,6 +6,9 @@ metadata:
   exam-code: MC-202
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Marketing Cloud Email Specialist — Skills Reference
@@ -31,6 +34,9 @@ data-model traps that bite teams integrating MC with a CRM.
 **This file is an operational playbook, not an exam outline.** Each section states the actual rules
 an agent must apply, the concrete limits, the decision criteria for picking a tool, and the
 anti-patterns to catch in review.
+
+> **Load this skill when…** designing or reviewing Salesforce Marketing Cloud email campaigns, Journey Builder flows, or Automation Studio pipelines; configuring deliverability (SPF/DKIM/DMARC, IP warming, bounce handling); working with data extensions, AMPscript personalization, or Marketing Cloud Connect; or diagnosing send failures, subscriber status issues, or inbox analytics.
+> **Not this skill:** this is SFMC (Studio/Builder stack) — not core CRM email alerts or Pardot/Account Engagement; for CRM email activity tied to Sales or Service Cloud objects, see `salesforce-sales-cloud-consultant` or `salesforce-service-cloud-consultant`.
 
 > **Deeper context:** Study resources (official Salesforce + community) live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, keep a per-org appendix in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 

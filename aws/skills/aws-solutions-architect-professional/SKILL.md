@@ -7,6 +7,8 @@ metadata:
   domain: aws
   type: certification-playbook
   status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
   blueprint: SAP-C02 (2026-06-07 verified)
 ---
 
@@ -17,6 +19,9 @@ metadata:
 The AWS Certified Solutions Architect – Professional credential validates that a practitioner can design and evaluate complex, enterprise-scale cloud architectures on AWS. Unlike the Associate-level exam, the Professional exam targets candidates with 2+ years of hands-on AWS experience who must reason across organizational boundaries, trade-offs between cost/resilience/performance, and the full migration lifecycle.
 
 **This file is an operational playbook, not an exam outline.** Each section states the rules an architect actually applies when reviewing or designing AWS architecture, the concrete decision criteria for picking between services, and the anti-patterns to catch in a design review. The recurring principle: **verify against the live account and official docs** — never assume from memory or blog posts, because service limits, pricing, and feature availability change frequently.
+
+> **Load this skill when…** evaluating or designing complex AWS architectures across multiple accounts or regions; choosing between connectivity patterns (Transit Gateway, VPC Peering, Direct Connect, PrivateLink); planning a migration strategy (7 Rs, tooling selection, wave planning); or making cost/resilience/performance trade-offs at enterprise scale.
+> **Not this skill:** hands-on pipeline/IaC delivery or deployment strategies → see `aws-devops-engineer-professional`; deep security control design (GuardDuty, KMS, IAM policy evaluation) → see `aws-security-specialty`.
 
 > **Study resources** (official links, whitepapers, practice exams) live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path.
 

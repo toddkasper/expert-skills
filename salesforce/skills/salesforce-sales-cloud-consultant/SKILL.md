@@ -7,6 +7,9 @@ metadata:
   domain: salesforce
   type: certification-playbook
   blueprint: June 2024 restructure (5 domains)
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Sales Cloud Consultant — Skills Reference
@@ -35,6 +38,9 @@ five consolidated domains. The skills tested are identical; only the
 labels/groupings changed. Current blueprint: Practical Application of Sales Cloud
 Expertise 33%, Sales Lifecycle 23%, Implementation Strategies 15%, Data
 Management 15%, Consulting Practices 14%.
+
+> **Load this skill when…** scoping or implementing Sales Cloud; designing lead conversion, opportunity pipeline stages, or forecasting; picking automation tools (Flow vs Apex) for a sales workflow; modeling the sales data layer or sharing model; planning a data migration or deduplication; or building sales reports and dashboards.
+> **Not this skill:** service console or case management → see `salesforce-service-cloud-consultant`; external portals or communities → see `salesforce-experience-cloud-consultant`; general org admin, profiles, or permission sets not tied to a sales implementation → see `salesforce-administrator`.
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 

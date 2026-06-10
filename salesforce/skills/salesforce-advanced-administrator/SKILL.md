@@ -6,6 +6,9 @@ metadata:
   exam-code: Plat-Admn-301
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Advanced Administrator — Skills Reference
@@ -17,15 +20,12 @@ metadata:
 
 ## Overview
 
-The Salesforce Certified Advanced Administrator (now branded **Salesforce Certified
-Platform Administrator II**, exam code Plat-Admn-301) validates that a Salesforce
-administrator can go beyond basic configuration to solve complex business problems
-declaratively: the full sharing and security model, advanced automation (Flow, approval
-processes, order of execution), custom object design, analytics, deployment pipelines, and
-org-health monitoring. It is the next step after the Administrator credential (ADM-201 /
-Plat-Admn-201) for anyone managing a non-trivial production org.
+The Salesforce Certified Advanced Administrator (Salesforce Certified Platform Administrator II, exam code Plat-Admn-301) extends the Administrator credential into complex declarative problem-solving: full sharing and security, advanced Flow and approval automation, custom object design, deployment pipelines, and org-health monitoring.
 
-> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For nonprofit/NPSP applications, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). For org-specific applications, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Load this skill when…** designing or debugging the full sharing/security model (OWD, role hierarchy, sharing rules, muting permsets, session-based permsets); debugging Flow order-of-execution or recursion bugs; planning SFDX deployment pipelines or sandbox strategy; setting up auditing (Field History, Event Monitoring, debug logs).
+> **Not this skill:** day-to-day org config, basic profiles/permsets, simple Flow builds → see `salesforce-administrator`; Apex triggers, SOQL, code review → see `salesforce-platform-developer-1`.
+
+> Study resources: [references/study-resources.md](references/study-resources.md). NPSP applications: [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). Org-specific rules: per-org appendix in your project CLAUDE.md.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
 
@@ -37,25 +37,13 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ## Security and Access — Operational Knowledge
 
-**Access is additive-only, and FLS is a separate gate from object access.** The stack is:
-OWD (baseline) → role hierarchy → sharing rules → manual/Apex sharing. Every layer can only
-*widen* access, never narrow it. If a record is invisible, the fix is *more* sharing, never
-"less" — to restrict, you must lower the OWD first.
+**Access is additive-only.** The stack: OWD (baseline) → role hierarchy → sharing rules → manual/Apex sharing. Every layer only *widens* access. To restrict, lower the OWD — sharing rules cannot take access away.
 
-**FLS ≠ object access ≠ record access.** A user can have "Read All" on an object and still
-get `INVALID_FIELD` on a SOQL field because FLS isn't granted. These three are independent
-layers — verify all three when access fails.
+**FLS ≠ object access ≠ record access — three independent gates.** Full object Read + `INVALID_FIELD` on a query = FLS not granted. Verify all three when access fails.
 
-- **FLS must be granted explicitly in a profile or permission set.** Deploying a custom
-  field via SFDX `field-meta.xml` grants FLS to **no one — not even System Administrator.**
-  The field exists but every query returns *"Invalid field."* You must add `<fieldPermissions>`
-  to a permset/profile XML.
-- **Never put `<fieldPermissions>` on a `<required>true</required>` field.** Deploy fails with
-  *"You cannot deploy to a required field."* Required fields are always readable/editable, so
-  **omit them** from fieldPermissions.
-- **Page layouts control visibility but never enforce security.** Removing a field from a
-  layout does not protect it — the API, reports, and SOQL still return it if FLS allows. Use
-  FLS for security, layouts for UX only.
+- **SFDX `field-meta.xml` grants FLS to no one.** Deploy a `<fieldPermissions>` entry in a permset/profile alongside every new custom field or every query returns *"Invalid field"* — including for System Administrator.
+- **Omit required fields from `<fieldPermissions>`.** Deploy fails: *"You cannot deploy to a required field."*
+- **Page layouts do not enforce security.** Removing a field from a layout still lets the API, reports, and SOQL return it if FLS allows. Use FLS for security, layouts for UX.
 
 **Decision table — profiles vs. permission sets vs. permission set groups:**
 
@@ -66,27 +54,19 @@ layers — verify all three when access fails.
 | Bundle 5+ permsets for a job role | Permission Set Group | Aggregates permsets; use Muting Permission Sets to subtract |
 | Elevated access only during a verified/MFA session | Session-based permission set | Time-boxed privilege escalation |
 
-Salesforce's strategic direction is **permission-set-first**: put new grants in permsets, keep
-profiles thin.
+Salesforce's strategic direction: **permission-set-first** — new grants in permsets, thin profiles.
 
-**Numbers to know:** Field History Tracking max 20 fields/object. OWD options: Private,
-Public Read Only, Public Read/Write, Controlled by Parent. Approval steps max 30.
+**Key limits:** Field History Tracking ≤ 20 fields/object. Approval steps ≤ 30.
 
-**Anti-patterns / red flags:**
-- A new custom field deployed via SFDX with no matching `<fieldPermissions>` entry → it will
-  silently fail every query. Catch this in any field-add PR.
-- "Grant access via hierarchies" left ON for a Lookup-related object when you wanted siloed
-  access — managers inherit access they shouldn't have.
-- Editing FLS in the *wrong* place for an External Client App: the classic Permission Set
-  "Assigned Connected Apps" page does **not** authorize ECA usage. The working path is
-  ECA detail → Policies → Edit → App Policies → **Select Permission Sets**.
+**Red flags:**
+- New SFDX field with no `<fieldPermissions>` → silently fails every query. Catch in every field-add PR.
+- "Grant access via hierarchies" ON for a Lookup object when silos are required — managers inherit access they shouldn't.
+- ECA FLS edited on the classic Permission Set "Assigned Connected Apps" page → does **not** authorize ECA usage. Correct path: ECA detail → Policies → Edit → App Policies → Select Permission Sets.
 
 **Verify against the live org:**
-- Describe the field-bearing object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Setup → Object Manager → <object> → Fields & Relationships) → confirm the field is even visible to the API user (if FLS is missing, it won't appear).
-- Run `SELECT Id,Field__c FROM Obj__c LIMIT 1` (your Salesforce MCP, `sf data query --query "SELECT Id,Field__c FROM Obj__c LIMIT 1"`, or the Developer Console Query Editor) → an `INVALID_FIELD` error means FLS, not object access, is the problem.
-- Confirm a permset assignment landed via `SELECT Id FROM PermissionSetAssignment WHERE
-  AssigneeId='…' AND PermissionSet.Name='…'` (MCP / `sf data query` / Developer Console) — never trust a UI "success" toast, especially
-  for ECA assignments (browser-AI tools report success while editing the wrong page).
+- Describe the object (MCP / `sf sobject describe --sobject <object>` / Object Manager) — if the field is absent from the output, FLS is missing.
+- `SELECT Id,Field__c FROM Obj__c LIMIT 1` (MCP / `sf data query` / Developer Console) → `INVALID_FIELD` = FLS problem, not object access.
+- Confirm permset assignment: `SELECT Id FROM PermissionSetAssignment WHERE AssigneeId='…' AND PermissionSet.Name='…'` (MCP / `sf data query` / Developer Console) — never trust a UI toast, especially for ECA.
 
 ---
 
@@ -100,30 +80,15 @@ Public Read Only, Public Read/Write, Controlled by Parent. Approval steps max 30
 | Lookup | Records are independent; either side can exist alone | No roll-up summary (need DLRS/Apex/flow); independent sharing; can be required or optional |
 | Junction (2 MD) | True many-to-many (e.g. Person A ↔ Person B relationships, donor soft credits) | First MD = primary (controls detail's ownership/sharing); deleting either master deletes the junction |
 
-- **Roll-up summary fields only exist on the Master in a Master-Detail.** SUM/COUNT/MIN/MAX
-  only. For Lookups, use Declarative Lookup Rollup Summaries (DLRS), a record-triggered flow,
-  or Apex.
-- **Lookup `relationshipName` must be unique per parent object.** Two Lookups pointing at the
-  same parent can't share a `relationshipName` (deploy fails *"Duplicate relationship name"*).
-  Use role-specific suffixes. SOQL parent traversal keys on the *field* name
-  (`Parent_Object__r.Name`), so renaming the relationshipName is safe.
-- **Record Types control picklist values + page layout + business process per type.** Reach
-  for them when one object serves multiple processes. (A common alternative is a single
-  `Type__c` discriminator field on one object instead of N separate objects; Record Types are
-  the path to per-type layouts on top of that.)
-- **Dynamic Forms** move fields/sections off the page layout onto the Lightning record page
-  with component-level visibility filters — the modern replacement for layout-driven UX.
+- **Roll-up summaries only exist on the Master of a Master-Detail** (SUM/COUNT/MIN/MAX). For Lookups: DLRS, record-triggered flow, or Apex.
+- **Lookup `relationshipName` must be unique per parent.** Duplicate name → deploy fails. SOQL traversal keys on the field name (`Parent_Object__r.Name`), so renaming the `relationshipName` is safe.
+- **Record Types** drive picklist values + page layout + business process per type.
+- **Dynamic Forms** move fields/sections onto the Lightning record page with component-level visibility — modern replacement for layout-driven UX.
 
-**Anti-patterns / red flags:**
-- Converting a Lookup → Master-Detail when child records have null parent values: conversion
-  fails until every child has a parent. Backfill first.
-- Expecting a roll-up summary on a Lookup relationship — it doesn't exist.
-- Adding fields to an existing **Quick Action** and trusting they render: the runtime QA cache
-  often does **not** invalidate even after deploy + logout/login. Lightning contextual tabs
-  (`console:relatedRecord`) silently omit the new fields with no error. **Cache-bust fix:**
-  edit any non-field-list metadata on the QA (`<description>`, `<label>`,
-  `<layoutSectionStyle>`) and redeploy — SF treats that as a structural change and flushes the
-  org-level QA cache.
+**Red flags:**
+- Converting Lookup → Master-Detail when any child has a null parent — conversion fails until every child has a parent. Backfill first.
+- Expecting a roll-up summary on a Lookup — it doesn't exist.
+- Adding fields to a Quick Action and trusting they render — the runtime QA cache on Lightning tabs (`console:relatedRecord`) doesn't invalidate on deploy. **Cache-bust:** edit any non-field-list metadata (`<description>`, `<label>`, or `<layoutSectionStyle>`) and redeploy.
 
 **Verify against the live org:**
 - List the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager) to confirm an object's API name before referencing it.
@@ -135,20 +100,7 @@ Public Read Only, Public Read/Write, Controlled by Parent. Approval steps max 30
 
 **Memorize the order of execution — most automation bugs are an ordering surprise:**
 
-1. Load record / apply old values
-2. System validation (required, field formats)
-3. **Before-save record-triggered flows**
-4. **Before-save Apex triggers**
-5. Custom **validation rules**
-6. Duplicate rules
-7. Record saved to DB (not committed)
-8. **After-save Apex triggers**
-9. Assignment rules, auto-response, workflow rules (legacy)
-10. Workflow field updates re-fire before-/after-update triggers (recursion source)
-11. **After-save record-triggered flows**
-12. Roll-up summary recalculation on parent (can fire parent triggers/flows)
-13. Criteria-based sharing recalculation
-14. Commit; post-commit logic (emails, async/`@future`, platform events)
+1. Load record / apply old values → 2. System validation → 3. **Before-save flows** → 4. **Before-save Apex** → 5. Validation rules → 6. Duplicate rules → 7. Save to DB (not committed) → 8. **After-save Apex** → 9. Assignment rules / auto-response / workflow rules (legacy) → 10. **Workflow field updates re-fire before-/after-update triggers** (main recursion source) → 11. **After-save flows** → 12. Roll-up recalculation on parent → 13. Criteria-based sharing recalc → 14. Commit; post-commit (emails, async, platform events)
 
 **Tool selection — pick the cheapest tool that does the job:**
 
@@ -161,37 +113,25 @@ Public Read Only, Public Read/Write, Controlled by Parent. Approval steps max 30
 | Complex branching, bulk loops, callouts, >limits | Apex trigger / invocable | Stacked flows that blow CPU/SOQL limits |
 | Multi-user, long-running, multi-stage | Flow Orchestration | A single mega-flow |
 
-**Bulkify everything.** Never put SOQL/DML inside a loop — in a flow, that's a Get/Update
-element *inside* a loop. Query once into a collection, work in memory, do one DML on the
-collection after the loop. **Per-transaction governor limits:** 100 SOQL queries, 50,000 rows
-retrieved, 150 DML statements, 10,000 DML rows, 10s synchronous CPU time (60s async), 6 MB
-heap (12 MB async), 100 callouts.
+**Bulkify.** Never put SOQL/DML inside a loop (Get/Update inside a Flow loop = same problem). Query once into a collection, work in memory, one DML after the loop. **Limits:** 100 SOQL, 50k rows, 150 DML, 10k DML rows, 10s CPU (60s async), 6 MB heap, 100 callouts.
 
-- **Approval processes do NOT evaluate validation rules on submission.** Don't rely on a
-  validation rule to gate approval entry — put the check in the approval entry criteria.
-- **Before-save flows are the cheapest same-record update** — no extra DML, runs before the
-  record hits the DB. Prefer them over after-save for field defaulting.
-- **Workflow Rules and Process Builder are retired/being retired.** Build new automation in
-  **Flow**. Migrate legacy ones rather than extending them.
+- **Approval processes do NOT run validation rules on submission.** Gate entry with approval entry criteria, not validation rules.
+- **Before-save flows = cheapest same-record update** — no extra DML, runs before commit.
+- **Workflow Rules and Process Builder are retired** — build in Flow, migrate legacy ones.
 
-**Anti-patterns / red flags:**
-- A Get Records or Update Records / Create Records element **inside a loop** in a flow → will
-  hit SOQL/DML limits on bulk loads. Move it outside, operate on a collection.
-- **Recursion:** an after-save flow/trigger that updates the same record it fired on, with no
-  guard → infinite loop / "maximum trigger depth exceeded." Use a before-save flow, an entry
-  condition (`ISCHANGED`), or a static recursion guard.
-- **Field updates from automation re-trigger triggers/flows** (step 10) — the classic source
-  of double-fires.
-- An automation reading a field the running user has no FLS for → silently reads null (flows
-  respect FLS in user context). Catch when a flow "works for admins, breaks for others."
-- **Before blaming your own code, enumerate ALL automation on the object** — managed-package
-  workflow rules, flows, and triggers included. A managed package can silently overwrite a
-  field on insert (e.g. NPSP's `npe01` workflow copies `Phone → MobilePhone` based on `PreferredPhone__c`). Use a debug log to find the actual writer.
+**Red flags:**
+- Get/Update/Create **inside a flow loop** → SOQL/DML limits on bulk loads. Move outside; operate on a collection.
+- **Recursion:** after-save flow updates the record it fired on, no guard → infinite loop. Use before-save, `ISCHANGED` entry condition, or a static guard.
+- **Workflow field updates re-trigger triggers/flows** (step 10) — source of double-fires.
+- Automation reads a field with no FLS for the running user → silently reads null. Pattern: "works for admins, breaks for others."
+- **Check ALL automation (incl. managed-package namespace) before blaming your own code.** NPSP `npe01` workflow overwrites `Phone → MobilePhone` on insert based on `PreferredPhone__c`. Use a debug log trace flag to find the actual writer.
 
 **Verify against the live org:**
 - Use an Apex debug log (set a trace flag on the user) to see *every* automation that touches
   a record during DML — this is how a hidden managed-package overwrite gets caught.
 - Run a SOQL query (MCP / `sf data query` / Developer Console) before/after a test write to confirm a flow set the field you expect (and didn't clobber another).
+
+Deep dive — Approval Process quirks and Territory Management: [references/approval-territory.md](references/approval-territory.md) — load when configuring multi-step approvals, record-lock automation collisions, or Enterprise Territory Management.
 
 ---
 
@@ -211,45 +151,19 @@ configured separately — you need both.
 
 Some managed packages provide a purpose-built import tool that enforces their data model (e.g. NPSP Data Importer/BDI for Contact/Account/Opp with Household matching — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
-- **Upsert needs an External ID field** (or the record Id). Upsert-by-external-ID is the
-  pattern for idempotent re-linking — late-arriving related records can re-attach to an
-  existing parent by its External ID without new write logic.
-- **Field/data storage are separate quotas.** Files count against *file* storage; records
-  against *data* storage (each record ~2 KB regardless of field count). Keeping large file
-  contents in external storage and storing only a reference key in Salesforce keeps you off SF
-  file storage.
-- **Reporting tools to reach for:** custom report types (when standard types don't expose the
-  object shape / a Lookup's child), cross-filters (WITH/WITHOUT related records), bucket
-  fields, summary formulas. **Reporting snapshots** persist report rows to a custom object on a
-  schedule for trend tracking. **Historical trending** tracks up to 8 fields over up to 3
-  months. **Dashboard filters** max 3 per dashboard.
+- **Upsert by External ID** is the pattern for idempotent re-linking — late-arriving records re-attach to an existing parent without new write logic.
+- **File vs. data storage are separate quotas.** Keep large file contents in external storage; store only the reference key in SF. (~2 KB/record regardless of field count.)
+- **Advanced reporting:** custom report types (non-standard object shapes, Lookup children), cross-filters (WITH/WITHOUT), bucket fields, summary formulas. Reporting snapshots for trends; historical trending ≤ 8 fields / 3 months; dashboard filters max 3.
 
-**Anti-patterns / red flags:**
+**Red flags:**
 - Trying to import Opportunities via Data Import Wizard — unsupported; use Data Loader (or a package-specific tool if one is available).
 - A "duplicate rule" that has no matching rule, or vice versa — neither works alone.
-- Bulk-loading records into a package-managed org without honoring the package's matching logic — can create duplicates (e.g. NPSP Household deduplication — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
+- Bulk-loading records into a package-managed org without honoring the package's matching logic — can create duplicates (e.g. NPSP Household deduplication).
 
 **Verify against the live org:**
 - Run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API) to pull its output before changing its definition.
 - Query the matching records (MCP / `sf data query` / a list view) to confirm a record exists / matched before an upsert.
 - Run a `COUNT()` query (MCP / `sf data query` / Developer Console) to sanity-check row counts pre/post import.
-
----
-
-## Cloud Applications — Operational Knowledge
-
-Know the shape of each Cloud — many orgs focus on one, but the exam covers all:
-- **Sales Cloud:** Products → Price Books → Price Book Entries; revenue/quantity schedules;
-  Opportunity splits; Collaborative Forecasting; quote-to-opportunity sync; lead conversion
-  field mapping.
-- **Service Cloud:** Knowledge (article types, data categories, Lightning Knowledge),
-  Entitlements/Milestones, case assignment/escalation rules, Omni-Channel routing, Service
-  Console.
-- **Experience Cloud:** the relevant one for any externally-facing portal (volunteer / donor /
-  applicant). Site types (Customer, Partner, LWR), Experience Builder, member profiles,
-  Audience Targeting. (Note: a portal does not *have* to be Experience-Cloud-gated — a
-  tokenized link on external infrastructure is a valid alternative when login friction is the
-  concern.)
 
 ---
 
@@ -274,7 +188,7 @@ Know the shape of each Cloud — many orgs focus on one, but the exam covers all
 - **Health Check** scores the org against a security baseline — remediate from there.
 - **Transaction Security Policies** can block/notify on events (bulk export, login anomalies).
 
-**Anti-patterns / red flags:**
+**Red flags:**
 - Relying on debug logs for forensics days later — they roll off in ~24h. Turn on Field
   History or Event Monitoring *before* you need the history.
 - Enabling Field History on a 21st field — silently capped at 20/object.
@@ -297,32 +211,68 @@ Know the shape of each Cloud — many orgs focus on one, but the exam covers all
 | Full | Metadata + ALL data | 29 days | Staging, perf, final pre-prod validation |
 
 **Deployment-tool decision:**
-- **SFDX / SF CLI (source-driven)** — metadata lives in a version-controlled project and
-  deploys with `sf project deploy start`. Version-controlled, can delete (destructive changes),
-  scriptable. **Run all `sf project …` commands from the SFDX project root**, or you get
-  *InvalidProjectWorkspaceError*.
-- **Change Sets** — UI-only, point-to-point, **cannot delete**, not version-controlled, must
-  manually add component dependencies. Use only when SFDX isn't available.
-- **Code coverage gate:** Apex deploys to production require **≥75% org-wide** coverage and
-  **>0% (at least 1%) per trigger**. A deploy with insufficient coverage is rejected.
+- **SFDX / SF CLI** — source-driven, version-controlled, scriptable, can delete. `sf project deploy start`. **Run from the SFDX project root** — running from the repo root gives *InvalidProjectWorkspaceError*.
+- **Change Sets** — UI-only, point-to-point, **cannot delete**, not version-controlled. Use only when SFDX is unavailable.
+- **Code coverage gate:** production Apex deploys require **≥75% org-wide** coverage and **>0% per trigger**.
 
-**Anti-patterns / red flags:**
-- A field/permset deploy that references components not yet in the target org → missing-
-  reference failure. Deploy dependencies first (object before field before permset before
-  layout).
-- Assuming SFDX `field-meta.xml` carried FLS — **it does not** (see Security section). The
-  permset granting FLS must deploy alongside.
-- **Connected App creation can be gated** in modern org configs — deploying a
-  `connectedApp-meta.xml` may return *"You can't create a connected app… contact Salesforce
-  Customer Support."* The workaround is an **External Client App** (ECA).
-- **External Client App Consumer Key is UI-only** — Tooling API, REST, Metadata retrieve,
-  Connect API none expose it. It's behind email verification in the SF UI. No scriptable path.
+**Red flags:**
+- Deploy references a component not yet in the target org → missing-reference failure. Order: object → field → permset → layout.
+- Assuming SFDX `field-meta.xml` carries FLS — it does not (see Security). Deploy the permset alongside.
+- **Connected App creation gated** in modern orgs — `connectedApp-meta.xml` may return *"You can't create a connected app."* Workaround: use an **External Client App (ECA)**.
+- **ECA Consumer Key is UI-only** — no scriptable path; behind email verification in the SF UI.
 
 **Verify before/after a deploy:**
 - Run a JWT-bearer smoke test (auth → describe → upsert idempotency → cleanup) to catch every
   gotcha above at the layer it bites.
 - Describe the object post-deploy (MCP / `sf sobject describe` / Object Manager) to confirm the new field is API-visible (proves FLS landed, not just the field).
 - Query a known record (MCP / `sf data query` / Developer Console) to confirm the field is selectable, not `INVALID_FIELD`.
+
+---
+
+## Cloud Applications — Operational Knowledge
+
+Know the shape of each Cloud — many orgs focus on one, but the exam covers all:
+- **Sales Cloud:** Products → Price Books → Price Book Entries; revenue/quantity schedules;
+  Opportunity splits; Collaborative Forecasting; quote-to-opportunity sync; lead conversion
+  field mapping.
+- **Service Cloud:** Knowledge (article types, data categories, Lightning Knowledge),
+  Entitlements/Milestones, case assignment/escalation rules, Omni-Channel routing, Service
+  Console.
+- **Experience Cloud:** the relevant one for any externally-facing portal (volunteer / donor /
+  applicant). Site types (Customer, Partner, LWR), Experience Builder, member profiles,
+  Audience Targeting. (Note: a portal does not *have* to be Experience-Cloud-gated — a
+  tokenized link on external infrastructure is a valid alternative when login friction is the
+  concern.)
+
+---
+
+## Decision Scenarios
+
+Operational judgment checks covering high-value gotchas. Scenarios 1 and 2 are here; Scenarios 3–5 are in [references/scenarios.md](references/scenarios.md) — load when diagnosing sharing-model tightening, Lookup-to-rollup gaps, or Flow recursion bugs.
+
+---
+
+**Scenario 1 — The invisible field after deployment**
+
+> **Situation:** A developer deploys a new `Restricted_Notes__c` field on Contact via SFDX `sf project deploy start`. A sales rep immediately reports the field is missing from their SOQL query results; no error, just absent. A System Administrator can also not SELECT it in a workbench query.
+>
+> **Competent move:** Recognize that `field-meta.xml` deploys the field schema but grants FLS to nobody — including System Administrator. Deploy a permission set that includes a `<fieldPermissions>` entry for the field (readable + editable as appropriate), then assign it or include it in a permission set group. Verify by describing the Contact object (MCP / `sf sobject describe --sobject Contact` / Object Manager) — the field should now appear in the field list for the running user.
+>
+> **Tempting-but-wrong:** Checking the page layout or assuming System Administrator bypasses FLS. System Admin *does* bypass most object/record security but **does not** bypass FLS for fields not in a profile/permset (this is a common misconception — FLS applies to all profiles including System Administrator unless explicitly granted).
+>
+> **Verify:** Run `SELECT Id, Restricted_Notes__c FROM Contact LIMIT 1` (MCP / `sf data query` / Developer Console) — transitions from `INVALID_FIELD` to a valid result once FLS is in place. Also describe the Contact object and confirm the field appears with `updateable: true`.
+
+---
+
+**Scenario 2 — Approval process and automation collision**
+
+> **Situation:** An after-save flow is configured to stamp an `Approved_Date__c` field on an Opportunity the moment `StageName` changes to "Closed Won." In UAT, submitters report the flow errors with "ENTITY_IS_LOCKED" after they approve a deal. The same flow works fine on records that were never submitted for approval.
+>
+> **Competent move:** Approval submission locks the record. After-save flows fire when the approver clicks Approve, but the record is still locked at that point. Move the field-stamp logic into a **before-save** record-triggered flow triggered when `StageName` becomes "Closed Won" — before-save flows run before the lock check, and they use no DML (they modify the in-flight record). Alternatively, use a final-approval action (Workflow Field Update or Flow) that runs in the approval process's own unlock context.
+>
+> **Tempting-but-wrong:** Adding a Recall step before the flow runs — this adds operational friction and doesn't fix the root cause. Also wrong: using an Apex trigger without `Database.setSavepoint` awareness — same lock error.
+>
+> **Verify:** After moving to before-save, submit a test Opportunity for approval and approve it — confirm `Approved_Date__c` is set and no ENTITY_IS_LOCKED error in the debug log.
 
 ---
 
@@ -366,104 +316,19 @@ Read this first. Each is imperative and concrete.
 - **DON'T** rely on debug logs for forensics — they roll off in ~24h; enable Field History /
   Event Monitoring beforehand.
 - **DO** run a JWT-bearer smoke test after any metadata/cert change and confirm by describing the object + querying a known record that new fields are API-visible.
+- **DON'T** convert a Lookup to Master-Detail without first backfilling null parents — conversion fails until every child has a parent.
+- **DO** use session-based permission sets for time-boxed privilege escalation (MFA-verified sessions).
 
 ---
 
-## Approval Processes — Operational Knowledge (gap fill)
+## References
 
-Approval processes are a distinct exam domain with their own quirks:
-
-- **Validation rules do not fire on approval submission.** Use entry criteria on the process, or a before-save flow that runs before the record is locked.
-- **Record lock on submission.** Once submitted, the record is read-only to non-approvers. Flows/triggers that try to write it will fail with a lock error. If automation must run, add a Recall step, let automation complete, then resubmit — or use an Apex action with `Database.rollback`-aware logic.
-- **Delegated approvers** inherit the original approver's queue but can't re-delegate. The delegatee must also have the appropriate object/FLS access to see the record.
-- **Approval step order matters:** step 1 runs before step 2 regardless of "who approves." Each step can require unanimous or first-response from a group. Know the difference.
-- **Recall vs. rejection:** Recall returns the record to the submitter (draft state); rejection can trigger a final-rejection action and unlock the record or send a notification — configure final-rejection actions explicitly.
-
-**Numbers to know:** Max 30 approval steps per process. An object can have multiple approval processes; only one can be active at a time for automated submission, but multiple can be submitted manually.
+- [references/study-resources.md](references/study-resources.md) — credential logistics, exam weights, study path, official links.
+- [references/scenarios.md](references/scenarios.md) — Scenarios 3–5 (sharing model tightening, DLRS vs. rollup summary on a Lookup, Flow recursion).
+- [references/approval-territory.md](references/approval-territory.md) — deep dive on Approval Process quirks (record locking, delegated approvers, step ordering) and Enterprise Territory Management (model states, assignment rules, forecasting integration).
 
 ---
 
-## Territory Management — Operational Knowledge (gap fill)
+## Disclaimer
 
-Enterprise Territory Management (ETM) is blueprint-tested and often skipped in prep:
-
-- **Territory model states:** Planning → Active → Archived. You can only assign records and run territory rules in **Active** state. You cannot delete an Active model — archive it first.
-- **Assignment rules** (account-field criteria) run when accounts are saved or when you manually run rules against the model. Territory assignment does **not** automatically cascade to related Opportunities; Opportunity territory assignment is a separate step.
-- **User access via territory:** members of a territory get at minimum Read on the accounts in that territory. OWD for Account can be Private while ETM grants the read — the two coexist.
-- **Collaborative Forecasting integrates with ETM** — forecasts roll up through the territory hierarchy, not the role hierarchy, when ETM is the forecast source. Don't confuse the two hierarchies.
-
----
-
-## Decision Scenarios
-
-Operational judgment checks — each covers a high-value gotcha from the sections above. Original scenarios; not derived from exam questions.
-
----
-
-**Scenario 1 — The invisible field after deployment**
-
-> **Situation:** A developer deploys a new `Restricted_Notes__c` field on Contact via SFDX `sf project deploy start`. A sales rep immediately reports the field is missing from their SOQL query results; no error, just absent. A System Administrator can also not SELECT it in a workbench query.
->
-> **Competent move:** Recognize that `field-meta.xml` deploys the field schema but grants FLS to nobody — including System Administrator. Deploy a permission set that includes a `<fieldPermissions>` entry for the field (readable + editable as appropriate), then assign it or include it in a permission set group. Verify by describing the Contact object (MCP / `sf sobject describe --sobject Contact` / Object Manager) — the field should now appear in the field list for the running user.
->
-> **Tempting-but-wrong:** Checking the page layout or assuming System Administrator bypasses FLS. System Admin *does* bypass most object/record security but **does not** bypass FLS for fields not in a profile/permset (this is a common misconception — FLS applies to all profiles including System Administrator unless explicitly granted).
->
-> **Verify:** Run `SELECT Id, Restricted_Notes__c FROM Contact LIMIT 1` (MCP / `sf data query` / Developer Console) — transitions from `INVALID_FIELD` to a valid result once FLS is in place. Also describe the Contact object and confirm the field appears with `updateable: true`.
-
----
-
-**Scenario 2 — Approval process and automation collision**
-
-> **Situation:** An after-save flow is configured to stamp an `Approved_Date__c` field on an Opportunity the moment `StageName` changes to "Closed Won." In UAT, submitters report the flow errors with "ENTITY_IS_LOCKED" after they approve a deal. The same flow works fine on records that were never submitted for approval.
->
-> **Competent move:** Approval submission locks the record. After-save flows fire when the approver clicks Approve, but the record is still locked at that point. Move the field-stamp logic into a **before-save** record-triggered flow triggered when `StageName` becomes "Closed Won" — before-save flows run before the lock check, and they use no DML (they modify the in-flight record). Alternatively, use a final-approval action (Workflow Field Update or Flow) that runs in the approval process's own unlock context.
->
-> **Tempting-but-wrong:** Adding a Recall step before the flow runs — this adds operational friction and doesn't fix the root cause. Also wrong: using an Apex trigger without `Database.setSavepoint` awareness — same lock error.
->
-> **Verify:** After moving to before-save, submit a test Opportunity for approval and approve it — confirm `Approved_Date__c` is set and no ENTITY_IS_LOCKED error in the debug log.
-
----
-
-**Scenario 3 — Sharing model tightening without lowering OWD**
-
-> **Situation:** A manager reports that when her direct reports create Accounts, she can see all of them — but she is not supposed to see Accounts owned by peers in a different region. The Account OWD is Public Read/Write. The security team asks you to restrict cross-region visibility without touching the role hierarchy.
->
-> **Competent move:** You cannot *narrow* access with a sharing rule — sharing is additive-only. The only way to restrict record visibility is to **lower the OWD** (to Private or Public Read Only). Once OWD is Private, re-open only the access you need (e.g., an owner-based sharing rule that shares records within each region's role). Explain this constraint before committing to a timeline — lowering OWD on a large object triggers a sharing recalculation job that can take hours.
->
-> **Tempting-but-wrong:** Creating a sharing rule that "blocks" peers. No such construct exists. Criteria-based or owner-based sharing rules can only grant access to more users, never remove it from users who already have it via OWD or hierarchy.
->
-> **Verify:** After changing OWD to Private, log in as a rep in Region A and confirm they cannot see Region B accounts. Run a SOQL query with `WITH USER_MODE` (Apex) or check via the Sharing button on a record to see the sharing reason.
-
----
-
-**Scenario 4 — DLRS vs. roll-up summary on a Lookup**
-
-> **Situation:** A consultant needs a `Total_Donations__c` currency field on Account that sums all related Opportunity amounts where `StageName = 'Closed Won'`. The Account → Opportunity relationship is a standard Lookup (not Master-Detail). The consultant tries to create a Roll-Up Summary field on Account and can't find the option.
->
-> **Competent move:** Roll-up summary fields are only available on the **master** side of a Master-Detail relationship. Account → Opportunity is a Lookup; you cannot create a native SOQL roll-up here. The correct tools are: (a) **DLRS** (Declarative Lookup Rollup Summaries) managed package — configure a rollup record pointing at the Lookup field; (b) a **record-triggered after-save flow** on Opportunity that aggregates and writes back to Account; or (c) Apex. DLRS is the least-code path for a standard admin.
->
-> **Tempting-but-wrong:** Converting the Opportunity Lookup to a Master-Detail to enable roll-up summaries. This is destructive — it requires every Opportunity to have a non-null Account (breaking standalone opps), deletes Opp records if the parent Account is deleted, and changes sharing behavior. Never convert unless the business model truly mandates parent-required lifecycle coupling.
->
-> **Verify:** After installing DLRS and configuring the rollup, trigger a recalculate job and run `SELECT Total_Donations__c FROM Account WHERE Id = '<test-id>'` (MCP / `sf data query` / Developer Console) to confirm the value matches the sum of Closed Won Opportunities.
-
----
-
-**Scenario 5 — Flow recursion from a field update**
-
-> **Situation:** A record-triggered after-save flow on Contact fires when `Email` changes. It also writes back a `Last_Email_Updated__c` timestamp on the same Contact. In production the flow works — but occasionally a Contact's flow fires twice (seen in debug logs), and some contacts end up in an infinite-loop error.
->
-> **Competent move:** Writing back to the triggering record from an after-save flow re-triggers the same flow (order-of-execution step 10 re-fires after-save triggers/flows). Add a **before-save** flow instead: set `Last_Email_Updated__c` on the in-flight record (no DML, no re-trigger). If after-save is required, add a `ISCHANGED(Email)` entry condition *and* a static recursion guard (a custom metadata flag or a flow variable reset after first execution — a text-type `$GlobalVariable` doesn't work for this; use a before-save flow or Apex static variable).
->
-> **Tempting-but-wrong:** Using a `{!$GlobalVariable}` to guard recursion — Flow's global variables are re-initialized each transaction interview; they don't persist across a re-fire within the same transaction. An Apex-based static boolean is the correct cross-trigger guard, or simply move to before-save.
->
-> **Verify:** Reproduce by updating `Email` on a Contact in a debug log session. A non-recursive fix shows exactly one flow interview for the email change. Confirm `Last_Email_Updated__c` is set after a single pass.
-
----
-
-## Study resources & relevance
-
-Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path. For nonprofit/NPSP applications of these rules, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
-
----
-
-*Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. Guidance only — verify against official documentation and live orgs before acting.*
+Independent educational content to upskill AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by Salesforce, Inc. or any certification body. "Salesforce," "Salesforce Certified Advanced Administrator," "Salesforce Certified Platform Administrator II," "Agentforce," "Einstein," "NPSP," and related marks are trademarks of Salesforce, Inc., used here solely to identify the subject matter. All other product names and brands are the property of their respective owners. Content is provided as-is, as guidance only — verify all rules, limits, and configuration steps against official Salesforce documentation and your live org before acting. Governor limits, blueprint weights, exam fees, and feature availability are subject to change at any time. No certification outcome is implied or guaranteed.
