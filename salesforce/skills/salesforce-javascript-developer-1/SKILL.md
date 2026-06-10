@@ -20,9 +20,9 @@ platform-agnostic: the multiple-choice exam tests general JavaScript fundamental
 ES6+ syntax, DOM manipulation, asynchronous patterns, Node.js, debugging, and testing —
 not Apex or declarative tooling.
 
-The credential is a two-part requirement: the proctored multiple-choice exam (JS-Dev-101)
-**and** the Lightning Web Components Specialist superbadge on Trailhead. Both can be
-completed in either order.
+The credential is a two-part requirement: a multiple-choice exam (JS-Dev-101, delivered
+in a supervised setting) **and** the Lightning Web Components Specialist superbadge on
+Trailhead. Both can be completed in either order.
 
 This file is an **operational playbook**, not an exam outline. Each section states the
 *rule* to apply at decision time, the *concrete limits/numbers*, the *decision criteria*,
@@ -35,20 +35,7 @@ using describe/SOQL tooling before parsing a response or wiring a component.
 
 ---
 
-## Exam Details
-
-| Field | Value |
-|---|---|
-| Questions | 60 multiple-choice / multiple-select (plus up to 5 unscored) |
-| Time Limit | 105 minutes |
-| Passing Score | 65% |
-| Cost | $200 USD registration; $100 USD per retake |
-| Prerequisites | None (no prior Salesforce certification required) + LWC Specialist superbadge to earn the credential |
-| Retake Policy | No wait between attempt 1 and 2; 14-day wait before attempt 3+. Unlimited attempts at $100. |
-
-Additional facts: Exam ID JS-Dev-101 (course code CRT-600). Proctored — online or onsite at
-a testing center; no references permitted. Annual per-release maintenance module required to
-keep the credential active.
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 

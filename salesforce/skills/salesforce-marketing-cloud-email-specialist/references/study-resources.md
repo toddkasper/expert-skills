@@ -4,6 +4,27 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 Marketing Cloud Email Specialist exam (MC-202) or mapping the operational rules to a nonprofit
 (NPSP) org.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Detail | Value |
+|---|---|
+| Exam Code | MC-202 |
+| Questions | 60 scored multiple-choice/multiple-select (+ up to 5 unscored pilot questions) |
+| Time Limit | 90 minutes |
+| Passing Score | 67% (approximately 40 of 60 scored questions correct) |
+| Cost | $200 USD (retake: $100 USD), plus applicable taxes |
+| Prerequisites | None formally required; MKT 101 course and 6+ months SFMC experience strongly recommended |
+| Retake Policy | Up to two retakes; first retake at the discounted retake fee. Maintained via annual Trailhead maintenance modules |
+
+Delivery is proctored — onsite testing center or online remote proctoring (no open-book).
+Recommended prep is ~28 hours via the official Trailmix.
+
+Domain weights (official guide): Email Marketing Best Practices **10%**, Content Creation &
+Delivery **24%**, Marketing Automation **26%**, Subscriber & Data Management **26%**, Insights &
+Analytics **14%**.
+
 ## Study Resources
 
 ### Official Salesforce Resources

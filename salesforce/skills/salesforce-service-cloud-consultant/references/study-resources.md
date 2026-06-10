@@ -2,6 +2,25 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Service Cloud Consultant exam or mapping the operational rules to a nonprofit (NPSP) org.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Field | Value |
+|---|---|
+| Exam Name | Salesforce Certified Service Cloud Consultant |
+| Exam Code | Service-Con-201 |
+| Questions | 60 multiple-choice / multiple-select (Salesforce may include a small number of unscored questions) |
+| Time Limit | 105 minutes |
+| Passing Score | 63% |
+| Cost | $200 USD registration; $100 USD retake (plus applicable tax) |
+| Prerequisites | Salesforce Certified Administrator credential (required before registering) |
+| Retake Policy | Up to 3 attempts per release; no mandatory waiting period beyond scheduling logistics; a fourth attempt requires a new release cycle |
+
+Delivery: proctored, onsite at a testing center or online-proctored. No reference materials permitted during the exam. Maintenance: an annual (release) maintenance module keeps the credential active.
+
+Domain weights (from the official exam guide): Solution Design 16%, Case Management 15%, Implementation Strategies 15%, Service Console 15%, Intake & Interaction Channels 10%, Industry Knowledge 10%, Knowledge Management 9%, Contact Center Analytics 5%, Integration & Data Management 5%.
+
 ## Study Resources
 
 ### Official Salesforce

@@ -2,6 +2,31 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Agentforce Specialist (AI-201) exam or mapping the operational rules to a nonprofit (NPSP) org.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Detail | Value |
+|---|---|
+| Credential name | Salesforce Certified Agentforce Specialist |
+| Exam code | AI-201 |
+| Number of questions | 60 scored + up to 5 unscored pilot questions |
+| Time limit | 105 minutes |
+| Passing score | 72% |
+| Cost | $200 USD + applicable taxes |
+| Retake fee | $100 USD + applicable taxes |
+| Prerequisites | None (Admin / Platform App Builder recommended) |
+| Retake policy | Up to 3 retakes per release cycle; standard retake fee per attempt |
+| Format | Multiple-choice and multiple-select |
+| Delivery | Online proctored or Pearson VUE testing center |
+| Maintenance | Annual maintenance exam required to keep credential active |
+
+**Pricing note:** Salesforce ran a free-exam promotion ("AI for All") from
+September 23, 2024 through December 31, 2025. As of 2026, the standard $200 list
+price applies, though Salesforce periodically offers free or discounted attempts
+through Trailhead challenges and Agentblazer programs — check the official exam
+page before purchasing a voucher.
+
 ## Study Resources
 
 ### Official Salesforce Resources

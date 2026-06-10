@@ -33,33 +33,7 @@ Both exams once shared a single Trailhead credential page and are still discusse
 
 ---
 
-## Exam Details
-
-### NP-Con-101 — Salesforce Certified Nonprofit Success Pack Consultant
-
-| Field | Value |
-|---|---|
-| Questions | 60 multiple-choice/multiple-select (plus up to 5 unscored) |
-| Time Limit | 105 minutes |
-| Passing Score | 67% (~40 of 60 scored questions) |
-| Cost | $200 USD registration + applicable tax; $100 retake |
-| Prerequisites | Salesforce Certified Administrator credential |
-| Retake Policy | 1st retake after 1 day; 2nd+ after 14 days; max 3 attempts per release window |
-
-Recommended experience: 2–5 years as a Salesforce Administrator or Consultant with hands-on NPSP implementation experience. Delivered as proctored online or in-person at a test center.
-
-### NP-Con-102 — Salesforce Certified Nonprofit Cloud Consultant (NPC)
-
-| Field | Value |
-|---|---|
-| Questions | 60 multiple-choice/multiple-select (plus up to 5 unscored) |
-| Time Limit | 105 minutes |
-| Passing Score | 64% (39 of 60 scored questions) |
-| Cost | $200 USD registration + applicable tax; $100 retake |
-| Prerequisites | Salesforce Certified Administrator credential |
-| Retake Policy | 1st retake after 1 day; 2nd+ after 14 days; max 3 attempts per release window |
-
-Recommended experience: 2–5 years implementing Salesforce solutions for nonprofits with Industries / Nonprofit Cloud hands-on experience. Delivered as proctored online or in-person at a test center.
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 

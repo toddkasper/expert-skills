@@ -2,6 +2,29 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the SAP-C02 exam or mapping the operational rules to a real AWS architecture engagement.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Field | Value |
+|---|---|
+| Scored questions | 65 |
+| Unscored (pretest) questions | 10 (not identified; don't count toward score) |
+| Total questions seen | 75 |
+| Time limit | 180 minutes |
+| Passing score | 750 / 1000 (scaled) |
+| Cost | $300 USD |
+| Format | Multiple choice and multiple response; Pearson VUE online proctored or test center |
+| Prerequisites | None required; 2+ years hands-on AWS experience recommended |
+
+Blueprint domains and weights (SAP-C02, verified from official exam guide):
+- Domain 1 — Design Solutions for Organizational Complexity — **26%**
+- Domain 2 — Design for New Solutions — **29%**
+- Domain 3 — Continuous Improvement for Existing Solutions — **25%**
+- Domain 4 — Accelerate Workload Migration and Modernization — **20%**
+
+> Exam facts verified from the official SAP-C02 exam guide at https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02.html (2026-06-07). Recheck before acting on these numbers — AWS updates them without notice.
+
 ## Official AWS Resources
 
 - [AWS Certified Solutions Architect – Professional exam page](https://aws.amazon.com/certification/certified-solutions-architect-professional/) — registration, exam overview, and links to the exam guide; start here

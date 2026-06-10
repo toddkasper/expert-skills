@@ -2,6 +2,19 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Sales Cloud Consultant exam or mapping the operational rules to an NPSP/Nonprofit Cloud org.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Questions | Time Limit | Passing Score | Cost | Prerequisites | Retake Policy |
+|---|---|---|---|---|---|
+| 60 multiple-choice / multiple-select | 105 minutes | 68% (≈41 of 60) | USD 200 + applicable taxes | Salesforce Certified Administrator (ADM-201) | USD 100 + applicable taxes per attempt |
+
+- **Delivery:** Online proctored or in-person testing center.
+- **Open-book:** No — no reference materials allowed.
+- **Recommended experience:** 2–5 years as a senior business analyst; 1–2 years
+  hands-on Sales Cloud configuration.
+
 ## Study Resources
 
 ### Official Salesforce

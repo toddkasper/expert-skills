@@ -19,20 +19,7 @@ The target audience is developers with object-oriented background building on or
 
 ---
 
-## Exam Details
-
-| Field | Value |
-|---|---|
-| Questions | 60 multiple-choice / multiple-select (plus up to 5 unscored pilot questions) |
-| Time Limit | 105 minutes (~1.75 minutes per question) |
-| Passing Score | 68% (approximately 41 of 60 scored questions) |
-| Cost | $200 USD registration + applicable taxes; $100 USD retake fee |
-| Prerequisites | None formally required; hands-on Apex experience and Admin/App Builder background strongly recommended |
-| Retake Policy | 14-day waiting period between attempts |
-
-**Delivery:** Proctored at Pearson VUE testing centers or online proctored. An annual release maintenance module is required to keep the credential active.
-
-> **Note on score discrepancies across sources:** Official Salesforce materials and the majority of current study guides cite 68% as the passing threshold. Older PDF exam guides (pre-2023) listed 65%. Use 68% as your target.
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 

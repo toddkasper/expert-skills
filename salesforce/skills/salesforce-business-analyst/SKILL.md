@@ -20,26 +20,7 @@ This file is an **operational playbook**, not an exam outline. Each section belo
 
 ---
 
-## Exam Details
-
-| Field | Value |
-|---|---|
-| Exam Name | Salesforce Certified Business Analyst |
-| Exam Code | BA-201 |
-| Questions | 60 scored + up to 5 unscored pretest = up to 65 total |
-| Time Limit | 105 minutes |
-| Passing Score | 72% |
-| Cost | US$200 registration + applicable tax; $100 retake fee |
-| Prerequisites | None (the formerly required Administrator certification was dropped as a hard prerequisite on May 2, 2023) |
-| Retake Policy | Half-price ($100) retakes; up to three attempts per release cycle |
-
-**Recommended experience:** 2+ years hands-on Salesforce platform experience and 2+ years functioning as a business analyst on real implementations.
-
-**Delivery:** Proctored online or in-person at a Kryterion test center. No reference materials permitted.
-
-**Maintenance:** Annual release-specific Trailhead maintenance module (one per year, free).
-
-**Domain weights (60 scored questions; each point ≈ 0.6 questions):** Collaboration with Stakeholders 24% · User Stories 18% · Customer Discovery 17% · Requirements 17% · Business Process Mapping 16% · User Acceptance Testing 8%.
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 

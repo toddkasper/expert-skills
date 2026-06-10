@@ -2,6 +2,23 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the JavaScript Developer I exam or mapping the operational rules to a nonprofit (NPSP) org.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Field | Value |
+|---|---|
+| Questions | 60 multiple-choice / multiple-select (plus up to 5 unscored) |
+| Time Limit | 105 minutes |
+| Passing Score | 65% |
+| Cost | $200 USD registration; $100 USD per retake |
+| Prerequisites | None (no prior Salesforce certification required) + LWC Specialist superbadge to earn the credential |
+| Retake Policy | No wait between attempt 1 and 2; 14-day wait before attempt 3+. Unlimited attempts at $100. |
+
+Additional facts: Exam ID JS-Dev-101 (course code CRT-600). Proctored — online or onsite at
+a testing center; no references permitted. Annual per-release maintenance module required to
+keep the credential active.
+
 ## Study Resources
 
 ### Official Salesforce / Trailhead

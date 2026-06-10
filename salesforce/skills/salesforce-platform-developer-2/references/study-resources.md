@@ -2,6 +2,21 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Developer II exam or mapping the operational rules to a nonprofit (NPSP) org.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Field | Value |
+|---|---|
+| Questions | 60 multiple-choice/multiple-select (plus up to 5 unscored pilot questions) |
+| Time Limit | 120 minutes |
+| Passing Score | 70% |
+| Cost | USD 200 registration / USD 100 retake (plus local taxes) |
+| Prerequisites | Salesforce Certified Platform Developer I credential **+ four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist) |
+| Retake Policy | No mandatory waiting period between attempts; no published attempt cap; failed attempts do not appear on your public Trailhead profile |
+
+*Delivery: onsite Kryterion testing center or online proctored, registered via Trailhead Academy (Plat-Dev-301; replaced Webassessor July 2025).*
+
 ## Study Resources
 
 ### Official Salesforce

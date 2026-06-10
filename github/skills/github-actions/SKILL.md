@@ -21,31 +21,7 @@ The GitHub Actions certification (exam GH-200) validates that a practitioner can
 
 ---
 
-## Certification Details
-
-| Field | Value |
-|---|---|
-| Exam code | GH-200 |
-| Provider | GitHub / Microsoft, delivered via Pearson VUE |
-| Format | Multiple choice + interactive components, proctored |
-| Time | 100 minutes |
-| Passing score | 700 / 1000 |
-| Cost | Varies by region; ~$99 USD (confirm at Pearson VUE scheduling) |
-| Retake | 24 h after first attempt; subsequent gaps vary |
-| Prerequisites | None; intermediate Actions experience recommended |
-| Languages | English, Spanish, Portuguese (Brazil), Korean, Japanese |
-
-> Logistics verified against the official Microsoft Learn certification page (updated Feb 2026). Cost is widely cited as $99 USD but is not published on the study guide page itself — confirm at registration. The exam migrated from PSI to Pearson VUE in July 2025.
-
-Domain weights (January 2026 revision):
-
-| Domain | Weight |
-|---|---|
-| Author and manage workflows | 20–25% |
-| Consume and troubleshoot workflows | 15–20% |
-| Author and maintain actions | 15–20% |
-| Manage GitHub Actions for the enterprise | 20–25% |
-| Secure and optimize automation | 10–15% |
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 

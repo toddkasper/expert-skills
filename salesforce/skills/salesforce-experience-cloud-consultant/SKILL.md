@@ -29,29 +29,7 @@ harden the guest user surface. The recurring exam (and real-world) framing is no
 
 ---
 
-## Exam Details
-
-| Field | Value |
-|---|---|
-| Exam Name | Salesforce Certified Experience Cloud Consultant |
-| Exam Code | EX-Con-101 |
-| Questions | 60 scored multiple-choice/multiple-select (up to 5 additional unscored pretest questions may appear) |
-| Time Limit | 105 minutes |
-| Passing Score | 65% |
-| Cost | $200 USD registration + applicable tax; $100 USD retake fee |
-| Prerequisites | Salesforce Certified Administrator credential required. Recommended: ~6 months hands-on Experience Cloud experience |
-| Retake Policy | No mandatory waiting period between attempts |
-
-Delivery: proctored — online or at a testing center; no reference materials
-permitted. Recommended prep time ≈ 33 hours 45 minutes (Trailhead estimate).
-Instructor-led option: ADX271 (Create and Manage Experience Cloud Sites).
-
-**Domain weights** (each point ≈ 0.6 scored questions): Admin/Setup/Config 25% ·
-Sharing/Visibility/Licensing 17% · Branding/Personalization/Content 15% ·
-User Creation/Auth 13% · Templates/Themes 10% · Basics 8% ·
-Customization Considerations 7% · Adoption/Analytics 5%. **Spend prep time
-proportionally: the sharing model and the external license matrix are where you
-both fail the exam and break a production portal.**
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 
@@ -442,4 +420,4 @@ Study resources (official Salesforce + community) and the NPSP/nonprofit relevan
 
 ## Disclaimer
 
-Independent educational content to upskill AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by Salesforce or any certification body. "Salesforce," "Experience Cloud," and all related product names and certification titles are trademarks of Salesforce, Inc. and their respective owners, used here solely to identify the subject matter. Content is provided as guidance only — verify all configuration details against official Salesforce documentation and a live org before acting. No certification outcome is implied or guaranteed. Exam details (questions, weights, fees, passing score) are subject to change; confirm current values at trailhead.salesforce.com.
+Independent educational content to upskill AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by Salesforce or any certification body. "Salesforce," "Experience Cloud," and all related product names and certification titles are trademarks of Salesforce, Inc. and their respective owners, used here solely to identify the subject matter. Content is provided as guidance only — verify all configuration details against official Salesforce documentation and a live org before acting. No certification outcome is implied or guaranteed. Exam details (questions, weights, fees, score thresholds) are subject to change; confirm current values at trailhead.salesforce.com.

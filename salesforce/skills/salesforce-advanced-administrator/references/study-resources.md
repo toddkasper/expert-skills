@@ -2,6 +2,20 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Administrator II exam or mapping the operational rules to a nonprofit (NPSP) org.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Field | Value |
+|---|---|
+| Questions | 60 multiple-choice / multiple-select (+ up to 5 unscored pilot questions) |
+| Time Limit | 105 minutes |
+| Passing Score | 65% |
+| Cost | USD $200 registration; USD $100 retake (plus applicable taxes) |
+| Prerequisites | Salesforce Certified Administrator (ADM-201 / Plat-Admn-201) |
+| Retake Policy | No mandatory waiting period stated; additional preparation recommended before rescheduling; standard voucher rules apply |
+| Delivery | Online proctored (OnVUE) or in-person at a Pearson VUE testing center |
+
 ## Study Resources
 
 ### Official Salesforce

@@ -14,7 +14,7 @@ metadata:
 
 The Salesforce Certified Platform Developer II (PD2 / PDII) certification validates advanced proficiency in designing, building, and optimizing Salesforce applications using Apex, Lightning Web Components, Aura, Visualforce, and the full suite of Salesforce integration and automation tools. It targets experienced developers who write *correct, performant, and maintainable* code at enterprise scale — not just code that compiles.
 
-The credential has **two parts**: the proctored multiple-choice exam below **and four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist). The superbadges replace the legacy Programming Assignment and are still required — both parts must be completed to earn the credential.
+The credential has **two parts**: a multiple-choice exam **and four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist). The superbadges replace the legacy Programming Assignment and are still required — both parts must be completed to earn the credential.
 
 **This file is an operational playbook, not an exam outline.** It states the rules as actionable instructions with concrete limits, decision criteria, and anti-patterns to catch in review. Read **Operational Rules Quick Reference** first, then drill into the topic sections.
 
@@ -22,18 +22,7 @@ The credential has **two parts**: the proctored multiple-choice exam below **and
 
 ---
 
-## Exam Details
-
-| Field | Value |
-|---|---|
-| Questions | 60 multiple-choice/multiple-select (plus up to 5 unscored pilot questions) |
-| Time Limit | 120 minutes |
-| Passing Score | 70% |
-| Cost | USD 200 registration / USD 100 retake (plus local taxes) |
-| Prerequisites | Salesforce Certified Platform Developer I credential **+ four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist) |
-| Retake Policy | No mandatory waiting period between attempts; no published attempt cap; failed attempts do not appear on your public Trailhead profile |
-
-*Delivery: onsite Kryterion testing center or online proctored, registered via Trailhead Academy (Plat-Dev-301; replaced Webassessor July 2025).*
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 

@@ -21,20 +21,7 @@ The Salesforce Certified Platform Administrator credential (formerly "Salesforce
 
 ---
 
-## Exam Details
-
-| Field | Value |
-|---|---|
-| Questions | 60 scored + up to 5 unscored pretest = 65 total |
-| Time Limit | 105 minutes |
-| Passing Score | 68% (English); 65% (Japanese) — approximately 41 of 60 scored questions |
-| Cost | $200 USD registration + applicable tax; $100 USD retake |
-| Prerequisites | None |
-| Retake Policy | No mandatory waiting period; retake voucher appears automatically after a failed attempt; no published cap on attempts |
-
-Other facts: exam code Plat-Admn-201; delivered via Webassessor / Kryterion (proctored online or in-person test center); no reference materials permitted. The Dec 15, 2025 exam-guide refresh added an Agentforce AI domain.
-
-Blueprint domains and weights: Data & Analytics 17%, Configuration & Setup 15%, Object Manager & Lightning App Builder 15%, Automation 15%, Sales & Marketing 10%, Service & Support 10%, Productivity & Collaboration 10%, Agentforce AI 8%.
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 

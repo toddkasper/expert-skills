@@ -26,20 +26,7 @@ The value of CTA-domain thinking is operational, not just the badge: it is exact
 
 ---
 
-## Exam Details
-
-The CTA credential is a **two-part sequential process**. You must pass Part 1 (Architect Review Board Evaluation) before being invited to Part 2 (Technical Architect Review Board Exam). Both parts are scenario-based oral defenses with no multiple-choice component.
-
-| Field | Value |
-|---|---|
-| Questions | No fixed question count — scenario-driven oral assessment in both parts |
-| Time Limit | Part 1: ~165 min (60 read + 30 present + 30 Q&A + ~45 feedback). Part 2: ~265 min (180 solution design + 45 present + 40 Q&A) |
-| Passing Score | Pass/fail. Part 2 scores 7 domains; failing >1 domain = overall failure, failing exactly 1 = Section Retake allowed |
-| Cost | $6,000 total: $1,500 Part 1 + $4,500 Part 2 (plus applicable taxes) |
-| Prerequisites | Salesforce Certified Application Architect **and** Salesforce Certified System Architect (both required) before Part 1; passing Part 1 gates Part 2 |
-| Retake Policy | Part 1 retake $750; Part 2 retake $2,250 (full or single-domain Section Retake). Wait 6 months after a failed attempt; written feedback within ~2 weeks. Annual maintenance required to stay current |
-
-Additional logistics: Part 1 is virtual (Zoom screen-share). Part 2 is virtual or in-person before a panel of 3–4 sitting CTAs. The scenario document is provided ~30 minutes before the board session begins. Allowed materials are G Suite tools (Docs, Slides, Sheets) or paper; offline materials require photo documentation.
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
 ---
 
@@ -393,4 +380,4 @@ Study resources (official Salesforce + community) and the NPSP/Nonprofit Cloud r
 
 ---
 
-*Independent educational content to upskill AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by Salesforce, Inc. or any certification body. "Salesforce," "Salesforce Certified Technical Architect," "CTA," "NPSP," "Agentforce," "MuleSoft," "Data Cloud," and all related trademarks and product names are the property of their respective owners and are used here solely for identification purposes. Content is provided as-is for guidance only — verify all rules, limits, fees, and procedures against official Salesforce documentation and your live org before acting. No certification outcome is implied or guaranteed. Governor limits, exam fees, retake policies, and product capabilities are subject to change; check the official exam guide and release notes for current values.*
+*Independent educational content to upskill AI agents. Not affiliated with, authorized by, endorsed by, or sponsored by Salesforce, Inc. or any certification body. "Salesforce," "Salesforce Certified Technical Architect," "CTA," "NPSP," "Agentforce," "MuleSoft," "Data Cloud," and all related trademarks and product names are the property of their respective owners and are used here solely for identification purposes. Content is provided as-is for guidance only — verify all rules, limits, fees, and procedures against official Salesforce documentation and your live org before acting. No certification outcome is implied or guaranteed. Governor limits, exam fees, and product capabilities are subject to change; check the official exam guide and release notes for current values.*
