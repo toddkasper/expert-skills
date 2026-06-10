@@ -1,6 +1,6 @@
 ---
 name: github-actions
-description: Operational playbook for authoring, maintaining, and securing GitHub Actions — CI/CD workflows, reusable and composite workflows, custom actions, runners, secrets and OIDC, and enterprise governance. Use when building or reviewing GitHub Actions automation, pipelines, or release workflows. The GitHub Actions (GH-200) certification scopes and benchmarks this skill.
+description: Authoring, maintaining, and securing GitHub Actions — CI/CD workflows, triggers, matrix builds, contexts and expressions, reusable and composite workflows, custom actions (action.yml; JS/Docker/composite), self-hosted and GitHub-hosted runners, secrets and OIDC cloud auth, and enterprise governance. Use when building, reviewing, or debugging GitHub Actions workflows, pipelines, release automation, or runner/security policy. Scoped and benchmarked by the GitHub Actions (GH-200) certification blueprint.
 metadata:
   credential: "GitHub Actions (GH-200)"
   exam-code: GH-200

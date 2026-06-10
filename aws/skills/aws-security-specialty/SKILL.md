@@ -1,6 +1,6 @@
 ---
 name: aws-security-specialty
-description: Operational playbook for AWS security engineering at the Specialty level (SCS-C03) — threat detection, incident response, security logging and monitoring, infrastructure and network security, identity and access management, data protection and encryption, and security governance in multi-account AWS environments. Use when designing or reviewing AWS security controls, IAM policy evaluation, detection/response automation, KMS encryption strategy, or compliance guardrails. Reflects the SCS-C03 blueprint (launched December 2, 2025).
+description: AWS security engineering — threat detection (GuardDuty, Security Hub, Detective, Security Lake), incident response and containment, IAM policy evaluation and permission boundaries, infrastructure/network security (security groups, NACLs, WAF, Shield, PrivateLink), data protection and KMS encryption strategy, Secrets Manager, Macie, and multi-account governance (SCPs, Control Tower, Config, Firewall Manager). Use when designing or reviewing AWS security controls, detection/response automation, or compliance guardrails. Not pipeline/IaC delivery (see aws-devops-engineer-professional) or broad architecture trade-offs (see aws-solutions-architect-professional). Scoped and benchmarked by the AWS Security – Specialty (SCS-C03) blueprint.
 metadata:
   credential: AWS Certified Security – Specialty
   exam-code: SCS-C03

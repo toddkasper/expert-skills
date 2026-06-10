@@ -1,6 +1,6 @@
 ---
 name: aws-devops-engineer-professional
-description: Operational playbook for AWS DevOps engineering at the Professional level — CI/CD pipelines, infrastructure as code, resilient cloud design, monitoring/logging, incident response, and security/compliance automation. Use when building or reviewing AWS delivery pipelines, IaC templates, observability stacks, and automated remediation. The AWS Certified DevOps Engineer – Professional (DOP-C02) certification scopes and benchmarks this skill.
+description: AWS DevOps engineering — CI/CD pipelines (CodePipeline, CodeBuild, CodeDeploy), infrastructure as code (CloudFormation, CDK, Systems Manager), deployment strategies (blue/green, canary), resilient multi-AZ/multi-region design, CloudWatch monitoring and logging, event-driven incident response and automated remediation, and security/compliance automation. Use when building, reviewing, or debugging AWS delivery pipelines, IaC templates, observability stacks, or auto-remediation. Not security-first design (see aws-security-specialty) or enterprise architecture trade-offs (see aws-solutions-architect-professional). Scoped and benchmarked by the AWS DevOps Engineer – Professional (DOP-C02) blueprint.
 metadata:
   credential: AWS Certified DevOps Engineer – Professional
   exam-code: DOP-C02

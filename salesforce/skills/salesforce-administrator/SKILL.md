@@ -1,6 +1,6 @@
 ---
 name: salesforce-administrator
-description: Operational playbook for day-to-day Salesforce administration — org security (profiles, permission sets, OWD, sharing, FLS), the object/field data model, Flow automation, data import and quality, reports and dashboards, and Agentforce admin setup. Use when configuring or reviewing any of these. The Platform Administrator certification (Plat-Admn-201) is the scaffold and benchmark used to scope and measure this skill, not its subject; reflects the December 2025 blueprint that added an Agentforce AI domain.
+description: Day-to-day Salesforce org configuration — profiles, permission sets, OWD, sharing rules, FLS, the object/field data model, Flow automation, data import (Data Import Wizard, Data Loader), validation rules, duplicate management, reports, dashboards, and Agentforce admin setup. Use when configuring or reviewing declarative org settings, security/sharing, automation, or analytics. Not Apex/triggers/SOQL (see salesforce-platform-developer-1), advanced sharing architecture, deployment pipelines or auditing (see salesforce-advanced-administrator), or building AI agents (see salesforce-agentforce-specialist). Scoped and benchmarked by the Platform Administrator (Plat-Admn-201) blueprint.
 metadata:
   credential: Salesforce Certified Platform Administrator
   exam-code: Plat-Admn-201

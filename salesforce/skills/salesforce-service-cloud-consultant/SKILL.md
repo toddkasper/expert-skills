@@ -1,6 +1,6 @@
 ---
 name: salesforce-service-cloud-consultant
-description: Operational playbook for designing and configuring Salesforce Service Cloud — cases, assignment and escalation rules, entitlements, milestones, the Lightning Service Console, Knowledge (Knowledge__kav, data categories, KCS), Omni-Channel routing, Web-to-Case/Email-to-Case, and Contact Center Analytics. Covers solution design, intake and interaction channel selection, implementation strategies, integration and data management, and industry KPIs (AHT, FCR, CSAT). Use when configuring or reviewing a Service Cloud implementation or building a case-management or intake-review workflow.
+description: Designing and configuring Salesforce Service Cloud — cases, assignment/escalation rules, queues, entitlements and milestones (SLAs), the Lightning Service Console, Knowledge (Knowledge__kav, data categories, KCS), Omni-Channel routing, Web-to-Case/Email-to-Case, CTI/voice, and contact-center analytics (AHT, FCR, CSAT). Use when scoping or implementing a case-management/support solution, intake channels, or routing. Not Sales Cloud pipeline (see salesforce-sales-cloud-consultant), external portals (see salesforce-experience-cloud-consultant), or general org admin (see salesforce-administrator). Scoped and benchmarked by the Service Cloud Consultant (Service-Con-201) blueprint.
 metadata:
   credential: Salesforce Certified Service Cloud Consultant
   exam-code: Service-Con-201

@@ -1,6 +1,6 @@
 ---
 name: salesforce-technical-architect
-description: Operational playbook for end-to-end Salesforce architecture and trade-off design — system architecture, security, data modeling, solution design, integration patterns, development lifecycle, and communication. Use when designing or reviewing a multi-org strategy, governor-limit-aware integration pipelines, security access models (FLS, OAuth, JWT Bearer, ECA), bulk-safe Apex/Flow automation, or SFDX deployment sequences — or when pursuing the Salesforce Certified Technical Architect (CTA) review board credential. Keywords: CTA, architect review board, Salesforce architecture, governor limits, integration patterns, FLS, managed package, NPSP, bulkification, Named Credentials, Bulk API, Platform Events.
+description: End-to-end Salesforce architecture and trade-off design — multi-org strategy, security and identity (SSO, OAuth, JWT Bearer, SAML, FLS), enterprise data modeling and LDV, solution architecture across clouds, integration patterns (Named Credentials, Platform Events, Bulk/REST API, middleware), governor-limit-aware design, and development-lifecycle/deployment governance. Use when designing or reviewing cross-cloud architecture, integration pipelines, access models, or org strategy. Not single-cloud config or hands-on coding (see the cloud-consultant and platform-developer skills). Scoped and benchmarked by the Certified Technical Architect (CTA) review-board blueprint.
 metadata:
   credential: Salesforce Certified Technical Architect
   domain: salesforce

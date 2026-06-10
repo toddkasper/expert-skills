@@ -1,6 +1,6 @@
 ---
 name: salesforce-sales-cloud-consultant
-description: Operational playbook for designing and configuring Salesforce Sales Cloud (leads, opportunities, forecasting, pipeline, price books, CPQ). Use when selecting automation tools (validation rules, Flow, Apex), enforcing governor limits and bulkification, modeling the data layer (lookups, master-detail, external IDs, FLS), designing the sharing and security model, planning data migrations or deduplication, configuring reporting and dashboards, or evaluating AI and sales productivity features. Covers deployment discipline from sandbox through production.
+description: Designing and configuring Salesforce Sales Cloud — leads and lead conversion, opportunities and pipeline stages, forecasting, territory management, price books and products, campaigns, and sales-productivity/AI features. Use when scoping or implementing Sales Cloud, picking automation tools, modeling the sales data layer, designing the sharing model, planning migrations/dedupe, or building sales reports and dashboards. Not Service Cloud (see salesforce-service-cloud-consultant), external portals (see salesforce-experience-cloud-consultant), or general org admin (see salesforce-administrator). Scoped and benchmarked by the Sales Cloud Consultant (Sales-Con-201) blueprint.
 metadata:
   credential: Salesforce Certified Sales Cloud Consultant
   exam-code: Sales-Con-201

@@ -1,6 +1,6 @@
 ---
 name: salesforce-platform-developer-2
-description: Operational playbook for advanced Apex, integration, async processing, and performance work on the Salesforce platform. Use when designing or reviewing Apex triggers, bulkification, asynchronous patterns (Batch/Queueable/Future/Schedulable), SOQL selectivity, LDV performance, platform events, REST/Bulk API integration, Lightning Web Components, FLS/sharing enforcement in code, or SFDX deployment. Covers governor limits, design patterns (Singleton, Strategy, Bulk State Transition, fflib), TDTM for NPSP orgs, and test mocking.
+description: Advanced Apex, integration, async processing, and performance work on the Salesforce platform — design patterns (Singleton, Strategy, fflib, Bulk State Transition), asynchronous patterns (Batch/Queueable/Future/Schedulable, chaining), SOQL selectivity and Large Data Volume tuning, Platform Events, Change Data Capture, REST/Bulk API integration, dynamic Apex with FLS/CRUD enforcement, and test mocking (Stub API). Use when designing or reviewing advanced Apex, integration, or performance-critical code. Not Apex fundamentals (see salesforce-platform-developer-1) or declarative config (see salesforce-administrator). Scoped and benchmarked by the Platform Developer II (Plat-Dev-301) blueprint.
 metadata:
   credential: Salesforce Certified Platform Developer II
   exam-code: Plat-Dev-301

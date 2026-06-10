@@ -1,6 +1,6 @@
 ---
 name: aws-solutions-architect-professional
-description: Operational playbook for designing and evaluating complex AWS architectures at the Solutions Architect – Professional level (SAP-C02) — multi-account organizations, hybrid and cross-account networking, migration and modernization strategy, cost and resilience trade-offs. Use when making or reviewing enterprise AWS design decisions across organizational complexity, greenfield solutions, continuous improvement, and workload migration.
+description: Designing and evaluating complex AWS architectures — multi-account AWS Organizations, hybrid and cross-account networking (Transit Gateway, PrivateLink, Direct Connect), business-continuity and DR design, migration and modernization strategy (the 7 Rs), and cost/resilience/performance trade-offs at enterprise scale. Use when making or reviewing enterprise AWS design decisions across organizational complexity, new solutions, continuous improvement, or workload migration. Not hands-on pipeline/IaC delivery (see aws-devops-engineer-professional) or security-control depth (see aws-security-specialty). Scoped and benchmarked by the AWS Solutions Architect – Professional (SAP-C02) blueprint.
 metadata:
   credential: AWS Certified Solutions Architect – Professional
   exam-code: SAP-C02

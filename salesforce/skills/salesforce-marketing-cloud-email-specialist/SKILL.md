@@ -1,6 +1,6 @@
 ---
 name: salesforce-marketing-cloud-email-specialist
-description: Operational playbook for building Marketing Cloud email campaigns, journeys, and automation — and for studying the Salesforce Certified Marketing Cloud Email Specialist exam (MC-202). Use when designing Journey Builder welcome or nurture sequences, configuring Automation Studio batch pipelines, writing AMPscript personalization, modeling data extensions, enforcing deliverability (SPF/DKIM/DMARC, IP warming, bounce handling), integrating SFMC with a Salesforce CRM via Marketing Cloud Connect, or preparing for the MCES certification covering email best practices, Content Builder, Triggered Sends, subscriber lifecycle, segmentation with SQL Data Views, and inbox analytics.
+description: Building Salesforce Marketing Cloud (SFMC) email campaigns, journeys, and automation — Journey Builder welcome/nurture flows, Automation Studio batch pipelines, Content Builder, AMPscript personalization, data extensions and SQL Data Views, Triggered/Single/User-Initiated sends, deliverability (SPF/DKIM/DMARC, IP warming, bounce handling), Marketing Cloud Connect to CRM, and inbox analytics. Use when designing or reviewing SFMC email, journeys, segmentation, or deliverability. This is SFMC (Studio/Builder stack) — not core CRM email or Pardot/Account Engagement. Scoped and benchmarked by the Marketing Cloud Email Specialist (MC-202) blueprint.
 metadata:
   credential: Salesforce Certified Marketing Cloud Email Specialist
   exam-code: MC-202

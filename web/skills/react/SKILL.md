@@ -1,6 +1,6 @@
 ---
 name: react
-description: Operational playbook for building and reviewing React applications — components and JSX, hooks, state and data flow, rendering and performance, accessibility, and testing — anchored on official React guidance (react.dev). Use when writing or reviewing React UIs. Excludes Next.js (see the nextjs skill) and React Native/Expo (see the react-native skill).
+description: Building and reviewing React applications — components and JSX, hooks (useState/useReducer/useEffect/useRef/useContext, custom hooks), the rules of hooks, state and data flow, rendering and memoization, concurrent features, accessibility, and testing with React Testing Library. Use when writing, reviewing, or debugging React UIs, re-renders/effects, or state architecture. Excludes Next.js (see nextjs) and React Native/Expo (see react-native). Competence skill anchored on react.dev — no first-party certification.
 metadata:
   credential: None — competence skill (no first-party React certification exists)
   domain: web

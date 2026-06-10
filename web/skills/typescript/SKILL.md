@@ -1,6 +1,6 @@
 ---
 name: typescript
-description: Operational playbook for writing and reviewing TypeScript — the type system, generics, narrowing and inference, utility and conditional types, strictness configuration, typing JavaScript/Node APIs, and declaration files. Use when adding or reviewing types in any TypeScript codebase (Node, React, Lambdas). No first-party certification exists; this is a competence skill. Sibling skills handle framework-specific concerns (react, nodejs, nextjs, react-native).
+description: Writing and reviewing TypeScript — the type system and structural typing, generics, narrowing and inference, conditional/mapped/utility types, strictness configuration (tsconfig, the strict family), module resolution and project references, typing third-party/Node APIs, and declaration files (.d.ts). Use when adding or reviewing types in any TS codebase (Node, React, Lambdas). Framework-specific concerns live in the react/nodejs/nextjs/react-native skills. Competence skill anchored on the official TypeScript Handbook — no first-party certification.
 metadata:
   credential: None — competence skill (TypeScript has no first-party certification)
   domain: web

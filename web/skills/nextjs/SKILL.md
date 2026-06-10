@@ -1,6 +1,6 @@
 ---
 name: nextjs
-description: Operational playbook for building and reviewing Next.js applications — the App Router, Server and Client Components, rendering and caching (use cache / PPR / streaming), data fetching, Route Handlers, Server Actions, and the Proxy layer. Use when building or reviewing Next.js apps. No first-party certification exists; this is a competence skill anchored on the official Next.js documentation (v16.x, May 2026). Sibling skills handle React fundamentals (react) and Node.js (nodejs).
+description: Building and reviewing Next.js applications — the App Router, Server and Client Components, rendering and caching (use cache, PPR, streaming), data fetching, Route Handlers, Server Actions and their security rules, and the Proxy (formerly Middleware) layer. Use when building, reviewing, or debugging Next.js apps, routing, caching, or server actions. Excludes React fundamentals (see react) and the Node.js runtime (see nodejs). Competence skill anchored on official Next.js docs (v16.x) — no first-party certification.
 metadata:
   credential: None — competence skill (no first-party Next.js certification)
   domain: web

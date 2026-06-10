@@ -1,6 +1,6 @@
 ---
 name: nodejs
-description: Operational playbook for building and reviewing Node.js applications and services — the event loop and async patterns, streams and buffers, the module system, error handling, diagnostics, packaging, and HTTP services with security. Use when writing or reviewing Node.js code, CLIs, services, or AWS Lambda handlers. The OpenJS JSNAD and JSNSD certifications (retired September 2025) provide the competence blueprint; the skill covers their full scope. Sibling skills handle React (`react`), Next.js (`nextjs`), React Native (`react-native`), and TypeScript (`typescript`) — this skill stays focused on the Node.js runtime.
+description: Building and reviewing Node.js applications and services — the event loop and async patterns, streams and buffers, the module system (ESM/CJS), packaging and the toolchain, error handling and diagnostics, and HTTP services with security. Use when writing, reviewing, or debugging Node.js code, CLIs, services, or AWS Lambda handlers. Stays on the Node runtime; excludes React (see react), Next.js (see nextjs), and TypeScript typing (see typescript). Competence skill mapped to the retired OpenJS JSNAD/JSNSD curriculum.
 metadata:
   credential: OpenJS Node.js Application Developer (JSNAD) / Services Developer (JSNSD) — both retired September 30, 2025
   domain: web

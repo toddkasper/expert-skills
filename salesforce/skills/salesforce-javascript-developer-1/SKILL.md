@@ -1,6 +1,6 @@
 ---
 name: salesforce-javascript-developer-1
-description: Operational playbook for writing and reviewing JavaScript (and Lightning Web Components) in Salesforce and adjacent stacks. Use when reasoning about closures, prototypes, the async/event loop, DOM manipulation, Node.js, or testing (Jest/Vitest/LWC Jest) — or when auditing ES6+ code for coercion bugs, `this`-binding errors, unhandled Promise rejections, XSS vectors, or bulkification anti-patterns.
+description: Lightning Web Components (LWC) and JavaScript for the Salesforce platform — wire adapters and Lightning Data Service, component lifecycle and decorators (@api/@track/@wire), custom events and shadow DOM, plus core JavaScript: ES6+ syntax, closures, prototypes, this-binding, the async/event loop, modules, Node.js, and Jest/LWC-Jest testing. Use when writing or reviewing LWC front-end code, or auditing JavaScript for coercion bugs, this-binding errors, unhandled rejections, or XSS. Not Apex/server-side logic (see salesforce-platform-developer-1). Scoped and benchmarked by the JavaScript Developer I (JS-Dev-101) blueprint.
 metadata:
   credential: Salesforce Certified JavaScript Developer I
   exam-code: JS-Dev-101
