@@ -60,6 +60,25 @@ When two stakeholders give incompatible requirements, the BA's job is to surface
 
 ---
 
+## Workflow 3 — Map current → future-state process (swimlane + RACI)
+
+> Full executable workflow for §5 Business Process Mapping. Linked from [../SKILL.md](../SKILL.md) Workflow 3 load cue.
+
+1. Schedule a current-state walkthrough with SMEs. Use observation/shadowing, not just interview — people describe the ideal process, not what they actually do.
+   → gate: as-is map reflects observed reality, not the SOP document; exception paths are included.
+2. Draw the as-is swimlane: lanes = actors (end user, staff, system/Salesforce, external system). Capture every handoff, manual workaround, bottleneck, and data-entry step.
+   → gate: at least two exception paths (e.g. incomplete submission, missing data) are on the map.
+3. Run an automation audit on every Salesforce object the process touches: list active workflow rules, record-triggered flows, process builders, and triggers. Document side effects.
+   → gate: automation audit complete; no active automation on the relevant objects is unaccounted for in the map.
+4. Build the to-be swimlane at the business level (what changes and who benefits — not a click-by-click Salesforce walkthrough). Align each decision diamond → validation rule or flow decision; each handoff → automation trigger; each data-entry step → field + layout requirement.
+   → gate: to-be map is readable by a non-technical stakeholder; each difference from as-is maps to at least one backlog item.
+5. Build the RACI for the to-be process: exactly one Accountable per decision. Flag any row with two Accountables as a defect — escalate before proceeding.
+   → gate: RACI has no duplicate Accountables; every new automation step has an owner for monitoring and break-fix.
+6. Version-control the to-be map alongside the requirements that drove it; update both when scope changes.
+   → gate: map file is committed to the repo with a link to the relevant requirements in the traceability doc.
+
+---
+
 ## Traceability and Impact Analysis
 
 When a field is resized, a picklist value changed, or a business rule updated, a BA must be able to enumerate downstream impact before approving the change. Traceability is not a one-time document — it is a living map.

@@ -22,15 +22,13 @@ Protocol: [../../docs/ASSESSMENT.md](../../docs/ASSESSMENT.md)
 | D6 | Verification discipline | 3 | Workflow gates are copy-runnable: React DevTools Profiler steps ("record a session, click the component"), `Object.is(prev, next)` ref-stability check, `screen.debug()`, `--verbose` test runner flag. |
 | D7 | Uncertainty & escalation | 3 | Dedicated U&E section; `[volatile — verify live]` on React Compiler availability, `useActionState`/`useOptimistic` (React 19+), TanStack Query major-version surface; escalate for React 17→18/18→19 upgrades; live-wins stated. |
 | D8 | Executable workflows | 3 | Three numbered workflows (state placement, re-render diagnosis, RTL test writing) with verify gates between every step. |
-| D9 | Teaching scenarios | 1 | Decision Scenarios body contains **one** full POLICY scenario (context provider value object), plus one inline mini-scenario in the Testing section. Remaining scenarios deferred to `references/scenarios.md`. D9 requires ≥4 original scenarios in the skill body — body only delivers 2 at most. |
+| D9 | Teaching scenarios | 3 | 4 scenarios now inline in body (POLICY-format): context provider value object, prop-mirroring vs controlled component, React.memo bypassed by context change, and useEffect dependency infinite loop. references/scenarios.md removed. |
 | D10 | Context economy | 2 | 4,721 words — inside the 4,300–5,000 band; scores 2. Body clean; no exam logistics. D10 trim flag: pushing additional scenarios to `references/` reduces body word count but D9 suffers — these concerns are in tension. |
 | D11 | Freshness & provenance | 2 | `last-reviewed: 2026-06-09`; Changelog present (2026-06-09 conformance); volatile marks inline. No per-scar provenance yet. |
 | D12 | Measurability | 2 | Eval infra complete (triggers, situations, tasks, answer-key); no model run recorded yet. |
-| | **Total** | **30/36** | |
+| | **Total** | **32/36** | |
 
-**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: needs content pass**
-
-Sub-2 dimensions filed as inbox items: **D9** (scenario count in body = 2; need ≥4 in-body POLICY scenarios).
+**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: publish-ready**
 
 ---
 
@@ -78,3 +76,4 @@ Source phrasings: `evals/react/triggers.md`. Test against descriptions only (fro
 The blocking issue is D9. The skill body contains one full POLICY scenario and one inline testing mini-scenario — two at most, against the ≥4 bar. The fix is to inline at least three additional scenarios from `references/scenarios.md` directly into the body. Since body word count (4,721) is already near the D10 ceiling, adding three 150–200 word scenarios will push the skill over 5,000 words, risking a D10 drop to 1. The recommended resolution: trim the Quick Reference section (currently ~28 bullet points, many redundant with section bodies) by approximately 350–400 words to create headroom before inlining the scenarios. Target: 4 in-body scenarios + body ≤4,800 words.
 
 The rest of the skill is high quality. D11/D12 improvements follow the standard path: field feedback for provenance, eval runs for measurability.
+Cycle-1 curation (2026-06-09): D9 1→3 (4 scenarios now inline; references/scenarios.md removed) → now publish-ready.

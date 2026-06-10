@@ -15,9 +15,7 @@ metadata:
 
 ## Overview
 
-**This file is an operational playbook, not an exam outline.** Each section states the rules a BA applies at decision time — requirements vs. user stories, story sizing, testable acceptance criteria, UAT go/no-go — plus the anti-patterns to catch in review and the way to verify against the live org before trusting any assumption. The recurring discipline is to confirm org reality (objects, fields, picklists, active automations) before committing to a requirement or estimate.
-
-Credential background and study path: [references/study-resources.md](references/study-resources.md).
+Operational playbook for the Salesforce BA discipline. Credential background, study path, and skill orientation: [references/study-resources.md](references/study-resources.md).
 
 > **Load this skill when…** eliciting or documenting requirements for a Salesforce project; writing or reviewing user stories and acceptance criteria; facilitating a discovery or UAT session; mapping as-is/to-be processes including automation implications.
 > **Not this skill:** building the declarative config (fields, flows, layouts) → see `salesforce-administrator`; writing Apex, LWC, or integration code → see `salesforce-platform-developer-1` / `salesforce-platform-developer-2`.
@@ -39,10 +37,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 - **Escalate to a human:** surface — never silently decide — any action that constitutes a sign-off or go-live decision (go/no-go for production deployment, sponsor approval to defer a Must requirement, acceptance of a residual defect risk). These decisions belong to the named human Accountable in the RACI; the BA facilitates and documents, not decides.
 - **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
-Inline volatile tags applied:
-- BA-201 blueprint topic weights (24% / 18% / 17% / 17% / 16% / 8%) `[volatile — verify live]` — Salesforce updates exam blueprints; verify against the current official exam guide before studying or quoting weights.
-- Workflow Rules and Process Builder "retired for new work" status `[volatile — verify live]` — Salesforce has announced deprecation; verify the current enforcement date and any grace periods in the latest release notes.
-- NPSP managed-package automation side effects (Household Account creation, `npe01__PreferredPhone__c` workflow rule) `[volatile — verify live]` — package version-specific; confirm active automations in the target org before writing requirements.
+> **Volatile tag index:** The specific items tagged `[volatile — verify live]` in this skill (blueprint weights, automation deprecation timeline, NPSP package behavior) are annotated in [references/study-resources.md](references/study-resources.md) — load that file when verifying exam logistics or planning a study pass.
 
 ---
 
@@ -249,18 +244,7 @@ A solution can pass verification and fail validation — a feature built exactly
 
 ### Workflow 3 — Map current → future-state process (swimlane + RACI)
 
-1. Schedule a current-state walkthrough with SMEs. Use observation/shadowing, not just interview — people describe the ideal process, not what they actually do.
-   → gate: as-is map reflects observed reality, not the SOP document; exception paths are included.
-2. Draw the as-is swimlane: lanes = actors (end user, staff, system/Salesforce, external system). Capture every handoff, manual workaround, bottleneck, and data-entry step.
-   → gate: at least two exception paths (e.g. incomplete submission, missing data) are on the map.
-3. Run an automation audit on every Salesforce object the process touches: list active workflow rules, record-triggered flows, process builders, and triggers. Document side effects.
-   → gate: automation audit complete; no active automation on the relevant objects is unaccounted for in the map.
-4. Build the to-be swimlane at the business level (what changes and who benefits — not a click-by-click Salesforce walkthrough). Align each decision diamond → validation rule or flow decision; each handoff → automation trigger; each data-entry step → field + layout requirement.
-   → gate: to-be map is readable by a non-technical stakeholder; each difference from as-is maps to at least one backlog item.
-5. Build the RACI for the to-be process: exactly one Accountable per decision. Flag any row with two Accountables as a defect — escalate before proceeding.
-   → gate: RACI has no duplicate Accountables; every new automation step has an owner for monitoring and break-fix.
-6. Version-control the to-be map alongside the requirements that drove it; update both when scope changes.
-   → gate: map file is committed to the repo with a link to the relevant requirements in the traceability doc.
+> **Full step-by-step workflow in [references/change-management.md](references/change-management.md)** — load that file when running a process-mapping session. Key gates: observation over SOP, two exception paths on the as-is map, automation audit before any to-be design, exactly one Accountable per RACI row, to-be map version-controlled alongside requirements.
 
 ---
 
@@ -332,9 +316,9 @@ Read this first. Each rule is imperative and concrete.
 
 ## References
 
-- [references/study-resources.md](references/study-resources.md) — credential logistics and study path.
+- [references/study-resources.md](references/study-resources.md) — credential logistics, study path, and volatile tag index.
 - [references/scenarios.md](references/scenarios.md) — Decision Scenarios 3–5: UAT defect vs. new requirement, requirement phrased as solution, to-be verification.
-- [references/change-management.md](references/change-management.md) — extended change management and scope escalation operational guidance; load when advising on go-live change planning, training design, or conflicting-stakeholder escalation paths.
+- [references/change-management.md](references/change-management.md) — extended change management and scope escalation operational guidance, plus the full Workflow 3 (map current → future-state process); load when advising on go-live change planning, training design, conflicting-stakeholder escalation paths, or running a process-mapping session.
 
 For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
@@ -353,6 +337,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 ## Changelog
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
+- **2026-06-09** — Curation pass (inbox: D10 audit finding): moved niche detail to references to meet the context-economy budget.
 
 ---
 

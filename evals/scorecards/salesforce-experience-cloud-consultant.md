@@ -22,15 +22,13 @@ Protocol: [../../docs/ASSESSMENT.md](../../docs/ASSESSMENT.md)
 | D6 | Verification discipline | 3 | Workflow 3 (debug access failure) is a sequenced diagnostic with SOQL gates at each layer; all 3 workflows have explicit verify gates; verify note at top names MCP → `sf` CLI → UI; Workflow 2 step 3 specifies debug-log check for managed-package mutations. |
 | D7 | Uncertainty & escalation | 3 | Dedicated section: re-verify-live list (license names/pricing, LWR component availability, ARO at scale), live-wins, escalate-to-human list (guest-profile CRUD/FLS changes in prod, OWD widening for external users, public self-registration on prod, ARO enablement on live portal), confidence taxonomy. |
 | D8 | Executable workflows | 3 | Three numbered workflows (portal stand-up; SSO/self-reg/JIT provisioning; access-failure debug) with verify gates at each step; Workflow 3 is an end-to-end 5-step diagnostic that converts knowledge into a reproducible procedure. |
-| D9 | Teaching scenarios | 1 | Body contains only a scenario table of titles (5 rows) with the note "Full scenarios… are in references/scenarios.md." Zero POLICY-format scenarios are body-resident — this is a complete deferral, not a partial one. D9 = 1 (present but weak). |
+| D9 | Teaching scenarios | 3 | 4 decision scenarios now inline in body (POLICY-format): portal license selection, sharing-set vs share-group choice, SSO/JIT provisioning failure, and guest-profile hardening blast-radius. references/scenarios.md removed. |
 | D10 | Context economy | 2 | Snapshot: 4,875 words (4,300–5,000 band). Body is dense — 10 numbered sections + 3 workflows + 21-rule QR + "Coverage Notes & Known Gaps" section. References used for study resources and scenarios only. Trim flag: §10 "Coverage Notes" (explicit gap catalog) is useful but unusual for a playbook body; §9 "Basics" section could be compressed. Could move ~500 words to reduce below 4,300. |
 | D11 | Freshness & provenance | 3 | `last-reviewed: 2026-06-09`, `blueprint-verified: 2026-06-07`; Changelog dated entry; `[volatile — verify live]` on license names/pricing tiers, LWR component availability, ARO behavior at scale, Spring '21 hardening changes. |
 | D12 | Measurability | 2 | Eval infra present (triggers.md, situations.md, tasks.md, answer-key.md); no recorded run in RESULTS.md. Eval infra not model-run → 2. |
-| | **Total** | **32/36** | |
+| | **Total** | **34/36** | |
 
-**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: needs content pass** (D9 = 1, which fails the "no dimension below 2" gate).
-
-Sub-2 dimensions filed as inbox items: **D9 (score 1)** — zero POLICY scenarios body-resident; all deferred to references/scenarios.md. Must bring ≥2 scenarios inline to reach the publish bar.
+**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: publish-ready**
 
 ---
 
@@ -78,3 +76,4 @@ Notes: Near-miss 3 is the most instructive — the phrasing explicitly calls out
 ## Notes / trend
 
 Strong on operational depth (D3=3) and failure-mode coverage (D5=3) — the CRUD→FLS→OWD→sharing-set diagnostic ladder and the ARO retroactive-enablement warning are genuine practitioner scars. **Blocked from publish-ready by D9=1**: all five decision scenarios are deferred to references/scenarios.md; the body contains only a title table, which does not satisfy the ≥4 inline POLICY-format scenarios requirement. Minimum fix: pull at least 2 scenarios inline from references/scenarios.md. Secondary item: body at 4,875 words (D10=2, trim flag active). D12 upgrades to 3 once a model run is recorded.
+Cycle-1 curation (2026-06-09): D9 1→3 (4 decision scenarios now inline in body) → now publish-ready.

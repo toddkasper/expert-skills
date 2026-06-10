@@ -153,15 +153,7 @@ Three mechanisms, in order of preference:
 
 ## 3. Authoring Custom Actions
 
-### Action Types
-
-| Type | Runtime | Best for | Key file |
-|---|---|---|---|
-| JavaScript | Node.js (on runner, no container spin-up) | Fast, cross-OS, access to Actions toolkit | `action.yml` + `index.js` (or compiled dist/) |
-| Docker | Container | Custom OS/tools, Python/Ruby/compiled binaries | `action.yml` + `Dockerfile` |
-| Composite | YAML steps, no container | Wrapping a sequence of steps/shell commands | `action.yml` with `runs.steps` |
-
-**Immutable actions on GitHub-hosted runners:** GitHub has been rolling out enforcement that actions pinned to a tag are resolved against an immutable copy in the GitHub Container Registry (GHCR), not the live repo at that tag. This means floating tags (`@v3`) can no longer silently pick up new commits pushed to that tag — you get the GHCR snapshot. Implication: pin to a full commit SHA for exact reproducibility; use a tag for convenience only when you trust the publisher's release process.
+Three action types: **JavaScript** (Node.js, fast, cross-OS, no container spin-up), **Docker** (custom OS/tools, compiled binaries), **Composite** (YAML steps, runs on the caller's runner). With immutable actions enforcement, floating tags (`@v3`) resolve against a GHCR snapshot rather than the live repo — pin to a full SHA for auditability. Full type comparison table and immutable-actions details: [references/advanced-features.md](references/advanced-features.md) → "Action Types."
 
 ### `action.yml` Structure
 
@@ -186,11 +178,7 @@ runs:
 - For JavaScript actions, outputs are set by calling `core.setOutput('result', value)` from the `@actions/core` toolkit.
 - `branding:` (`icon` + `color`) is required to publish to the Marketplace but has no effect on functionality.
 
-### Versioning and Publishing
-
-- **Semantic tags + SHA pin:** tag releases (`v1`, `v1.2`, `v1.2.3`); move major version tags (`v1`) to point at the latest patch. Callers pin to `v1` for auto-updates within major, or to a full SHA for exact reproducibility.
-- **Marketplace publication:** the action repo must be public; `action.yml` must be at the repo root; Marketplace listing requires a description, icon, and color. A `README.md` is expected for discoverability.
-- **Private actions:** reference directly as `uses: org/private-repo/.github/actions/my-action@ref` — accessible if the calling repo has read access. No Marketplace publication needed.
+**Versioning and publishing details** (semantic tags, Marketplace requirements, private actions): [references/advanced-features.md](references/advanced-features.md) → "Action Versioning and Publishing."
 
 **Red flags in review:** a JavaScript action without a compiled `dist/` committed (the runner has no build step; the source must be pre-compiled); a Docker action with no health check or CMD; an action with hardcoded secrets in `action.yml` (use inputs mapped from `secrets:`).
 
@@ -296,9 +284,7 @@ Script injection occurs when user-controlled input (e.g., a PR title, issue body
 - Prefer vetted marketplace actions over inline `run:` scripts for complex processing.
 - Never grant `pull_request_target` workflows write permissions without careful review — this trigger runs in the context of the base repo (with secrets access) even for fork PRs.
 
-### Artifact Attestations
-
-Actions supports generating SLSA Build L2+ signed provenance attestations via `actions/attest-build-provenance`; verify with `gh attestation verify`. Full details and required permissions in [references/advanced-features.md](references/advanced-features.md).
+**Artifact Attestations (SLSA provenance):** generate and verify signed build provenance for release artifacts. Full details, required permissions, and verify steps: [references/advanced-features.md](references/advanced-features.md) → "Artifact Attestations."
 
 **Red flags in review:** `permissions: write-all` or unscoped permissions on any workflow; `${{ github.event.*.body }}` or similar user-controlled context values inside a `run:` script; a `pull_request_target` workflow that checks out the PR head and runs it (classic code-exec attack surface); floating action tags (`@main`, `@v3`) without a SHA comment; OIDC trust policies scoped to an entire org rather than a specific repo+branch.
 
@@ -361,7 +347,43 @@ Actions supports generating SLSA Build L2+ signed provenance attestations via `a
 
 > **Verify:** In the `action.yml`'s `runs` section, confirm `using: composite` and that `steps:` lists the 4 steps directly; in the calling workflow, the action appears as a single `uses:` step within the job (not as a separate `uses:` at job level). `gh workflow list` in the shared repo should NOT show a new workflow file for a composite action.
 
-Further scenarios (GITHUB_OUTPUT vs GITHUB_ENV for cross-job data, OIDC trust scoped to org vs repo+branch, reusable workflow nesting depth, self-hosted runner on public repo): [references/scenarios.md](references/scenarios.md).
+---
+
+**Scenario 2 — GITHUB_OUTPUT vs GITHUB_ENV for cross-job data**
+
+> **Situation:** A CI workflow has two jobs: `build` and `deploy`. The `build` job produces a Docker image tag. A developer writes `echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV` and references `${{ env.IMAGE_TAG }}` in the `deploy` job. The workflow runs but `env.IMAGE_TAG` is empty in the `deploy` job.
+
+> **Competent move:** `GITHUB_ENV` propagates environment variables to subsequent steps within the same job only — it does not cross job boundaries. To pass data between jobs, write to `GITHUB_OUTPUT` (`echo "image_tag=$TAG" >> $GITHUB_OUTPUT`), declare a job-level `outputs:` block mapping the output (`image_tag: ${{ steps.<step-id>.outputs.image_tag }}`), and reference it in the `deploy` job via `${{ needs.build.outputs.image_tag }}`. The `deploy` job must also declare `needs: build`.
+
+> **Tempting-but-wrong:** Using an artifact to pass a single string value. Artifacts work for files; for scalars, `GITHUB_OUTPUT` + job outputs is the canonical low-overhead pattern.
+
+> **Verify:** Add `- run: echo "${{ needs.build.outputs.image_tag }}"` as the first step in `deploy` and confirm the tag appears. In the `build` step log, the Actions runner logs `Set output image_tag=<value>`.
+
+---
+
+**Scenario 3 — OIDC trust policy scoped to organization rather than repo+branch**
+
+> **Situation:** A team sets up OIDC federation with AWS. The IAM role trust policy condition is `"StringLike": { "token.actions.githubusercontent.com:sub": "repo:my-org/*" }`. Production deployments succeed. A security reviewer flags the condition as dangerously broad.
+
+> **Competent move:** A wildcard `repo:my-org/*` allows any repository in the org — including forks and any future repo — to assume the production IAM role. Scope the condition to the specific repo and branch or environment: `"StringEquals": { "token.actions.githubusercontent.com:sub": "repo:my-org/my-service:ref:refs/heads/main" }` or `repo:my-org/my-service:environment:production` for protected environments.
+
+> **Tempting-but-wrong:** Adding an environment condition alongside the broad org wildcard. If `StringLike` with `repo:my-org/*` is the sub-claim check, any repo in the org can still assume the role — the repo restriction must be specific.
+
+> **Verify:** `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — confirm `StringEquals` (not `StringLike`) and the exact repo+branch or environment. Test from a different repo in the org — `AssumeRoleWithWebIdentity` should return `AccessDenied`.
+
+---
+
+**Scenario 4 — Reusable workflow nesting depth exceeded**
+
+> **Situation:** A platform team builds a layered architecture: `app-pipeline.yml` → `build.yml` → `lint.yml` → `security-scan.yml` → `notify.yml`. The workflow fails at the `notify.yml` level. The team suspects a permissions issue.
+
+> **Competent move:** GitHub Actions limits reusable workflow nesting to 4 levels (caller + 3 levels of called workflows). A fifth level causes a runtime failure, not a permissions error. Fix: promote `notify.yml`'s steps into a composite action and call it from `security-scan.yml`, or collapse layers by inlining notify steps. The 4-level limit is a hard platform constraint `[volatile — verify live]`.
+
+> **Tempting-but-wrong:** Debugging IAM permissions or secrets inheritance first. The nesting-depth error is distinct from permission failures; check the workflow run's error message — it will reference the call depth.
+
+> **Verify:** Count the call chain: caller (1) → build.yml (2) → lint.yml (3) → security-scan.yml (4) → notify.yml (5 = over limit). After refactoring notify into a composite action called from level 4, `gh run list --workflow app-pipeline.yml` should show successful runs.
+
+Further scenario (self-hosted runner on a public repository): [references/scenarios.md](references/scenarios.md).
 
 ---
 
@@ -398,6 +420,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 ## Changelog
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
+- **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: GITHUB_OUTPUT vs GITHUB_ENV, OIDC org-scope trust, reusable workflow nesting depth) to meet the teaching-scenario standard (≥4 inline). Scenario 5 remains in references. "Versioning and Publishing" and "Artifact Attestations" subsections moved to references/advanced-features.md to offset body length.
 
 ---
 

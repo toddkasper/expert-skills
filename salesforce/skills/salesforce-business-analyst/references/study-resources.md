@@ -1,6 +1,10 @@
 # Business Analyst — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Business Analyst (BA-201) exam.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Business Analyst (BA-201) exam, verifying volatile tags, or reviewing the skill orientation below.
+
+## Skill Orientation
+
+**[../SKILL.md](../SKILL.md) is an operational playbook, not an exam outline.** Each section states the rules a BA applies at decision time — requirements vs. user stories, story sizing, testable acceptance criteria, UAT go/no-go — plus the anti-patterns to catch in review and the way to verify against the live org before trusting any assumption. The recurring discipline is to confirm org reality (objects, fields, picklists, active automations) before committing to a requirement or estimate.
 
 ## Credential logistics
 
@@ -57,3 +61,13 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 ## Relevance to other verticals
 
 The BA methodology in this skill — requirements elicitation, process mapping, user stories, UAT — is platform-agnostic and applies to any Salesforce implementation. For NPSP/Nonprofit Cloud-specific BA considerations — Household Account side effects, NPSP managed-package automation audit checklist, donor/volunteer/participant persona security modeling — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Volatile Tag Index
+
+Items tagged `[volatile — verify live]` in [../SKILL.md](../SKILL.md) and their current annotations:
+
+- **BA-201 blueprint topic weights (24% / 18% / 17% / 17% / 16% / 8%)** `[volatile — verify live]` — Salesforce updates exam blueprints; verify against the current official exam guide before studying or quoting weights.
+- **Workflow Rules and Process Builder "retired for new work" status** `[volatile — verify live]` — Salesforce has announced deprecation; verify the current enforcement date and any grace periods in the latest release notes.
+- **NPSP managed-package automation side effects** (Household Account creation, `npe01__PreferredPhone__c` workflow rule) `[volatile — verify live]` — package version-specific; confirm active automations in the target org before writing requirements.

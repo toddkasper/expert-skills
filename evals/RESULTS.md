@@ -26,23 +26,26 @@ trigger-test pass rate (Lens 2). `—` = that lens not run yet.
 | salesforce-platform-developer-2 | 2026-06-09 | static-audit | — | — | 34 | 100% | L3–5 pending; rubric publish-ready |
 | salesforce-javascript-developer-1 | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready |
 | salesforce-technical-architect | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready |
-| salesforce-business-analyst | 2026-06-09 | static-audit | — | — | 31 | 100% | needs content pass (D10=1) |
+| salesforce-business-analyst | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready (D10 cured) |
 | salesforce-sales-cloud-consultant | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready |
 | salesforce-service-cloud-consultant | 2026-06-09 | static-audit | — | — | 33 | 100% | L3–5 pending; rubric publish-ready |
-| salesforce-experience-cloud-consultant | 2026-06-09 | static-audit | — | — | 32 | 100% | needs content pass (D9=1) |
+| salesforce-experience-cloud-consultant | 2026-06-09 | static-audit | — | — | 34 | 100% | L3–5 pending; rubric publish-ready (D9 cured) |
 | salesforce-marketing-cloud-email-specialist | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready |
 | salesforce-nonprofit-cloud-consultant | 2026-06-09 | static-audit | — | — | 33 | 100% | L3–5 pending; rubric publish-ready |
 | salesforce-agentforce-specialist | 2026-06-09 | static-audit | — | — | 33 | 100% | L3–5 pending; rubric publish-ready |
-| aws-solutions-architect-professional | 2026-06-09 | static-audit | — | — | 29 | 100% | needs content pass (D9=1, D3=2) |
-| aws-devops-engineer-professional | 2026-06-09 | static-audit | — | — | 30 | 100% | needs content pass (D9=1) |
-| aws-security-specialty | 2026-06-09 | static-audit | — | — | 30 | 100% | needs content pass (D9=1) |
-| github-actions | 2026-06-09 | static-audit | — | — | 28 | 100% | needs content pass (D9=1) |
+| aws-solutions-architect-professional | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready (D9/D3 cured) |
+| aws-devops-engineer-professional | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready (D9 cured) |
+| aws-security-specialty | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready (D9 cured) |
+| github-actions | 2026-06-09 | static-audit | — | — | 30 | 100% | L3–5 pending; rubric publish-ready (D9 cured; D1/D2=2, no GH sibling) |
 | nodejs | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready |
 | typescript | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready |
-| react | 2026-06-09 | static-audit | — | — | 30 | 100% | needs content pass (D9=1) |
+| react | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready (D9 cured) |
 | nextjs | 2026-06-09 | static-audit | — | — | 33 | 100% | L3–5 pending; rubric publish-ready |
-| react-native | 2026-06-09 | static-audit | — | — | 30 | 100% | needs content pass (D9=1) |
+| react-native | 2026-06-09 | static-audit | — | — | 32 | 100% | L3–5 pending; rubric publish-ready (D9 cured) |
 
 _Lens 3–4 (live baseline-vs-skilled) and Lens 5 (adversarial web audit) run in a separate
-session per [run-eval.md](run-eval.md). The 8 "needs content pass" rows are tracked as inbox
-items and addressed in the curation pass that follows this cycle._
+session per [run-eval.md](run-eval.md). The 8 rubric findings from this cycle (7× D9, 1× D10)
+were validated and **cured the same day** via the curation pass (see
+[../feedback/INBOX.md](../feedback/INBOX.md)) — rubric totals above reflect the post-curation
+state, and all 22 skills now meet the rubric publish bar (no dimension < 2, total ≥ 28). Knowledge
+and application lift remain to be measured against live models._

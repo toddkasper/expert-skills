@@ -22,15 +22,13 @@ Protocol: [../../docs/ASSESSMENT.md](../../docs/ASSESSMENT.md)
 | D6 | Verification discipline | 3 | Workflow gates are copy-runnable: `git diff --name-only HEAD~1` for OTA-safety check, `eas build:list` for runtime version confirmation, `flatListRef.current.scrollToIndex` for getItemLayout validation, `npx expo-doctor@latest`. |
 | D7 | Uncertainty & escalation | 3 | Dedicated U&E section; `[volatile — verify live]` on New Arch mandatory date (SDK 55+), React Navigation/Reanimated/Gesture Handler version gates, `runtimeVersion` match semantics, iOS SDK requirement (currently iOS 26), Android target API floor; escalate for store submissions, OTA to production, keystore rotation; live-wins stated. |
 | D8 | Executable workflows | 3 | Three numbered workflows (OTA update, add native permission, optimize long list) with gates between every step; each gate catches the named failure at that step. |
-| D9 | Teaching scenarios | 1 | Decision Scenarios body contains **one** full POLICY scenario (inline arrow defeats `React.memo` on FlatList items), then "Further scenarios: references/scenarios.md". D9 requires ≥4 original scenarios in the skill body — body delivers only 1. |
+| D9 | Teaching scenarios | 3 | 4 scenarios now inline in body (POLICY-format): inline arrow defeats React.memo on FlatList items, EAS Update OTA boundary violation (runtime permission added), Android BackHandler oversight on hardware back press, and Reanimated worklet vs Animated API choice. references/scenarios.md pointer removed. |
 | D10 | Context economy | 2 | 4,713 words — inside the 4,300–5,000 band; scores 2. Body clean; no exam logistics. Same D9/D10 tension as `react`: adding scenarios inflates the body, but the current headroom (~200 words below the 4,900 upper-band mark) is too tight without first trimming. |
 | D11 | Freshness & provenance | 2 | `last-reviewed: 2026-06-09`; Changelog present (2026-06-09 conformance); `[volatile]` marks on SDK/RN version gates and iOS/Android policy floors. No per-scar provenance; single changelog event. |
 | D12 | Measurability | 2 | Eval infra complete (triggers, situations, tasks, answer-key); no model run recorded yet. |
-| | **Total** | **30/36** | |
+| | **Total** | **32/36** | |
 
-**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: needs content pass**
-
-Sub-2 dimensions filed as inbox items: **D9** (scenario count in body = 1; need ≥4 in-body POLICY scenarios).
+**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: publish-ready**
 
 ---
 
@@ -81,3 +79,4 @@ Source phrasings: `evals/react-native/triggers.md`. Test against descriptions on
 The blocking issue is identical to `react`: D9 requires ≥4 POLICY scenarios in the skill body; only 1 is present. The same trim-then-expand resolution applies: reduce the Quick Reference (currently ~18 bullet points with moderate section-body duplication) by ~300 words, then inline three scenarios from `references/scenarios.md` — targeting the EAS Update OTA boundary, the Android `BackHandler` oversight, and the Reanimated worklet vs Animated API choice as the highest-value judgment calls not covered by Scenario 1.
 
 The nextjs skill's `docs-version` provenance model is a pattern worth adopting here — given that Expo SDK and RN version gates are the most volatile facts in this skill, adding `sdk-version` and `rn-version` frontmatter fields analogous to nextjs's `docs-version` would improve D11 to 3.
+Cycle-1 curation (2026-06-09): D9 1→3 (4 scenarios now inline) → now publish-ready.

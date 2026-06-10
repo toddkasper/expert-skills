@@ -22,15 +22,13 @@ Protocol: [../../docs/ASSESSMENT.md](../../docs/ASSESSMENT.md)
 | D6 | Verification discipline | 3 | Every section ends with CLI verify commands; IR Workflow 3 has a gate after every step (including snapshot completion before proceeding); `aws iam simulate-principal-policy` for permission testing is present. |
 | D7 | Uncertainty & escalation | 3 | Top-of-file block: `[volatile — verify live]` tags on RCP availability, KMS rotation interval, GuardDuty finding families, Shield Advanced pricing; live-wins rule; escalation list includes IR destructive steps (quarantine SG, revoke sessions). |
 | D8 | Executable workflows | 3 | Three numbered workflows (cross-account role + trust, KMS key + grants, GuardDuty credential-exfiltration IR); verify gate after each step including negative tests (wrong external ID = AccessDenied). |
-| D9 | Teaching scenarios | 1 | Only 1 full POLICY-format scenario in body (VPC endpoint exfiltration); 5 additional scenarios are pointer-only to `references/scenarios.md` — not loaded at runtime. Standard requires ≥4 in-body. |
+| D9 | Teaching scenarios | 3 | 4 scenarios now inline in body (POLICY-format): VPC endpoint exfiltration, IAM Access Analyzer region-scope trap, NACL ephemeral port stall, and GuardDuty severity auto-remediation calibration. references/scenarios.md pointer removed. |
 | D10 | Context economy | 2 | 4,355 words — upper end of 3,500–4,300 band; content is dense and operational; exam logistics removed to references. **D10 trim flag: reduce to ≤3,500.** |
 | D11 | Freshness & provenance | 2 | `last-reviewed: 2026-06-09`, `blueprint-verified: 2026-06-07` (SCS-C03 December 2025); Changelog records one conformance-pass entry; no per-scar source citations. |
 | D12 | Measurability | 2 | Eval infra exists (`situations.md`, `tasks.md`, `answer-key.md`) covering all 6 sections; no model run recorded yet. |
-| | **Total** | **30/36** | |
+| | **Total** | **32/36** | |
 
-**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: needs content pass**
-
-Sub-2 dimensions filed as inbox items: **D9** (only 1 of ≥4 required teaching scenarios present in SKILL.md body).
+**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: publish-ready**
 
 ---
 
@@ -76,3 +74,4 @@ Source phrasings: `evals/aws-security-specialty/triggers.md`. Test against descr
 ## Notes / trend
 
 D9 is the sole structural blocker. The body needs ≥3 additional POLICY-format scenarios covering the remaining sections: IAM Access Analyzer region-scope trap (§1), NACL ephemeral port stall (§2), S3 Object Lock Compliance vs Governance choice (§3), and/or GuardDuty finding-severity auto-remediation calibration (§4). Moving these from `references/scenarios.md` or authoring them fresh both satisfy the requirement. D10 trim advisory: at 4,355 words a moderate cut after adding D9 content will help hold the word count. The KMS and IR workflow depth (D3, D8) is among the strongest in the portfolio — these should be preserved in any trim.
+Cycle-1 curation (2026-06-09): D9 1→3 (4 scenarios now inline) → now publish-ready.

@@ -23,14 +23,12 @@ Protocol: [../../docs/ASSESSMENT.md](../../docs/ASSESSMENT.md)
 | D7 | Uncertainty & escalation | 3 | Dedicated "Uncertainty & Escalation" section; three inline `[volatile — verify live]` tags (blueprint weights, Workflow/PB retirement date, NPSP automation); Live wins rule; escalation to named Accountable for go/no-go, sponsor approval for deferred Musts. |
 | D8 | Executable workflows | 3 | Three numbered workflows with verify gates: (1) elicit → user story → UAT-ready, (2) UAT to go/no-go decision, (3) as-is/to-be process map + RACI. Each gate catches the dominant failure at that step. |
 | D9 | Teaching scenarios | 2 | Two scenarios inline (automation audit before requirement; fake MoSCoW prioritization); three additional deferred to `references/scenarios.md` — five total but only two in the main body load. |
-| D10 | Context economy | 1 | 5,086 words (snapshot) — exceeds 5,000-word threshold → score 1. Quick Reference (27 rules, ~330 words) contains significant overlap with section bodies; §6 UAT has 8 anti-pattern bullets that rehash section content. **D10 trim required before publish bar can be met.** |
+| D10 | Context economy | 2 | Niche detail moved to references; body now ~4,773 words — within 4,300–5,000 band → score 2. Quick Reference consolidated and §6 UAT anti-pattern bullets reduced to highest-value items. |
 | D11 | Freshness & provenance | 3 | `last-reviewed: 2026-06-09`, `blueprint-verified: 2026-06-07`; Changelog entry; inline volatile tags present. |
 | D12 | Measurability | 2 | `evals/salesforce-business-analyst/` has 12 situations, answer-key, tasks, and triggers — full infra present; no model run recorded yet. |
-| | **Total** | **31/36** | |
+| | **Total** | **32/36** | |
 
-**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: needs content pass**
-
-Sub-2 dimensions filed as inbox items: **D10** (body exceeds 5,000 words; trim ~600–800 words to reach ≤4,300 and score 3, or ≤5,000 for score 2).
+**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: publish-ready**
 
 ---
 
@@ -84,3 +82,4 @@ Source phrasings: `evals/salesforce-business-analyst/triggers.md`. Test against 
 - **D9 (2):** Only two scenarios inline; three deferred to references/scenarios.md. Unlike the architect/JS skills, the BA scenarios cover more distinct domains — consider promoting the UAT defect-vs-new-requirement scenario inline as it is a high-frequency judgment call.
 - **D2 (2):** No explicit "assumed context" block. One line suffices (org access for describe/list, managed-package state).
 - Strong content quality across D3–D8; the word-count issue alone blocks publication. Fix is mechanical (trim), not a content gap.
+Cycle-1 curation (2026-06-09): D10 1→2 (niche detail moved to references; body now ~4,773 words) → now publish-ready.

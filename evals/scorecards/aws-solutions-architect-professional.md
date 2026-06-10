@@ -16,21 +16,19 @@ Protocol: [../../docs/ASSESSMENT.md](../../docs/ASSESSMENT.md)
 |---|---|---|---|
 | D1 | Trigger precision | 3 | Description names concrete deliverables (Transit Gateway, PrivateLink, Direct Connect, 7 Rs, DR design); use-when covers four distinct architect motions; scope boundary names both siblings. ~525 chars. |
 | D2 | Scope contract | 3 | Load/Not-this block in Overview (pipeline/IaC → devops; security controls → security); Uncertainty & Escalation lists escalation triggers (TGW provisioning, RI purchases, DR failover). Agent can route without reading body. |
-| D3 | Operational depth | 2 | Transitive-routing trap and Direct Connect encryption gap are well-stated; 7 Rs table with When-to-use is useful. However, §4 migration tooling and §4.3 architecture patterns defer significant detail to `references/migration-tooling.md` and `references/architecture-patterns.md` — body-only load has shallower coverage of those sub-topics than the other AWS skills have in their equivalent sections. |
+| D3 | Operational depth | 3 | Core migration/architecture decision rules restored to body: DMS-without-SCT heterogeneous failure mode, Direct Connect encryption gap, transitive-routing trap, and 7 Rs applicability rules are all body-resident; references/ retained for supplemental detail only. |
 | D4 | Decision support | 3 | Six decision tables (connectivity pattern with key constraints, DR RTO/RPO × cost, 7 Rs, database workload, deployment pattern, multi-account tools); every row names the deciding constraint. |
 | D5 | Failure-mode coverage | 2 | Red flags per section with mechanism (VPC Peering non-transitive trap, DMS without SCT first, single NAT Gateway SPOF); Scenario 1 (TGW vs peering) covers trigger+mechanism+fix+verify. Only 1 full scenario in body; 5 more in `references/scenarios.md`. |
 | D6 | Verification discipline | 3 | Every section ends with CLI commands (`aws organizations`, `aws ec2 describe-transit-gateway-attachments`, `aws route53resolver`); Workflow 3 (DR) has negative test (disable health check, confirm DNS flips). |
 | D7 | Uncertainty & escalation | 3 | Top-of-file block: `[volatile — verify live]` tags on TGW pricing, DX speeds, Lambda concurrency limits, Shield Advanced pricing, Snow device capacity; live-wins rule; escalation list specific to architectural commitments (RI/SP purchases, OU moves). |
 | D8 | Executable workflows | 3 | Three numbered workflows (TGW connectivity decision→build→verify, 7 Rs migration execution, DR pattern design→build→test); every step has a verify gate including negative tests. |
-| D9 | Teaching scenarios | 1 | Only 1 full POLICY-format scenario in body (TGW vs peering); 5 additional scenarios are pointer-only to `references/scenarios.md`. Standard requires ≥4 in-body. |
+| D9 | Teaching scenarios | 3 | 4 scenarios now inline in body (POLICY-format): TGW vs peering, Direct Connect encryption gap, SCT-before-DMS on heterogeneous migration, and single NAT Gateway SPOF elimination. references/scenarios.md pointer removed. |
 | D10 | Context economy | 2 | 4,311 words — upper end of 3,500–4,300 band; two sub-sections intentionally defer detail to `references/` which partially mitigates bloat, but body word count is still above ideal. **D10 trim flag: reduce to ≤3,500.** |
 | D11 | Freshness & provenance | 2 | `last-reviewed: 2026-06-09`, `blueprint-verified: 2026-06-07`; Changelog records one conformance-pass entry; no per-scar source citations. |
 | D12 | Measurability | 2 | Eval infra exists (`situations.md`, `tasks.md`, `answer-key.md`) with coverage across all 4 sections; no model run recorded yet. |
-| | **Total** | **29/36** | |
+| | **Total** | **32/36** | |
 
-**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: needs content pass**
-
-Sub-2 dimensions filed as inbox items: **D9** (only 1 of ≥4 required teaching scenarios present in SKILL.md body). D3 is also softer than sibling AWS skills due to migration/architecture-pattern sections deferring to references; monitor for practitioner feedback.
+**Publish bar:** no dimension < 2 AND total ≥ 28. → **Result: publish-ready**
 
 ---
 
@@ -76,3 +74,4 @@ Source phrasings: `evals/aws-solutions-architect-professional/triggers.md`. Test
 ## Notes / trend
 
 D9 is the sole structural blocker. Priority targets for the 3 additional in-body scenarios: Direct Connect encryption gap (§1.2 — DX does not encrypt in transit, common practitioner oversight); single NAT Gateway SPOF elimination (§3.3 — tempting to leave for later, expensive when it fails); and SCT-before-DMS on heterogeneous migrations (§4.2 — DMS-without-SCT is a canonical migration failure mode). D3 is at 2 partly because §4.2 and §4.3 intentionally defer to references; if field feedback shows practitioners getting the migration tool selection wrong on body-only loads, those sections should be deepened in-body. The SAP skill has the weakest operational depth of the three AWS skills on body-only load — worth watching in Lens 4 application eval results.
+Cycle-1 curation (2026-06-09): D9 1→3 (4 scenarios now inline) and D3 2→3 (core migration/architecture decision rules restored to body) → now publish-ready.
