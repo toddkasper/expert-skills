@@ -25,6 +25,14 @@ read the answer key and the scenarios stay held-out.
 - `situations.md` — ~12–20 original decision scenarios, **Situation text only** (the prompt).
 - `answer-key.md` — each scenario's **competent move**, the **tempting-but-wrong** trap, and the
   **verify** step (the grading rubric).
+- `triggers.md` — routing regression set for Lens 2 (should-trigger phrasings + near-misses that
+  must route to a named sibling), tested against descriptions only.
+- `tasks.md` — 2–3 task-based application evals (Lens 4): a realistic work product to produce,
+  seeded with the domain's classic traps, plus a trap-keyed grading rubric.
+
+All four are **held out** — never copied into a skill, and (per the solver fence in
+[evals/run-eval.md](evals/run-eval.md)) a solving agent under test sees only `<skill-path>/` +
+`situations.md`/`tasks.md` prompts — never `answer-key.md`, the scorecards, or RESULTS.md.
 
 Rules: original content only (POLICY §rules 1–2 — never real exam questions). **Held-out** — must
 not duplicate any teaching scenarios inside the skill. Probe the skill's *value-add* (non-obvious

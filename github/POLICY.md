@@ -76,12 +76,14 @@ Keep them concrete and a handful per major domain. Put them in `SKILL.md`, or in
 
 ## Adding a new skill — checklist
 
-- [ ] Folder slug is `vendor-role` (e.g. `salesforce-administrator`, `aws-solutions-architect`); the `SKILL.md` `name` field matches the folder name exactly.
+- [ ] Folder slug is `vendor-role` for credential-scaffolded skills (e.g. `salesforce-administrator`, `aws-solutions-architect`) or a plain technology name for competence skills with no vendor (e.g. `nodejs`, `react`, `typescript`); the `SKILL.md` `name` field matches the folder name exactly.
 - [ ] Content is original — no copied exam-guide or documentation text, **no real exam questions**.
 - [ ] Any practice content is original **decision scenarios** (Situation → Competent move → Tempting-but-wrong → Verify), scaffolded from the free blueprint — never copied questions.
 - [ ] Framed as competence ("what a certified X knows and does"), with explicit "verify against live systems / official docs" guidance.
 - [ ] Exam/blueprint facts are cited to a **free official source** and marked subject to change.
 - [ ] The disclaimer below applies (covered repo-wide by this file; add it to the skill itself if it will be distributed individually).
+- [ ] Skill conforms to [TEMPLATE.md](TEMPLATE.md) and clears the 12-dimension rubric in [docs/SKILL-STANDARD.md](docs/SKILL-STANDARD.md) (no dimension < 2, total ≥ 28/36), with a scorecard in `evals/scorecards/`.
+- [ ] `bash scripts/validate.sh` exits 0; held-out eval set is complete (`situations.md`, `answer-key.md`, `triggers.md`, `tasks.md`). See [CONTRIBUTING.md](CONTRIBUTING.md) for the full sequence.
 - [ ] Before publishing, the skill passes its eval — **≥85% skilled pass rate and positive lift** over baseline (see [EVALS.md](EVALS.md)).
 
 ## Disclaimer

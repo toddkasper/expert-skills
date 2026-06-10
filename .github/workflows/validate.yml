@@ -1,8 +1,10 @@
 name: validate
 
+# Dedupe: run on pushes to main and on PRs. Feature-branch pushes are covered by their PR,
+# avoiding the double-run a "branches: [**]" + pull_request pair produces.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -10,5 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate plugin JSON (jq)
+        run: |
+          for f in .claude-plugin/marketplace.json */.claude-plugin/plugin.json; do
+            jq empty "$f" && echo "ok  $f"
+          done
+
+      - name: Shellcheck scripts (errors only)
+        run: shellcheck -S error scripts/*.sh
+
       - name: Run skill structure validator
         run: bash scripts/validate.sh

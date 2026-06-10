@@ -1,0 +1,61 @@
+name: Skill feedback
+description: Report a wrong/missing/ambiguous claim in a skill (the human channel into the learning loop)
+title: "[feedback] <skill>: <one-line summary>"
+labels: ["skill-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for improving a skill. This is the human equivalent of the in-agent
+        `.skill-feedback/<skill>.md` capture — it lands in the same curation pipeline
+        (see `docs/LEARNING-LOOP.md`). Curation validates every item against official docs
+        before integrating, so concrete evidence (a doc URL, error text, query output) matters.
+  - type: input
+    id: skill
+    attributes:
+      label: Skill
+      description: e.g. salesforce-administrator, react, aws-security-specialty
+      placeholder: skill-name
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Claim contradicted by the live system / official docs
+        - Missing rule that cost a wrong attempt
+        - Decision with no criteria given
+        - Stale fact (limit / version / price / weight)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: Claim or gap
+      description: What the skill says (quote it) or what's missing.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What you observed instead
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Official doc URL, error message, or query/command output. Required for validation.
+    validations:
+      required: true
+  - type: input
+    id: last_reviewed
+    attributes:
+      label: Skill last-reviewed date (from frontmatter)
+      placeholder: YYYY-MM-DD
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix (optional)
