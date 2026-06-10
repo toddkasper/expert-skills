@@ -10,7 +10,7 @@ metadata:
 
 # Salesforce Nonprofit Cloud Consultant — Skills Reference
 
-> This file is an **operational playbook**, not an exam outline. It states the rules an AI agent applies at decision time on an NPSP / Nonprofit Cloud org: the actual rule, the real limits, the "when X → do Y" criteria, the red flags to catch in review, and how to verify against the live org (e.g. `describe_object`, `soql_query`, `list_objects`, `run_report`). All `describe_object` / `soql_query` reads are safe; any write/metadata change belongs in a sandbox, never Production.
+> This file is an **operational playbook**, not an exam outline. It states the rules an AI agent applies at decision time on an NPSP / Nonprofit Cloud org: the actual rule, the real limits, the "when X → do Y" criteria, the red flags to catch in review, and how to verify against the live org (describe objects, run SOQL, list objects, run reports — via MCP, `sf` CLI, or the Salesforce setup UI). All describe/SOQL reads are safe; any write/metadata change belongs in a sandbox, never Production.
 
 ## Overview
 
@@ -22,7 +22,7 @@ This file covers **two related but distinct** Salesforce certifications for nonp
 
 Both exams once shared a single Trailhead credential page and are still discussed interchangeably in the community, which causes confusion. Read the official exam guide carefully to confirm which version you are registering for.
 
-**Picking the right model at decision time:** an org running the **NPSP managed package** maps to **NP-Con-101**; an org running **Industries-based Nonprofit Cloud** maps to **NP-Con-102**. NPSP is the legacy model Salesforce is sunsetting in favor of Nonprofit Cloud over the coming years. **Default all operational decisions to the NPSP (101) model unless someone has confirmed Nonprofit Cloud / Industries is enabled** — verify with `list_objects`: NPSP objects carry `npe01__` / `npo02__` / `npsp__` / `npe4__` / `npe5__` namespaces, while NPC objects are namespace-free Industries standard objects like `Gift`, `Program`, and `ProgramEnrollment`.
+**Picking the right model at decision time:** an org running the **NPSP managed package** maps to **NP-Con-101**; an org running **Industries-based Nonprofit Cloud** maps to **NP-Con-102**. NPSP is the legacy model Salesforce is sunsetting in favor of Nonprofit Cloud over the coming years. **Default all operational decisions to the NPSP (101) model unless someone has confirmed Nonprofit Cloud / Industries is enabled** — verify by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager): NPSP objects carry `npe01__` / `npo02__` / `npsp__` / `npe4__` / `npe5__` namespaces, while NPC objects are namespace-free Industries standard objects like `Gift`, `Program`, and `ProgramEnrollment`.
 
 > **Deeper context:** Study resources (official Salesforce + community, hands-on environments), the Relevance map, and full deep-dive operational detail live in:
 > - [references/study-resources.md](references/study-resources.md) — study paths, links, certification sequence recommendation, exam-topic ↔ operational-rule relevance table
@@ -30,6 +30,8 @@ Both exams once shared a single Trailhead credential page and are still discusse
 > - [references/nonprofit-cloud-industries.md](references/nonprofit-cloud-industries.md) — PART B detail: full NPC term-translation table, PSL gating, Program Management & Outcome objects, OmniStudio tool selection
 >
 > For org-specific applications, keep a per-org appendix in your own project, referenced from a CLAUDE.md.
+
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
 
 ---
 
@@ -53,7 +55,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
   | Contact ↔ Organization Account | **Affiliation** | `npe5__Affiliation__c` |
 
 - **Relationships are reciprocal and auto-mirrored.** Creating a Husband→Wife Relationship makes NPSP create the Wife→Husband reverse via `REL_Relationships_TDTM`. **Do not hand-create both directions** — you'll get duplicate reverse records.
-- **Verify:** `soql_query("SELECT npe01__SYSTEM_AccountType__c, COUNT(Id) FROM Account GROUP BY npe01__SYSTEM_AccountType__c")` to confirm the org's account model.
+- **Verify:** Run `SELECT npe01__SYSTEM_AccountType__c, COUNT(Id) FROM Account GROUP BY npe01__SYSTEM_AccountType__c` via your Salesforce MCP/connection, or `sf data query --query "SELECT npe01__SYSTEM_AccountType__c, COUNT(Id) FROM Account GROUP BY npe01__SYSTEM_AccountType__c"` (Salesforce CLI), or the Developer Console Query Editor — to confirm the org's account model.
 
 ## 2. Hard Credit vs Soft Credit — the single most-tested NPSP concept
 
@@ -61,7 +63,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 - **Sum of hard credits = total raised. Soft credits are a parallel recognition layer.** RED FLAG: a report that adds hard + soft and calls it "total raised" double-counts.
 - NPSP auto-creates household soft credits via the OCR + Household Soft Credit setting.
-- Verify: `soql_query("SELECT Role, IsPrimary, ContactId FROM OpportunityContactRole WHERE OpportunityId = '…'")`.
+- Verify: run `SELECT Role, IsPrimary, ContactId FROM OpportunityContactRole WHERE OpportunityId = '…'` (MCP / `sf data query` / Developer Console).
 
 > For full PART A detail (CRLP, Enhanced Recurring Donations, TDTM, Addresses, Governor Limits, FLS, Custom Fields, Lookup uniqueness, QA cache, managed-package automation, Data Import tool selection, Duplicate management, Analytics/LYBUNT/SYBUNT), see [references/npsp-deep-dive.md](references/npsp-deep-dive.md).
 
@@ -69,7 +71,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 # PART B — Nonprofit Cloud (Industries) Operational Knowledge (NP-Con-102)
 
-> Applies only if the org has **Nonprofit Cloud / Industries** enabled. For an NPSP org, treat this as forward-looking. Confirm with `list_objects` — NPC uses namespace-free Industries objects.
+> Applies only if the org has **Nonprofit Cloud / Industries** enabled. For an NPSP org, treat this as forward-looking. Confirm by listing the org's objects (MCP / `sf sobject list` / Object Manager) — NPC uses namespace-free Industries objects.
 
 **Rule: Permission Set Licenses gate NPC features.** In Nonprofit Cloud, access errors are usually a missing Permission Set License, not a sharing problem. Each module (Fundraising, Program Management, Outcome Management, Grantmaking) requires its specific PSL **plus** a Permission Set assigned to the user. Troubleshoot "can't see the feature" by checking the PSL assignment first.
 
@@ -134,9 +136,9 @@ Read this first. Each rule is imperative and concrete.
 - **DO** pick the import tool by need: NPSP Data Import for NPSP objects, Data Import Wizard < 50k generic, Data Loader for > 50k / hard delete / CLI.
 - **DO** assign ECA permissions on the ECA's Policies tab (not the permset page); verify via `PermissionSetAssignment` API — browser tools lie.
 - **DO** run all `sf project` commands from the SFDX project root and run a JWT smoke test after any metadata/cert change.
-- **DO** verify any field/picklist/relationship against the live org with `describe_object`/`soql_query` before writing code that depends on it.
+- **DO** verify any field/picklist/relationship against the live org (describe the object, run SOQL) before writing code that depends on it.
 - **DO** treat data-model changes as all-three: doc + SFDX XML + app-layer types (and permset FLS + schema regen if it touches Contact).
-- **DO** default to the NPSP (101) model; only use NPC/Industries patterns if `list_objects` confirms Industries objects exist.
+- **DO** default to the NPSP (101) model; only use NPC/Industries patterns if listing the org's objects confirms Industries objects exist.
 - **DO** check PSL assignment first when a Nonprofit Cloud feature is inaccessible — it's usually a missing Permission Set License, not a sharing issue.
 
 ---
@@ -147,7 +149,7 @@ Read this first. Each rule is imperative and concrete.
 
 - Decision: use Engagement Plans for repeatable stewardship sequences (e.g. major-donor cultivation); use standard Task manual creation for one-off contact.
 - **Anti-pattern:** building Flows or Apex to create task sequences when Engagement Plan Templates already do it natively — prefer NPSP-native before custom logic.
-- Verify a template exists: `soql_query("SELECT Name, npsp__Description__c FROM npsp__Engagement_Plan_Template__c")`.
+- Verify a template exists: run `SELECT Name, npsp__Description__c FROM npsp__Engagement_Plan_Template__c` (MCP / `sf data query` / Developer Console).
 
 ## 4. Gift Entry (Batch Gift Entry) — the correct NPSP intake path for batches
 
@@ -156,7 +158,7 @@ Read this first. Each rule is imperative and concrete.
 - GE supports **matching rules** — it can find and update an existing Contact/Opportunity instead of creating duplicates.
 - GE templates let admins configure which fields appear; only expose what the gift-entry staff need.
 - **Anti-pattern:** using Data Loader to bulk-import Opportunities for batch gift processing — you lose GAU split logic and may orphan Household Accounts. Reserve Data Loader for full migration loads run by a consultant, not day-to-day gift entry.
-- Verify a GE batch exists: `soql_query("SELECT Name, npsp__Batch_Status__c FROM npsp__DataImportBatch__c LIMIT 10")`.
+- Verify a GE batch exists: run `SELECT Name, npsp__Batch_Status__c FROM npsp__DataImportBatch__c LIMIT 10` (MCP / `sf data query` / Developer Console).
 
 ---
 
@@ -168,13 +170,13 @@ These scenarios test judgment in the highest-consequence operational situations.
 
 **Scenario 1 — NPSP or Nonprofit Cloud?**
 
-> **Situation:** A new client has a Salesforce org. A user says "we're on Nonprofit Cloud" and asks you to configure a Gift Commitment Schedule for a recurring donor. Before touching anything, you run `list_objects`.  The results include `npe03__Recurring_Donation__c` but no `GiftCommitment` or `GiftCommitmentSchedule` object.
+> **Situation:** A new client has a Salesforce org. A user says "we're on Nonprofit Cloud" and asks you to configure a Gift Commitment Schedule for a recurring donor. Before touching anything, you list the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager). The results include `npe03__Recurring_Donation__c` but no `GiftCommitment` or `GiftCommitmentSchedule` object.
 >
 > **Competent move:** Treat this as an NPSP org. The `npe03__` namespace is the NPSP Recurring Donations package. "Gift Commitment" is the Nonprofit Cloud (NPC/Industries) term. The correct action is to configure an NPSP Enhanced Recurring Donation (`npe03__Recurring_Donation__c`), not a `GiftCommitment`. Inform the client of the distinction so scope and documentation are accurate.
 >
 > **Tempting-but-wrong:** Accept the client's framing ("we're on Nonprofit Cloud") and attempt to find or create a `GiftCommitment` record, which either errors or creates an unmanaged custom object — neither correct.
 >
-> **Verify:** `list_objects` for `GiftCommitment` returns nothing; `describe_object("npe03__Recurring_Donation__c")` returns fields including `RecurringType__c` confirming ERD is active. Official source: NPC object reference in Salesforce Help.
+> **Verify:** List the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager) — `GiftCommitment` should not appear; describe `npe03__Recurring_Donation__c` (MCP / `sf sobject describe --sobject npe03__Recurring_Donation__c` / Object Manager) and confirm fields including `RecurringType__c` exist, confirming ERD is active. Official source: NPC object reference in Salesforce Help.
 
 ---
 
@@ -186,7 +188,7 @@ These scenarios test judgment in the highest-consequence operational situations.
 >
 > **Tempting-but-wrong:** Run the report as requested because the officer is the business owner and "it's just a report." This produces inflated totals that distort fundraising KPIs, major-gift segmentation, and board reporting.
 >
-> **Verify:** `soql_query("SELECT Role, IsPrimary, ContactId FROM OpportunityContactRole WHERE OpportunityId = '…'")` confirms which role carries hard credit (IsPrimary = true, Role = "Donor"). Cross-check `npo02__TotalOppAmount__c` matches the sum of that Contact's primary OCR Opportunities.
+> **Verify:** Run `SELECT Role, IsPrimary, ContactId FROM OpportunityContactRole WHERE OpportunityId = '…'` (MCP / `sf data query` / Developer Console) to confirm which role carries hard credit (IsPrimary = true, Role = "Donor"). Cross-check `npo02__TotalOppAmount__c` matches the sum of that Contact's primary OCR Opportunities.
 
 ---
 
@@ -198,7 +200,7 @@ These scenarios test judgment in the highest-consequence operational situations.
 >
 > **Tempting-but-wrong:** Leave handlers active to avoid the extra steps, reasoning that "the org handled 5,000 records fine." Volume changes the math — 80k records in a single Data Loader batch will hit synchronous SOQL and DML limits that 5k never triggered.
 >
-> **Verify:** After re-enabling, `soql_query("SELECT npsp__Active__c, Name FROM npsp__Trigger_Handler__c WHERE npsp__Active__c = false")` should return zero rows (all re-enabled). Then confirm rollup totals by spot-checking a few donor records against the raw Opportunity sum.
+> **Verify:** After re-enabling, run `SELECT npsp__Active__c, Name FROM npsp__Trigger_Handler__c WHERE npsp__Active__c = false` (MCP / `sf data query` / Developer Console) — should return zero rows (all re-enabled). Then confirm rollup totals by spot-checking a few donor records against the raw Opportunity sum.
 
 ---
 
@@ -222,7 +224,7 @@ These scenarios test judgment in the highest-consequence operational situations.
 >
 > **Tempting-but-wrong:** Disabling Address management to prevent future overwrites. This breaks Seasonal Address, Primary Address switching, and household-level address inheritance for all Contacts in that household going forward.
 >
-> **Verify:** `soql_query("SELECT npsp__MailingStreet__c, npsp__Primary__c FROM npsp__Address__c WHERE npsp__Household_Account__c = '[HH Account Id]'")` shows the canonical address. The Contact's Mailing fields should match the Primary Address record; if they don't, run Verify Addresses from NPSP Settings.
+> **Verify:** Run `SELECT npsp__MailingStreet__c, npsp__Primary__c FROM npsp__Address__c WHERE npsp__Household_Account__c = '[HH Account Id]'` (MCP / `sf data query` / Developer Console) to see the canonical address. The Contact's Mailing fields should match the Primary Address record; if they don't, run Verify Addresses from NPSP Settings.
 
 ---
 

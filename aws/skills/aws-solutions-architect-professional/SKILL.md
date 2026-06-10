@@ -20,6 +20,8 @@ The AWS Certified Solutions Architect – Professional credential validates that
 
 > **Study resources** (official links, whitepapers, practice exams) live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path.
 
+> **Verify steps assume nothing about your tooling** — use your project's MCP/automation, the AWS CLI (`aws`) or CloudShell, or the AWS Console, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

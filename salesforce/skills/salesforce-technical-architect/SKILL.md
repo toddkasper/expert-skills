@@ -24,6 +24,8 @@ The credential targets senior Salesforce architects with 5+ years of implementat
 
 The value of CTA-domain thinking is operational, not just the badge: it is exactly the discipline that keeps an integration pipeline correct, secure, and within governor limits. The rules below are written to be applied at decision time.
 
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

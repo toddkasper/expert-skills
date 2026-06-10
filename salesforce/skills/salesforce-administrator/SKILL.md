@@ -19,6 +19,8 @@ The Salesforce Certified Platform Administrator credential (formerly "Salesforce
 
 > **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
 
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
@@ -60,9 +62,9 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 **Red flags:** a new SFDX field deployed with no accompanying `<fieldPermissions>`; a permset XML listing a required field; "grant access" attempted by editing OWD to Public (nukes the floor for everyone); assuming a permission set can revoke; trusting a browser-tool "success" on ECA assignment.
 
 **Verify against the live org:**
-- `describe_object(<object>)` → inspect each field; if a field you expect is missing, suspect FLS, not a missing field.
-- `soql_query("SELECT PermissionsRead, PermissionsEdit, Field FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')")` to confirm FLS actually landed.
-- `soql_query("SELECT AssigneeId, PermissionSet.Name FROM PermissionSetAssignment WHERE PermissionSet.Name='<permset>'")` to confirm assignment before trusting it.
+- Describe the `<object>` object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Setup → Object Manager → <object> → Fields & Relationships) → inspect each field; if a field you expect is missing, suspect FLS, not a missing field.
+- Run `SELECT PermissionsRead, PermissionsEdit, Field FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')` via your Salesforce MCP/connection, or `sf data query --query "SELECT PermissionsRead, PermissionsEdit, Field FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')"` (Salesforce CLI), or the Developer Console Query Editor — to confirm FLS actually landed.
+- Run `SELECT AssigneeId, PermissionSet.Name FROM PermissionSetAssignment WHERE PermissionSet.Name='<permset>'` (MCP / `sf data query` / Developer Console) to confirm assignment before trusting it.
 
 **Setup Audit Trail:** 180-day log of who changed what in Setup. First stop when behavior changes and nobody admits to a change — including silent changes introduced by managed packages (see §4).
 
@@ -121,7 +123,7 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 
 **Red flags:** choosing master-detail when the child must sometimes exist alone (use Lookup); expecting a roll-up over a Lookup; two same-parent Lookups with identical relationshipName; hand-editing generated schema/validation files; a form `max()` literal that doesn't trace to the field-length source of truth; adding QA fields and not seeing them on the tab (apply the cache-bust).
 
-**Verify:** `describe_object(<object>)` to read true field lengths and picklist values before trusting any schema file; `list_objects()` to confirm an object exists before referencing it.
+**Verify:** Describe the target object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Setup → Object Manager → <object> → Fields & Relationships) to read true field lengths and picklist values before trusting any schema file. List the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager) to confirm an object exists before referencing it.
 
 ---
 
@@ -152,7 +154,7 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 
 **Red flags:** any Get/Create/Update/Delete element inside a Loop; before-save flow doing DML on other objects (use after-save); building a *new* Workflow Rule or Process Builder; assuming "the field changed itself" without checking managed-package automation; an after-save flow that re-triggers itself (recursion — add entry criteria / `ISCHANGED` guards).
 
-**Verify:** `soql_query("SELECT Id, MasterLabel, TriggerType, Status FROM FlowDefinitionView WHERE Status='Active'")` to see what's actually firing; `describe_object` on the affected object to inspect managed-package fields and their defaults before debugging mystery data changes; Setup Audit Trail for recent automation changes.
+**Verify:** Run `SELECT Id, MasterLabel, TriggerType, Status FROM FlowDefinitionView WHERE Status='Active'` (MCP / `sf data query` / Developer Console) to see what's actually firing; describe the affected object (MCP / `sf sobject describe` / Object Manager) to inspect managed-package fields and their defaults before debugging mystery data changes; Setup Audit Trail for recent automation changes.
 
 ---
 
@@ -183,7 +185,7 @@ For nonprofit (NPSP) orgs, **NPSP Data Import** is purpose-built and supports NP
 
 **Red flags:** Data Import Wizard for >50k rows or for an unsupported object; hard delete without a backup; a dashboard exposing data because its running user is an admin; expecting a report to show records the running user can't see.
 
-**Verify:** `soql_query("SELECT COUNT() FROM <object>")` to sanity-check row counts before/after an import; `run_report(...)` to confirm a report returns what staff expect; `find_contacts(...)` to spot-check that a backfill landed.
+**Verify:** Run `SELECT COUNT() FROM <object>` (MCP / `sf data query` / Developer Console) to sanity-check row counts before/after an import; run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API) to confirm it returns what staff expect; query the matching Contacts (MCP / `sf data query` / a list view) to spot-check that a backfill landed.
 
 ---
 
@@ -249,11 +251,11 @@ Five original scenarios covering the highest-value operational gotchas. Each one
 
 > **Situation:** A developer deploys a new custom text field `Preferred_Language__c` on Contact via SFDX pipeline. The CI job reports success. A support agent logs in and the field is absent from the page layout and returns `"Invalid field"` when queried via SOQL. The developer confirms the field exists in Object Manager. What is happening and what is the fix?
 
-> **Competent move:** The field was created but no `<fieldPermissions>` block was included in the permset or profile XML deployed alongside it. SFDX field-meta.xml does not carry FLS; every non-required field starts invisible to everyone — including System Administrators — until a profile or permission set explicitly grants at least Read. Fix: add `<fieldPermissions>` granting `editable`/`readable` to the appropriate profile or permission set and redeploy. Verify with `soql_query("SELECT Field, PermissionsRead FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')")`.
+> **Competent move:** The field was created but no `<fieldPermissions>` block was included in the permset or profile XML deployed alongside it. SFDX field-meta.xml does not carry FLS; every non-required field starts invisible to everyone — including System Administrators — until a profile or permission set explicitly grants at least Read. Fix: add `<fieldPermissions>` granting `editable`/`readable` to the appropriate profile or permission set and redeploy. Verify by running `SELECT Field, PermissionsRead FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>')` (MCP / `sf data query` / Developer Console).
 
 > **Tempting-but-wrong:** Assume the field was not actually deployed and re-run the deploy, or add it to the page layout. Neither addresses the root cause — the field exists but is FLS-invisible. Adding a missing-FLS field to a page layout produces a layout that renders with the field still absent.
 
-> **Verify:** `describe_object('Contact')` — if `Preferred_Language__c` appears in the field list, it exists; check `filterable` and `updateable` flags. If the field is absent from describe output for the current user context, FLS is the culprit. After adding `<fieldPermissions>` and redeploying, re-run the SOQL above to confirm the grant landed.
+> **Verify:** Describe the `Contact` object (your Salesforce MCP, `sf sobject describe --sobject Contact`, or Setup → Object Manager → Contact → Fields & Relationships) — if `Preferred_Language__c` appears in the field list, it exists; check `filterable` and `updateable` flags. If the field is absent from describe output for the current user context, FLS is the culprit. After adding `<fieldPermissions>` and redeploying, re-run the SOQL above (MCP / `sf data query` / Developer Console) to confirm the grant landed.
 
 ---
 
@@ -277,7 +279,7 @@ Five original scenarios covering the highest-value operational gotchas. Each one
 
 > **Tempting-but-wrong:** Create a criteria-based sharing rule that says "share records where Owner = Viewer" — there is no such sharing rule syntax. Or try to use a permission set to restrict record visibility — permission sets are additive on object/field access and have no mechanism to restrict sharing. The only mechanism to *lower* record visibility is to change the OWD.
 
-> **Verify:** After changing OWD, run `soql_query("SELECT Id, Name FROM Opportunity LIMIT 10")` as a rep user (or via a guest/community session) to confirm row-level filtering. Check that managers can still see subordinate records by querying under a manager's user context.
+> **Verify:** After changing OWD, run `SELECT Id, Name FROM Opportunity LIMIT 10` (MCP / `sf data query` / Developer Console) as a rep user (or via a guest/community session) to confirm row-level filtering. Check that managers can still see subordinate records by querying under a manager's user context.
 
 ---
 
@@ -301,7 +303,7 @@ Five original scenarios covering the highest-value operational gotchas. Each one
 
 > **Tempting-but-wrong:** Assume the Flow has a bug because it returns results when run as an admin. Or rebuild the Flow. The Flow itself is correct — the access problem is upstream of it. Elevating the running user to System Administrator "to fix" is a security anti-pattern that bypasses all OWD/FLS/sharing controls for every action the agent can perform.
 
-> **Verify:** `soql_query("SELECT PermissionsRead FROM ObjectPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE IsOwnedByProfile=true AND Profile.Name='<running_user_profile>') AND SObjectType='Case'")` to confirm Case Read. Then run the Case SOQL with a `LIMIT 1` filter matching the scenario as the running user context. Check Setup Audit Trail for any recent change to Case OWD.
+> **Verify:** Run `SELECT PermissionsRead FROM ObjectPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE IsOwnedByProfile=true AND Profile.Name='<running_user_profile>') AND SObjectType='Case'` (MCP / `sf data query` / Developer Console) to confirm Case Read. Then run the Case SOQL with a `LIMIT 1` filter matching the scenario as the running user context. Check Setup Audit Trail for any recent change to Case OWD.
 
 ---
 
@@ -328,7 +330,7 @@ Read this first. Each rule is concrete and imperative.
 - **DO** remember Recycle Bin is 15 days; hard delete is unrecoverable — back up first.
 - **DON'T** delete a user — deactivate (frees license) or freeze (instant lockout, keeps license).
 - **DO** check Setup Audit Trail (180-day) first when org behavior changes unexpectedly.
-- **DO** verify against the live org with MCP tools (`describe_object`, `soql_query`, `list_objects`, `find_contacts`) before trusting repo XML or a schema file.
+- **DO** verify against the live org (describe objects, run SOQL, list objects, query contacts) before trusting repo XML or a schema file.
 - **DON'T** assume an agent (Agentforce) or dashboard bypasses sharing/FLS — both honor the running user's access.
 
 ---

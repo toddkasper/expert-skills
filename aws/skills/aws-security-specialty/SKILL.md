@@ -19,6 +19,8 @@ This file is an **operational playbook, not an exam outline**. Each section stat
 
 > **Study resources** (official guides, service docs, study sequencing, SCS-C02→SCS-C03 changes) live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path.
 
+> **Verify steps assume nothing about your tooling** — use your project's MCP/automation, the AWS CLI (`aws`) or CloudShell, or the AWS Console, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

@@ -18,6 +18,8 @@ This file is an **operational playbook**, not an exam outline. Each section belo
 
 > **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
 
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

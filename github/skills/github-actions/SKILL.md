@@ -19,6 +19,8 @@ The GitHub Actions certification (exam GH-200) validates that a practitioner can
 
 > **Deeper context:** Study resources, official links, and domain weight details live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
 
+> **Verify steps assume nothing about your tooling** — use your project's MCP/automation, the GitHub CLI (`gh`) and Actions log/`act`/workflow-lint, or the GitHub web UI, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

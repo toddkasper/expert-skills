@@ -23,6 +23,8 @@ Service Cloud concepts map cleanly onto any intake-and-review workflow: a custom
 
 > **Deeper context:** Study resources, recommended study schedule, and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
 
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
@@ -55,7 +57,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 - **RED FLAG:** a Flow with a DML/record element **inside a loop** — it consumes a governor limit per iteration and will hit limits in bulk exactly like Apex SOQL-in-loop. Collect into a collection variable, do one DML after the loop.
 - **RED FLAG:** building in Apex what a Validation Rule or simple Flow does declaratively — that is unmaintainable, especially for a small or volunteer admin team.
 - **Einstein / Agentforce features** (Case Classification, Article Recommendations, bots) require data volume to be useful. Low-volume orgs (hundreds of records per year) can't justify them; recognize the use case but don't recommend.
-- **Verify** the current automation surface before adding more: `list_objects` then `describe_object` on the target object to see existing fields and record types; check existing Flows/triggers in source control before authoring a new one.
+- **Verify** the current automation surface before adding more: list the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager), then describe the target object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Object Manager → <object> → Fields & Relationships) to see existing fields and record types; check existing Flows/triggers in source control before authoring a new one.
 
 ## 2. Case Management — operational rules
 
@@ -70,7 +72,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **Case merge:** max **3 at a time**; pick the master deliberately — related records re-parent to the master and field values follow master-selection rules.
 - **Macros / Quick Text:** prefer for repetitive agent actions over training memory. Macros can set fields, send email, apply templates, run a flow. Quick Text snippets are channel-scoped (email/chat/call). Good fit for repetitive "request missing document" follow-ups.
 - **Queues vs. Omni-Channel:** list-view queues = manual pull; Omni = push/capacity routing. Low volume → a queue list view suffices; don't over-engineer Omni.
-- **Verify** record types / picklist values before assuming they exist: `describe_object` on the target returns record types and picklist entries; `soql_query` confirms status-value distribution in the live org.
+- **Verify** record types / picklist values before assuming they exist: describe the target object (MCP / `sf sobject describe` / Object Manager) to see record types and picklist entries; run a SOQL query (MCP / `sf data query` / Developer Console) to confirm status-value distribution in the live org.
 
 ## 3. Implementation Strategies — operational rules
 
@@ -97,7 +99,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **CRITICAL CACHE GOTCHA:** when you add fields to an existing Quick Action's `quickActionLayoutItems` via SFDX, Salesforce's runtime QA cache often does **NOT** invalidate — the new fields are silently absent on the rendered tab, **even after a full browser logout/login**, with no error. **Fix:** edit any non-field-list metadata on the QA (`<description>`, `<label>`, `<layoutSectionStyle>`) and redeploy; SF treats the structural change as meaningful and flushes the org-level cache. Keep this as the go-to cache-bust.
 - **Utility bar:** add only utilities the workflow uses (Macros, Omni widget, History, Open CTI, Notes). Each utility loads per session; don't bloat it.
 - **Split view** (pinned list + record) is for high-volume queue agents. Low-volume desks don't need it.
-- **Verify** what fields actually render: a deploy "success" is not proof the field appears. After a QA change, log into the org and look at the rendered tab; confirm field presence visually, and confirm the field exists + is readable via `describe_object` (object access ≠ FLS — see §9).
+- **Verify** what fields actually render: a deploy "success" is not proof the field appears. After a QA change, log into the org and look at the rendered tab; confirm field presence visually, and confirm the field exists + is readable by describing the object (MCP / `sf sobject describe` / Object Manager) — object access ≠ FLS — see §9.
 
 ## 5. Intake & Interaction Channels — operational rules
 
@@ -106,7 +108,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **Omni-Channel routing model:** Most Available (by configured capacity) vs. Least Active. Push routing with a capacity model prevents agent overload; queue-based is simpler. For low volume, a queue list view is sufficient — don't deploy Omni.
 - **Messaging consent is mandatory** for SMS/WhatsApp (10DLC registration for US SMS). Any SMS link-delivery feature requires 10DLC — flag this as a prerequisite, not a quick toggle.
 - **Social Studio is sunset** — do not design net-new on it; recognize it only for legacy.
-- **Verify** channel-created records by querying for their origin: `soql_query` filtering on the origin/source field confirms which intake path produced a record.
+- **Verify** channel-created records by querying for their origin: run a SOQL query (MCP / `sf data query` / Developer Console) filtering on the origin/source field to confirm which intake path produced a record.
 
 ## 6. Knowledge Management — operational rules
 
@@ -131,7 +133,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **Milestone compliance % = completion date vs. target date.** Build "cases/records with overdue milestones" as the core SLA report.
 - **Real-time vs. historical:** Omni Supervisor is live (queue backlog, agent status) — not a substitute for historical trend reports, and vice versa. Choose by whether the consumer needs "right now" or "over time."
 - **Establish baselines before launch** so post-go-live trending can demonstrate ROI.
-- **Verify against live data:** use `run_report` to pull an existing report, or `soql_query` with `GROUP BY status/type` to confirm the real pipeline distribution before building a dashboard on assumptions.
+- **Verify against live data:** run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API), or run a SOQL query with `GROUP BY status/type` (MCP / `sf data query` / Developer Console) to confirm the real pipeline distribution before building a dashboard on assumptions.
 
 ## 9. Integration & Data Management — operational rules
 
@@ -143,7 +145,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **Large Data Volume tactics** (skinny tables, custom indexes, selective queries, Bulk API + PK chunking) are for millions of rows. Recognize them; don't prematurely apply.
 - **Bulk API vs REST:** Bulk for large async batch loads/exports; REST for small synchronous operations. A per-record upsert path (e.g. jsforce over REST) is correct for low single-record volume.
 - **External truncation is a last-line fallback, not a strategy.** Every input-validation string that ultimately writes to a Salesforce field must enforce that field's `max length` (and picklist value set) at the boundary, ideally from constants generated from the live org's schema. Defensive Apex truncation should exist only for legacy/direct-API records, not as a substitute for validating at the form/API boundary.
-- **Verify field length/type against the live org before trusting a constant:** `describe_object` returns each field's `length`, `type`, and picklist `value` set — diff it against your generated constants if a field was recently resized, then regenerate.
+- **Verify field length/type against the live org before trusting a constant:** describe the object (MCP / `sf sobject describe` / Object Manager) — it returns each field's `length`, `type`, and picklist `value` set — diff against your generated constants if a field was recently resized, then regenerate.
 
 ---
 
@@ -168,8 +170,8 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **DON'T** deploy schema, run destructive changes, or load data to production without a cutover plan + backfill.
 - **DON'T** log or surface PII / medical / sensitive-document data anywhere (logs, caches, behind a tokenized bearer link).
 - **DO** enforce field max-length / picklist constraints at the input boundary from live-org-generated constants; don't rely on Apex truncation.
-- **DO** verify against the live org with `describe_object` (FLS, field length, picklists, record types) before trusting metadata or constants.
-- **DON'T** trust a deploy "success" as proof a field renders — confirm visually + via `describe_object`.
+- **DO** verify against the live org by describing objects (FLS, field length, picklists, record types) before trusting metadata or constants.
+- **DON'T** trust a deploy "success" as proof a field renders — confirm visually + by describing the object.
 - **DON'T** over-engineer (Omni-Channel, Einstein, Experience Cloud auth portal) for low-volume orgs.
 - **DO** design for the audience: minimize login friction for low-tech / one-time / shared-device users (anonymous submit, tokenized magic link).
 
@@ -209,7 +211,7 @@ Entitlement Processes are the template that governs which milestones apply and w
 
 **Tempting-but-wrong:** Re-ordering the assignment rule entries or creating a new rule — neither changes the underlying fact that the header must be set. Alternatively, adding an after-insert Flow to re-assign the case: this works but duplicates routing logic and creates a maintenance burden; `AssignmentRuleHeader` is the correct surface.
 
-**Verify:** After the fix, insert a test case via the same integration path and `soql_query` for `OwnerId` on the resulting Case. Also confirm the rule's audit trail in Assignment Rule history on the Case record.
+**Verify:** After the fix, insert a test case via the same integration path and run a SOQL query (MCP / `sf data query` / Developer Console) for `OwnerId` on the resulting Case. Also confirm the rule's audit trail in Assignment Rule history on the Case record.
 
 ---
 
@@ -233,7 +235,7 @@ Entitlement Processes are the template that governs which milestones apply and w
 
 **Tempting-but-wrong:** Repeated logout/login cycles — the cache is org-level, not browser-level, so session invalidation does not help. Another trap: assuming the fields have FLS issues and adding profile permissions before diagnosing the cache — wasted effort and possible over-permission.
 
-**Verify:** After the cache-bust redeploy, open the rendered Quick Action tab in the org and visually confirm each new field. Also `describe_object` the object to confirm FLS is correct for the fields — deploy success does not grant FLS (see §9).
+**Verify:** After the cache-bust redeploy, open the rendered Quick Action tab in the org and visually confirm each new field. Also describe the object (MCP / `sf sobject describe` / Object Manager) to confirm FLS is correct for the fields — deploy success does not grant FLS (see §9).
 
 ---
 
@@ -245,7 +247,7 @@ Entitlement Processes are the template that governs which milestones apply and w
 
 **Tempting-but-wrong:** Editing the milestone target time directly on the Entitlement Process — that changes the duration for all Entitlements using this process, not just VIP accounts. Alternatively, changing the org default Business Hours — this impacts every SLA in the org, including non-VIP tiers.
 
-**Verify:** `soql_query` for `CaseMilestone WHERE CaseId = '<test case id>'` and confirm `TargetDate` aligns with VIP Business Hours math. Cross-check the Entitlement record's `BusinessHoursId` field.
+**Verify:** Run `SELECT Id, TargetDate FROM CaseMilestone WHERE CaseId = '<test case id>'` (MCP / `sf data query` / Developer Console) and confirm `TargetDate` aligns with VIP Business Hours math. Cross-check the Entitlement record's `BusinessHoursId` field.
 
 ---
 

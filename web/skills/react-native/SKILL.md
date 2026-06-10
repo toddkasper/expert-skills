@@ -23,6 +23,8 @@ Key shifts from the web:
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md). Load that file when looking up official docs or library links.
 
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
 ---
 
 ## 1. RN Core — Components, Styling, Lists, and Platform Differences

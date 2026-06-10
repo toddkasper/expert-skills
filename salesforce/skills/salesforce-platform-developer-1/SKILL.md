@@ -17,6 +17,8 @@ The Salesforce Certified Platform Developer I (PD1) credential validates that a 
 
 The target audience is developers with object-oriented background building on or customizing Salesforce orgs. PD1 is Salesforce's entry-level developer credential and the practical prerequisite for Platform Developer II, Application Architect, and most advanced developer credentials. On an NPSP org, PD1 underpins writing safe Apex that coexists with NPSP's Table-Driven Trigger Management (TDTM) without blowing governor limits or causing trigger recursion.
 
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

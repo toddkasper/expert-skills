@@ -28,6 +28,8 @@ Next.js server components, Node.js APIs) is deferred to the sibling skills (`rea
 > [references/study-resources.md](references/study-resources.md) — load that file when planning
 > a learning path or verifying a version-specific fact.
 
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
 ---
 
 ## TypeScript 6.0 — Breaking-change release (March 2026)

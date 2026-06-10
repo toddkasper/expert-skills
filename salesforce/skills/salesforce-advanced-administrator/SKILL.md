@@ -27,6 +27,8 @@ Plat-Admn-201) for anyone managing a non-trivial production org.
 
 > **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
 
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
@@ -80,12 +82,10 @@ Public Read Only, Public Read/Write, Controlled by Parent. Approval steps max 30
   ECA detail → Policies → Edit → App Policies → **Select Permission Sets**.
 
 **Verify against the live org:**
-- `describe_object` on a field-bearing object → confirm the field is even visible to the API
-  user (if FLS is missing, it won't appear).
-- `soql_query` `SELECT Id,Field__c FROM Obj__c LIMIT 1` → an `INVALID_FIELD` error means FLS,
-  not object access, is the problem.
+- Describe the field-bearing object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Setup → Object Manager → <object> → Fields & Relationships) → confirm the field is even visible to the API user (if FLS is missing, it won't appear).
+- Run `SELECT Id,Field__c FROM Obj__c LIMIT 1` (your Salesforce MCP, `sf data query --query "SELECT Id,Field__c FROM Obj__c LIMIT 1"`, or the Developer Console Query Editor) → an `INVALID_FIELD` error means FLS, not object access, is the problem.
 - Confirm a permset assignment landed via `SELECT Id FROM PermissionSetAssignment WHERE
-  AssigneeId='…' AND PermissionSet.Name='…'` — never trust a UI "success" toast, especially
+  AssigneeId='…' AND PermissionSet.Name='…'` (MCP / `sf data query` / Developer Console) — never trust a UI "success" toast, especially
   for ECA assignments (browser-AI tools report success while editing the wrong page).
 
 ---
@@ -126,9 +126,8 @@ Public Read Only, Public Read/Write, Controlled by Parent. Approval steps max 30
   org-level QA cache.
 
 **Verify against the live org:**
-- `list_objects` (with `includeCustomOnly`) to confirm an object's API name before referencing it.
-- `describe_object` to read relationship fields, `relationshipName`s, and picklist values
-  before writing SOQL or a flow that traverses them.
+- List the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager) to confirm an object's API name before referencing it.
+- Describe the object (MCP / `sf sobject describe` / Object Manager) to read relationship fields, `relationshipName`s, and picklist values before writing SOQL or a flow that traverses them.
 
 ---
 
@@ -193,8 +192,7 @@ heap (12 MB async), 100 callouts.
 **Verify against the live org:**
 - Use an Apex debug log (set a trace flag on the user) to see *every* automation that touches
   a record during DML — this is how a hidden managed-package overwrite gets caught.
-- `soql_query` before/after a test write to confirm a flow set the field you expect (and
-  didn't clobber another).
+- Run a SOQL query (MCP / `sf data query` / Developer Console) before/after a test write to confirm a flow set the field you expect (and didn't clobber another).
 
 ---
 
@@ -233,9 +231,9 @@ configured separately — you need both.
   Households.
 
 **Verify against the live org:**
-- `run_report` to pull an existing report's output before changing its definition.
-- `find_applications` / `find_contacts` to confirm a record exists / matched before an upsert.
-- `soql_query COUNT()` to sanity-check row counts pre/post import.
+- Run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API) to pull its output before changing its definition.
+- Query the matching records (MCP / `sf data query` / a list view) to confirm a record exists / matched before an upsert.
+- Run a `COUNT()` query (MCP / `sf data query` / Developer Console) to sanity-check row counts pre/post import.
 
 ---
 
@@ -284,9 +282,8 @@ the shape:
 - Enabling Field History on a 21st field — silently capped at 20/object.
 
 **Verify against the live org:**
-- `describe_object` to confirm which fields have history tracking enabled before promising
-  an audit trail exists.
-- `soql_query SELECT … FROM Obj__History WHERE …` to read tracked changes directly.
+- Describe the object (MCP / `sf sobject describe` / Object Manager) to confirm which fields have history tracking enabled before promising an audit trail exists.
+- Run `SELECT … FROM Obj__History WHERE …` (MCP / `sf data query` / Developer Console) to read tracked changes directly.
 
 ---
 
@@ -326,9 +323,8 @@ the shape:
 **Verify before/after a deploy:**
 - Run a JWT-bearer smoke test (auth → describe → upsert idempotency → cleanup) to catch every
   gotcha above at the layer it bites.
-- `describe_object` post-deploy to confirm the new field is API-visible (proves FLS landed,
-  not just the field).
-- `soql_query` a known record to confirm the field is selectable, not `INVALID_FIELD`.
+- Describe the object post-deploy (MCP / `sf sobject describe` / Object Manager) to confirm the new field is API-visible (proves FLS landed, not just the field).
+- Query a known record (MCP / `sf data query` / Developer Console) to confirm the field is selectable, not `INVALID_FIELD`.
 
 ---
 
@@ -371,8 +367,7 @@ Read this first. Each is imperative and concrete.
   fields don't render on Lightning tabs.
 - **DON'T** rely on debug logs for forensics — they roll off in ~24h; enable Field History /
   Event Monitoring beforehand.
-- **DO** run a JWT-bearer smoke test after any metadata/cert change and confirm with
-  `describe_object` + `soql_query` that new fields are API-visible.
+- **DO** run a JWT-bearer smoke test after any metadata/cert change and confirm by describing the object + querying a known record that new fields are API-visible.
 
 ---
 
@@ -411,11 +406,11 @@ Operational judgment checks — each covers a high-value gotcha from the section
 
 > **Situation:** A developer deploys a new `Restricted_Notes__c` field on Contact via SFDX `sf project deploy start`. A sales rep immediately reports the field is missing from their SOQL query results; no error, just absent. A System Administrator can also not SELECT it in a workbench query.
 >
-> **Competent move:** Recognize that `field-meta.xml` deploys the field schema but grants FLS to nobody — including System Administrator. Deploy a permission set that includes a `<fieldPermissions>` entry for the field (readable + editable as appropriate), then assign it or include it in a permission set group. Verify with `describe_object` — the field should now appear in the field list for the running user.
+> **Competent move:** Recognize that `field-meta.xml` deploys the field schema but grants FLS to nobody — including System Administrator. Deploy a permission set that includes a `<fieldPermissions>` entry for the field (readable + editable as appropriate), then assign it or include it in a permission set group. Verify by describing the Contact object (MCP / `sf sobject describe --sobject Contact` / Object Manager) — the field should now appear in the field list for the running user.
 >
 > **Tempting-but-wrong:** Checking the page layout or assuming System Administrator bypasses FLS. System Admin *does* bypass most object/record security but **does not** bypass FLS for fields not in a profile/permset (this is a common misconception — FLS applies to all profiles including System Administrator unless explicitly granted).
 >
-> **Verify:** `soql_query SELECT Id, Restricted_Notes__c FROM Contact LIMIT 1` — transitions from `INVALID_FIELD` to a valid result once FLS is in place. Also run `describe_object` and confirm the field appears with `updateable: true`.
+> **Verify:** Run `SELECT Id, Restricted_Notes__c FROM Contact LIMIT 1` (MCP / `sf data query` / Developer Console) — transitions from `INVALID_FIELD` to a valid result once FLS is in place. Also describe the Contact object and confirm the field appears with `updateable: true`.
 
 ---
 
@@ -439,7 +434,7 @@ Operational judgment checks — each covers a high-value gotcha from the section
 >
 > **Tempting-but-wrong:** Creating a sharing rule that "blocks" peers. No such construct exists. Criteria-based or owner-based sharing rules can only grant access to more users, never remove it from users who already have it via OWD or hierarchy.
 >
-> **Verify:** After changing OWD to Private, log in as a rep in Region A and confirm they cannot see Region B accounts. Use `soql_query` with `WITH USER_MODE` (Apex) or check via the Sharing button on a record to see the sharing reason.
+> **Verify:** After changing OWD to Private, log in as a rep in Region A and confirm they cannot see Region B accounts. Run a SOQL query with `WITH USER_MODE` (Apex) or check via the Sharing button on a record to see the sharing reason.
 
 ---
 
@@ -451,7 +446,7 @@ Operational judgment checks — each covers a high-value gotcha from the section
 >
 > **Tempting-but-wrong:** Converting the Opportunity Lookup to a Master-Detail to enable roll-up summaries. This is destructive — it requires every Opportunity to have a non-null Account (breaking standalone opps), deletes Opp records if the parent Account is deleted, and changes sharing behavior. Never convert unless the business model truly mandates parent-required lifecycle coupling.
 >
-> **Verify:** After installing DLRS and configuring the rollup, trigger a recalculate job and `soql_query SELECT Total_Donations__c FROM Account WHERE Id = '<test-id>'` to confirm the value matches the sum of Closed Won Opportunities.
+> **Verify:** After installing DLRS and configuring the rollup, trigger a recalculate job and run `SELECT Total_Donations__c FROM Account WHERE Id = '<test-id>'` (MCP / `sf data query` / Developer Console) to confirm the value matches the sum of Closed Won Opportunities.
 
 ---
 

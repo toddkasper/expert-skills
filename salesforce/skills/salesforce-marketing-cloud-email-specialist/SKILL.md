@@ -39,6 +39,8 @@ anti-patterns to catch in review.
 > (loaded on demand). For org-specific applications of these rules, keep a per-org appendix in
 > your own project, referenced from a CLAUDE.md.
 
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

@@ -20,6 +20,8 @@ The AWS Certified DevOps Engineer – Professional credential validates that a p
 
 > **Study resources** live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
 
+> **Verify steps assume nothing about your tooling** — use your project's MCP/automation, the AWS CLI (`aws`) or CloudShell, or the AWS Console, in that order of preference.
+
 ---
 
 Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).

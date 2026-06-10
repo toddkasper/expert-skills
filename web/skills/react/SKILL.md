@@ -19,6 +19,8 @@ No vendor certification exists for React. This playbook encodes the working comp
 
 > Study resources and data-fetching library links live in [references/study-resources.md](references/study-resources.md).
 
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
 ---
 
 ## 1. Components, Hooks & State

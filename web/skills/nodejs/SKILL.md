@@ -16,6 +16,8 @@ A strong Node.js engineer reasons about the runtime, not just the library. That 
 
 > **Deeper context:** Study resources, certification history, and learning paths live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path. Sibling skills: `typescript`, `react`, `nextjs`, `react-native`.
 
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
 ---
 
 Credential context (retired JSNAD/JSNSD) and study path: see [references/study-resources.md](references/study-resources.md).

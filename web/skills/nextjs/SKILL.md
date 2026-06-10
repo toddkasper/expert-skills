@@ -29,6 +29,8 @@ a cache was not invalidated after a mutation.
 This playbook covers the App Router model (the `app/` directory). The Pages Router (`pages/`) is
 a legacy path — do not build new features there.
 
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
 ---
 
 ## 1. App Router & Component Model

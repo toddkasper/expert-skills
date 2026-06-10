@@ -1,6 +1,6 @@
 # Nonprofit Cloud (Industries) Deep Dive — Sections 16–19
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Contains the full operational detail for PART B (NP-Con-102 / Salesforce Industries Nonprofit Cloud). Applies only if the org has Nonprofit Cloud / Industries enabled — confirm with `list_objects` (NPC uses namespace-free Industries standard objects like `Gift`, `Program`, `ProgramEnrollment`).
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Contains the full operational detail for PART B (NP-Con-102 / Salesforce Industries Nonprofit Cloud). Applies only if the org has Nonprofit Cloud / Industries enabled — confirm by listing the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager); NPC uses namespace-free Industries standard objects like `Gift`, `Program`, `ProgramEnrollment`.
 
 ---
 
