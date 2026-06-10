@@ -82,3 +82,16 @@ state, and all 22 skills now meet the rubric publish bar (no dimension < 2, tota
 > from Cycle-2 (`claude-fable-5`), so cross-cycle deltas are model-confounded; the within-run
 > baseline-vs-skilled lift is the valid signal. Application evals all hit ceiling this run
 > (uninformative)._
+>
+> **Cycle 3 Lens 5 (2026-06-10) — live-web freshness/coverage/contradiction audit of the 19
+> un-pilot skills + volatile-fact confirmation on the 3 pilot skills.** 22 agents, official-source
+> cited. **80 findings filed** to [../feedback/INBOX.md](../feedback/INBOX.md) (72 `new` across 19
+> skills; the 3 pilot skills' volatile facts confirmed → markers cleared, or corrected in-body and
+> filed `integrated`). Dominant themes: stale cert blueprints / domain weights / passing scores
+> (most consultant + specialist skills), renamed-or-retired products (QLDB EOL, Snowmobile,
+> Social Studio, Einstein Copilot→Agentforce, Data Cloud→Data 360, Nonprofit Cloud→Agentforce
+> Nonprofit), and a few hard technical errors (PD2 SOQL selectivity thresholds inverted; Apex
+> default sharing now WITH sharing in API v67+; GH reusable-workflow nesting 4→10; a fabricated
+> GuardDuty AttackSequence finding type — fixed). One unresolved source conflict: Data Loader
+> 5M vs 150M (two official Salesforce pages disagree) → left `[volatile]`, filed `new`. These
+> `new` items are the work-list for the next curation cycle (validate → integrate → eval probe)._

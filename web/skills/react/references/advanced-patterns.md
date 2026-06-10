@@ -6,7 +6,7 @@
 
 ## Memoization
 
-Default: don't. Re-renders are cheap unless profiling shows otherwise. The React Compiler (stable as of late 2025, production-ready) `[volatile — verify live]` automatically inserts the equivalent of `React.memo`, `useMemo`, and `useCallback` where they're beneficial — in compiler-enabled projects, manual memoization is usually redundant.
+Default: don't. Re-renders are cheap unless profiling shows otherwise. The React Compiler (stable as of late 2025, production-ready) automatically inserts the equivalent of `React.memo`, `useMemo`, and `useCallback` where they're beneficial — in compiler-enabled projects, manual memoization is usually redundant.
 
 Without the compiler, apply the trio only after measuring:
 

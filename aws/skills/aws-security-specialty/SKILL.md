@@ -29,7 +29,7 @@ Operational playbook for AWS security work. Each section states the rule to appl
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live — volatile facts:** KMS automatic-rotation minimum interval `[volatile — verify live]`, Shield Advanced pricing `[volatile — verify live]`, GuardDuty finding type catalog (new finding families added quarterly) `[volatile — verify live]`, IAM Access Analyzer supported resource types `[volatile — verify live]`, RCP (Resource Control Policy) service coverage and region availability `[volatile — verify live]`, Security Hub CSPM and Security Hub (risk-correlation) feature boundaries `[volatile — verify live]`, and any feature flagged in the `blueprint:` frontmatter as a recent addition.
+- **Always re-verify live — volatile facts:** Shield Advanced pricing `[volatile — verify live]`, GuardDuty finding type catalog (new finding families added quarterly) `[volatile — verify live]`, IAM Access Analyzer supported resource types `[volatile — verify live]`, RCP (Resource Control Policy) service coverage (partial list, expanding) `[volatile — verify live]`, and any feature flagged in the `blueprint:` frontmatter as a recent addition.
 - **Live wins:** when the live AWS account, CLI output, or official AWS docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
 - **Escalate to a human — do not silently execute:** modifying KMS key policies or deleting CMKs; changing SCPs or RCPs; revoking IAM sessions or attaching explicit-deny policies to production roles; quarantining or terminating EC2 instances (even as an IR step); disabling GuardDuty or CloudTrail in any account; opening security-group or network-boundary rules; any Secrets Manager rotation that affects a production database.
 - **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with AWS service updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
@@ -44,7 +44,7 @@ Every authorization decision passes through this stack in order. **Explicit Deny
 
 1. **Explicit Deny** (any policy type) → AccessDenied, full stop.
 2. **SCPs** — ceiling on what principals in the OU/account may do. SCPs do not grant; they cap.
-3. **RCPs (Resource Control Policies)** — ceiling on what any principal (including cross-account) may do to resources in the OU/account. Introduced Nov 2024; apply only to supported services (S3, STS, KMS, SQS, Secrets Manager, ECR, OpenSearch Serverless, DynamoDB) `[volatile — verify live]`.
+3. **RCPs (Resource Control Policies)** — ceiling on what any principal (including cross-account) may do to resources in the OU/account. Introduced Nov 2024; apply only to supported services (S3, STS, KMS, SQS, Secrets Manager, ECR, OpenSearch Serverless, DynamoDB, and others — partial list, expanding) `[volatile — verify live]`.
 4. **Permission Boundaries** — ceiling on what an IAM principal's identity policies may grant. Does not cap resource-policy grants made directly to the role.
 5. **Session Policies** — ceiling applied at `AssumeRole` / `GetFederationToken`; caps the session below the role's full permissions.
 6. **Resource Policies + Identity Policies** — the grant layer:
@@ -136,11 +136,11 @@ Only **symmetric** CMKs with AWS-generated material support automatic rotation (
 
 GuardDuty analyzes CloudTrail, VPC Flow Logs, DNS, EKS audit logs, Lambda network activity, and RDS login activity — no log source setup required. Enable in every region and account; use the org delegated-administrator so member accounts cannot disable it.
 
-**Protection plans** (enable per account or org-wide): S3 Protection, EKS Protection, Malware Protection (EBS scanning), RDS Protection (login anomalies), Lambda Network Activity Monitoring `[volatile — verify live]`.
+**Protection plans** (enable per account or org-wide): S3 Protection, EKS Protection, Malware Protection (EBS scanning), RDS Protection (login anomalies), Lambda Protection (monitors Lambda network activity via VPC Flow Logs).
 
-Severity: **Low** (do not auto-isolate), **Medium** (auto-notify + investigate), **High** (auto-contain), **Critical** `[volatile — verify live]` (immediate escalation).
+Severity: **Low** (do not auto-isolate), **Medium** (auto-notify + investigate), **High** (auto-contain), **Critical** (immediate escalation).
 
-**Extended Threat Detection:** `AttackSequence` findings (e.g., `AttackSequence:IAM/CompromisedCredentials`) correlate multi-stage signals into a single compound Critical/High finding — treat with highest priority; review all constituent events, not just the most recent `[volatile — verify live]`.
+**Extended Threat Detection:** `AttackSequence` findings (e.g., `AttackSequence:EC2/CompromisedInstanceGroup`; other real types: `AttackSequence:EKS/CompromisedCluster`, `AttackSequence:ECS/CompromisedCluster`) correlate multi-stage signals into a compound **Critical**-severity finding (all AttackSequence findings are rated Critical 9.0–10.0). ETD also covers AWS-credential-misuse and S3-data-compromise scenarios, but emitted finding IDs are resource-keyed (not IAM-keyed). Treat with highest priority; review all constituent events, not just the most recent.
 
 | Finding family | Example finding | Auto-remediation |
 |---|---|---|
@@ -148,14 +148,14 @@ Severity: **Low** (do not auto-isolate), **Medium** (auto-notify + investigate),
 | Credential exfiltration | `UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS` | Explicit-deny role policy + notify |
 | S3 data exposure | `Policy:S3/BucketPublicAccessGranted` | Re-enable Block Public Access |
 | Malware | `Execution:EC2/MaliciousFile` | Isolate instance + Malware Protection scan |
-| Multi-stage attack | `AttackSequence:IAM/CompromisedCredentials` | Immediate escalation + IR playbook `[volatile — verify live]` |
+| Multi-stage attack | `AttackSequence:EC2/CompromisedInstanceGroup` | Immediate escalation + IR playbook |
 
 ### Security Hub CSPM, Security Hub, Security Lake, and Detective
 
-**Naming (Oct/Dec 2025):** Original findings-aggregation product → renamed **Security Hub CSPM** (Oct 2025). New **Security Hub** (GA Dec 2025) = separate risk-correlation/exposure product. They are distinct — verify which product a feature references `[volatile — verify live]`.
+**Naming (Oct/Dec 2025):** Original findings-aggregation product → renamed **Security Hub CSPM** (Oct 2025). New **Security Hub** (GA Dec 2025) = separate risk-correlation/exposure product. They are distinct — verify which product a feature references.
 
 - **Security Hub CSPM:** aggregates GuardDuty, Inspector, Macie, Access Analyzer, Firewall Manager findings (ASFF format); runs CIS, FSBP, PCI DSS checks. Use org delegated-admin so all-account findings flow centrally. Route HIGH/CRITICAL to EventBridge → SNS → on-call.
-- **Security Hub (risk-correlation):** exposure management product; correlates findings into prioritized attack paths and risk scores across the org `[volatile — verify live]`.
+- **Security Hub (risk-correlation):** exposure management product; correlates findings into prioritized attack paths and risk scores across the org.
 - **Security Lake** normalizes sources (CloudTrail, VPC Flow Logs, WAF, EKS, Security Hub CSPM) to OCSF/Parquet for long-term SIEM analytics. **Detective** provides graph-based investigation of GuardDuty findings — use instead of manually joining CloudTrail + VPC Flow Logs.
 
 ### CloudTrail and log analysis — Domain 1 design and troubleshooting
@@ -199,7 +199,7 @@ Severity: **Low** (do not auto-isolate), **Medium** (auto-notify + investigate),
 ### SCPs, RCPs, and Control Tower
 
 - **SCPs** cap what IAM principals in the OU/account may do. Do not grant. A Deny SCP blocks even `AdministratorAccess`.
-- **RCPs** (introduced Nov 2024) cap what any principal — including cross-account and service principals — may do to resources in the OU/account. Apply only to supported services (S3, STS, KMS, SQS, Secrets Manager, ECR, OpenSearch Serverless, DynamoDB) `[volatile — verify live]`. Enforce encryption at rest or block non-TLS org-wide regardless of individual bucket policies.
+- **RCPs** (introduced Nov 2024) cap what any principal — including cross-account and service principals — may do to resources in the OU/account. Apply only to supported services (S3, STS, KMS, SQS, Secrets Manager, ECR, OpenSearch Serverless, DynamoDB, and others — partial list, expanding) `[volatile — verify live]`. Enforce encryption at rest or block non-TLS org-wide regardless of individual bucket policies.
 - **Deny-list SCP strategy** (start with `FullAWSAccess`, add targeted Denies) is preferred over allow-list (allow-list requires enumerating every allowed action, becomes unmanageable).
 - **Control Tower preventive guardrails** = SCPs (block); **detective guardrails** = Config rules (alert, don't block). Deploy preventive controls only after validating with detective guardrails.
 
@@ -213,9 +213,9 @@ Severity: **Low** (do not auto-isolate), **Medium** (auto-notify + investigate),
 
 ### Additional governance controls
 
-- **Declarative policies** — organization-policy type (alongside SCPs/RCPs) that enforce a specific resource configuration state regardless of what resource policies or IAM policies say; used for immutable baseline settings `[volatile — verify live]`.
-- **AI-services opt-out policies** — organization policy to opt all accounts out of using customer content to improve AWS AI services (Bedrock, Rekognition, etc.) — required in data-sensitive orgs `[volatile — verify live]`.
-- **Centralized root access** — AWS Organizations management account can centralize root-credential management for member accounts, allowing root action only via trusted-access delegation and removing the need for member-account root passwords `[volatile — verify live]`.
+- **Declarative policies** — organization-policy type (alongside SCPs/RCPs) that enforce a specific resource configuration state regardless of what resource policies or IAM policies say; used for immutable baseline settings.
+- **AI-services opt-out policies** — organization policy to opt all accounts out of using customer content to improve AWS AI services (Bedrock, Rekognition, etc.) — required in data-sensitive orgs.
+- **Centralized root access** — AWS Organizations management account can centralize root-credential management for member accounts, allowing root action only via trusted-access delegation and removing the need for member-account root passwords.
 - **Audit Manager** — automates evidence collection for compliance frameworks (SOC 2, PCI DSS, HIPAA); maps AWS Config rules and CloudTrail API calls to control requirements; generates assessment reports.
 
 ### Additional services — Domain 3 to 6 (condensed)
@@ -224,13 +224,13 @@ Key services with brief decision rules (full service guides in [references/study
 
 - **Network Firewall** — stateful VPC network firewall; Firewall Manager deploys policies org-wide.
 - **DNS Firewall** — Route 53 Resolver DNS Firewall blocks DNS tunneling/exfiltration from VPCs.
-- **Verified Access** — zero-trust app access (no VPN); enforces identity + device posture `[volatile — verify live]`.
+- **Verified Access** — zero-trust app access (no VPN); enforces identity + device posture.
 - **Cognito** — user pools (app auth) + identity pools (federated AWS credentials); scope identity-pool trust policies tightly.
 - **IAM Roles Anywhere** — STS temp credentials for on-premises workloads via X.509 certs; replaces long-lived keys.
 - **ABAC** — tag-based policies (`aws:ResourceTag`, `aws:RequestTag`); scales IAM without per-resource policy edits.
-- **CloudHSM** — FIPS 140-2 Level 3 dedicated HSM (single-tenant). **XKS** — KMS key backed by on-premises HSM (HYOK) `[volatile — verify live]`.
+- **CloudHSM** — FIPS 140-3 Level 3 dedicated HSM (single-tenant; current hsm2m.medium; legacy hsm1.medium was FIPS 140-2 Level 3). **XKS** — KMS key backed by on-premises HSM (HYOK) `[volatile — verify live]`.
 - **AWS Private CA** — managed private CA for internal TLS and code-signing certificates.
-- **Bedrock Guardrails** — content filtering, PII redaction, topic denial for GenAI inference `[volatile — verify live]`.
+- **Bedrock Guardrails** — content filtering, PII redaction, topic denial for GenAI inference.
 
 ---
 
@@ -262,7 +262,7 @@ Key services with brief decision rules (full service guides in [references/study
    → gate: `aws kms list-key-policies --key-id <key-id>` to inspect; then test with `aws kms generate-data-key --key-id <key-id> --key-spec AES_256` as the intended principal — success confirms the grant chain works.
 3. If a third-party service or Lambda needs time-bounded access without modifying the key policy, create a KMS grant: `aws kms create-grant --key-id <key-id> --grantee-principal <arn> --operations Decrypt,GenerateDataKey`.
    → gate: `aws kms list-grants --key-id <key-id>` confirms the grant exists; note the `GrantId` for future revocation.
-4. Enable automatic key rotation (symmetric CMKs only, minimum 90-day interval `[volatile — verify live]`): `aws kms enable-key-rotation --key-id <key-id>`.
+4. Enable automatic key rotation (symmetric CMKs only, minimum 90-day interval): `aws kms enable-key-rotation --key-id <key-id>`.
    → gate: `aws kms get-key-rotation-status --key-id <key-id>` returns `{"KeyRotationEnabled": true}`.
 5. To clean up a temporary grant, revoke it by ID: `aws kms revoke-grant --key-id <key-id> --grant-id <grant-id>`. Do NOT delete or disable the CMK while encrypted data exists — that data becomes permanently inaccessible.
    → gate: `aws kms list-grants --key-id <key-id>` no longer shows the revoked grant ID.
@@ -396,6 +396,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 - **2026-06-09** — Conformed to 12-dimension skill standard: task-vocab description, Scope block, Uncertainty & Escalation with `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, feedback protocol. Exam logistics relocated to references/study-resources.md.
 - **2026-06-09** — Inlined 4 decision scenarios; prose compression pass.
 - **2026-06-10** — C3 curation pass (inbox 2026-06-10). (1) Security Hub CSPM / Security Hub rename disambiguated. (2) RCP date corrected to Nov 2024; supported-service scope added. (3) Domain 1: org CloudTrail, CloudTrail Lake, Athena/OpenSearch, missing-logs checklist added. (4) GuardDuty: Critical severity, Extended Threat Detection / AttackSequence, protection plans added; nonexistent finding type replaced. (5) IAM Access Analyzer unused-access + internal-access + custom policy checks added; Firewall Manager prerequisite corrected to AWS Config; Secrets Manager managed rotation + single-user/alternating-users strategies added. (6) Medium/High severity automation rule made consistent; S3 BPA falsehood corrected; Scenario 4 garbled paragraph repaired; scored/unscored split fixed to 50+15 in study-resources.md. (7) Domain 3–6 gap coverage: Network Firewall, DNS Firewall, Verified Access, Cognito, IAM Roles Anywhere, ABAC, CloudHSM/XKS, Private CA, Bedrock Guardrails, declarative/AI-opt-out policies, centralized root, Audit Manager. Evals: 6 new held-out scenarios added (items 13–18).
+- **2026-06-10** — Cycle-3 volatile reconciliation: 6 facts confirmed (markers cleared): KMS min-90-day rotation interval, GuardDuty Critical severity tier, Security Hub CSPM rename + Security Hub (risk-correlation) split, IAM Access Analyzer three analyzer types + custom policy checks, declarative/AI-opt-out/centralized-root governance controls, Verified Access + Bedrock Guardrails. Corrections: (1) fabricated GuardDuty AttackSequence finding type `AttackSequence:IAM/CompromisedCredentials` replaced with real resource-keyed types (`AttackSequence:EC2/CompromisedInstanceGroup`, etc.); (2) AttackSequence severity changed from "Critical/High" to Critical-only (all rated 9.0–10.0); (3) RCP supported-services list reworded as partial/expanding (volatile marker retained); (4) Lambda protection plan renamed from "Lambda Network Activity Monitoring" to "Lambda Protection"; (5) CloudHSM FIPS updated from 140-2 Level 3 to 140-3 Level 3 (current hsm2m.medium; legacy note retained).
 
 ---
 
