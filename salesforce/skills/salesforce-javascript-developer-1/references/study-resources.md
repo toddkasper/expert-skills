@@ -1,6 +1,6 @@
 # JavaScript Developer I — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the JavaScript Developer I exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the JavaScript Developer I exam.
 
 ## Credential logistics
 
@@ -43,54 +43,6 @@ keep the credential active.
 - [You Don't Know JS (GitHub)](https://github.com/getify/You-Dont-Know-JS) — Free book series by Kyle Simpson; deep-dives on scope, closures, `this`, and async — the concepts most frequently tested
 - [Jest — Getting Started](https://jestjs.io/docs/en/getting-started) — Official Jest docs; focus on matchers, mocking, and async testing patterns for the Testing topic
 
-## Relevance to NPSP & Nonprofit Cloud
+## Relevance to other verticals
 
-The JavaScript Developer I certification is directly applicable to NPSP / Nonprofit Cloud
-development. The JS surface on many nonprofit projects is a mix of React/front-end, Node
-Lambda/back-end, and SFDX scripts in addition to LWC, but the rules above are identical
-across all of them.
-
-### LWC Components for Nonprofit Staff Workflows
-
-NPSP and Nonprofit Cloud provide standard objects and flows, but nonprofit orgs routinely
-need custom UI — donor portals, volunteer check-in, grant dashboards, or application intake.
-The **Objects, Functions, Classes** and **Browser and Events** rules map directly to LWC
-authoring: `@api`/`@track`/`@wire` are the same decorators used in every LWC; child→parent
-custom-event bubbling is the same pattern used by multi-step form steps emitting events upward.
-
-### Asynchronous Apex Integration
-
-`@wire` adapters and imperative Apex calls both return Promises. Correct `async/await` with
-`try/catch` and `Promise.all` fan-out for independent SOQL is the difference between a
-component that fails silently and one that shows useful error states — and the difference
-between N×latency and 1×latency.
-
-### Testing LWC Components with Jest
-
-`@salesforce/sfdx-lwc-jest` runs LWC unit tests in Node with no live org. The exam's emphasis
-on `jest.fn()` and `jest.mock()` maps to mocking `@salesforce/apex` imports and wire adapters —
-the same discipline applied to boundary-case unit suites elsewhere in a project.
-
-### Node.js for Build Tooling and Automation
-
-The **Server-Side JavaScript** rules cover npm, `package.json`, and core modules — the exact
-toolchain behind SFDX CI/CD scripts, schema-sync utilities, smoke tests, and the test runner.
-
-### Debugging Integration Issues
-
-The **Debugging and Error Handling** rules apply the moment a Salesforce REST call returns an
-unexpected status, a JWT auth fails, or a validation error propagates wrong through the
-back-end chain — read the stack trace, log structured (PII-free), and `try/catch` around
-`await`.
-
-### Specific NPSP Topic Mapping
-
-| Cert Topic | NPSP/Nonprofit Cloud Application |
-|---|---|
-| Objects, Functions, Classes | LWC components for donor, volunteer, and constituent-facing UIs |
-| Browser and Events | Custom event patterns between LWC child/parent components |
-| Asynchronous Programming | `@wire` + imperative Apex; `Promise.all()` for parallel SOQL |
-| Testing | `@salesforce/sfdx-lwc-jest` unit tests for custom NPSP components |
-| Server-Side JavaScript | npm/Node toolchain for SFDX CI/CD scripts and schema sync |
-| Debugging and Error Handling | Salesforce API error handling in Lambda and LWC error boundaries |
-| Variables, Types, Collections | JSON parsing of NPSP API responses; array manipulation for list views |
+The JavaScript and LWC rules in this skill apply uniformly to any Salesforce org or JavaScript stack — React front-ends, Node/Lambda back-ends, LWC, SFDX scripts. For NPSP/Nonprofit Cloud-specific LWC use cases (donor portals, volunteer check-in UIs, constituent-facing components), see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).

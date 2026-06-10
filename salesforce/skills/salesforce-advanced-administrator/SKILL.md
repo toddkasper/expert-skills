@@ -25,7 +25,7 @@ processes, order of execution), custom object design, analytics, deployment pipe
 org-health monitoring. It is the next step after the Administrator credential (ADM-201 /
 Plat-Admn-201) for anyone managing a non-trivial production org.
 
-> **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For nonprofit/NPSP applications, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). For org-specific applications, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
 
@@ -98,7 +98,7 @@ Public Read Only, Public Read/Write, Controlled by Parent. Approval steps max 30
 |---|---|---|
 | Master-Detail | Child can't exist without parent; you need roll-up summaries; child shares parent's sharing | Cascade delete; child inherits OWD/sharing; max 2 MD per object; reparenting off by default |
 | Lookup | Records are independent; either side can exist alone | No roll-up summary (need DLRS/Apex/flow); independent sharing; can be required or optional |
-| Junction (2 MD) | True many-to-many (NPSP Relationship, Affiliation, Soft Credit) | First MD = primary (controls detail's ownership/sharing); deleting either master deletes the junction |
+| Junction (2 MD) | True many-to-many (e.g. Person A ↔ Person B relationships, donor soft credits) | First MD = primary (controls detail's ownership/sharing); deleting either master deletes the junction |
 
 - **Roll-up summary fields only exist on the Master in a Master-Detail.** SUM/COUNT/MIN/MAX
   only. For Lookups, use Declarative Lookup Rollup Summaries (DLRS), a record-triggered flow,
@@ -186,8 +186,7 @@ heap (12 MB async), 100 callouts.
   respect FLS in user context). Catch when a flow "works for admins, breaks for others."
 - **Before blaming your own code, enumerate ALL automation on the object** — managed-package
   workflow rules, flows, and triggers included. A managed package can silently overwrite a
-  field on insert (e.g. an NPSP workflow rule copying `Phone → MobilePhone` when
-  `PreferredPhone` defaults to "Mobile"). Use a debug log to find the actual writer.
+  field on insert (e.g. NPSP's `npe01` workflow copies `Phone → MobilePhone` based on `PreferredPhone__c`). Use a debug log to find the actual writer.
 
 **Verify against the live org:**
 - Use an Apex debug log (set a trace flag on the user) to see *every* automation that touches
@@ -209,7 +208,8 @@ configured separately — you need both.
 |---|---|---|---|
 | Data Import Wizard | up to 50,000 | Accounts, Contacts, Leads, Solutions, custom objects — **NOT Opportunities** | Quick UI import, simple de-dup |
 | Data Loader | up to 5,000,000 | **All** objects incl. Opportunities | Large volume, CLI/batch, upsert via External ID |
-| NPSP Data Importer (BDI) | batched | Contact/Account/Opp with NPSP matching | Nonprofit gift/Contact imports with Household logic |
+
+Some managed packages provide a purpose-built import tool that enforces their data model (e.g. NPSP Data Importer/BDI for Contact/Account/Opp with Household matching — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 - **Upsert needs an External ID field** (or the record Id). Upsert-by-external-ID is the
   pattern for idempotent re-linking — late-arriving related records can re-attach to an
@@ -225,10 +225,9 @@ configured separately — you need both.
   months. **Dashboard filters** max 3 per dashboard.
 
 **Anti-patterns / red flags:**
-- Trying to import Opportunities via Data Import Wizard — unsupported; use Data Loader/BDI.
+- Trying to import Opportunities via Data Import Wizard — unsupported; use Data Loader (or a package-specific tool if one is available).
 - A "duplicate rule" that has no matching rule, or vice versa — neither works alone.
-- Bulk-loading into NPSP without honoring its Contact/Household matching — creates duplicate
-  Households.
+- Bulk-loading records into a package-managed org without honoring the package's matching logic — can create duplicates (e.g. NPSP Household deduplication — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 **Verify against the live org:**
 - Run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API) to pull its output before changing its definition.
@@ -239,8 +238,7 @@ configured separately — you need both.
 
 ## Cloud Applications — Operational Knowledge
 
-Sales/Service Cloud features are largely out of scope for a fundraising/NPSP org, but know
-the shape:
+Know the shape of each Cloud — many orgs focus on one, but the exam covers all:
 - **Sales Cloud:** Products → Price Books → Price Book Entries; revenue/quantity schedules;
   Opportunity splits; Collaborative Forecasting; quote-to-opportunity sync; lead conversion
   field mapping.
@@ -355,7 +353,7 @@ Read this first. Each is imperative and concrete.
   that updates its own object.
 - **DO** enumerate ALL automation (incl. managed-package workflow rules) before blaming your
   own code — use a debug log trace flag.
-- **DON'T** import Opportunities via Data Import Wizard — Data Loader or NPSP BDI only.
+- **DON'T** import Opportunities via Data Import Wizard — use Data Loader (or a package-specific tool that supports Opportunities).
 - **DO** upsert by External ID for idempotent re-linking; both a Matching Rule and a
   Duplicate Rule are required for de-dup.
 - **DO** build new automation in Flow — Workflow Rules and Process Builder are retired.
@@ -464,7 +462,7 @@ Operational judgment checks — each covers a high-value gotcha from the section
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path. For nonprofit/NPSP applications of these rules, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

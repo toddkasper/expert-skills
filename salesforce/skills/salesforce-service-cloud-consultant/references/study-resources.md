@@ -1,6 +1,6 @@
 # Service Cloud Consultant — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Service Cloud Consultant exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Service Cloud Consultant exam.
 
 ## Credential logistics
 
@@ -63,34 +63,6 @@ The most effective preparation for the practical skills; all free on Trailhead:
 
 ---
 
-## Relevance to NPSP and Nonprofit Cloud
+## Relevance to other verticals
 
-### Direct Feature Overlap
-
-Nonprofits often use Salesforce in a service pattern — applications/requests arrive, get reviewed, get approved/declined, generate follow-ups. Every Service Cloud domain maps to something real:
-
-| Service Cloud Feature | Nonprofit Implementation | Typical Status |
-|---|---|---|
-| Case object (as application/request) | A custom intake object serves the same function | Common |
-| Case assignment rules | Route applications to review queues by type | Often manual; set `AssignmentRuleHeader` for API inserts |
-| Entitlements and milestones | Application review SLA (e.g., 14-day, business-hours-aware) | Rarely implemented at small orgs |
-| Lightning Service Console | Role-specific contextual tabs on the constituent record | High value (mind the QA cache gotcha) |
-| Omni-Channel | Route incoming work to available staff | Often unnecessary at low volume; a queue list view suffices |
-| Knowledge | FAQ, eligibility, required-documents articles | Underused; could deflect staff email |
-| Knowledge-Centered Support | Articles linked to common rejection reasons / doc requirements | Future |
-| Contact Center Analytics | Pipeline dashboard (volume by type, status, age) | Often partial — list views without a formal dashboard |
-
-### NPSP and Nonprofit Cloud Context (2026)
-
-NPSP remains fully supported but stopped receiving new features (Salesforce ended NPSP innovation March 2023). The new path is **Agentforce Nonprofit** (rebranded Nonprofit Cloud) with native case, program, volunteer, and fundraising management on core objects.
-
-- **New nonprofits** on the Power of Us 10-free-license benefit are provisioned with Agentforce Nonprofit or Sales+Service Cloud — Service Cloud Consultant skills apply directly.
-- **Existing NPSP orgs** still benefit for console setup, case/entitlement config on Contact, Knowledge, and reporting.
-- **Agentforce Nonprofit** natively includes case + volunteer management — overlapping heavily with the Case Management and Service Console domains here.
-- This cert does **not** cover NPSP-specific packages (NPSP, DLRS, PMM) — those are tested by the separate Nonprofit Cloud Consultant credential.
-
-### Certification Path Recommendation
-
-1. **Salesforce Administrator** — prerequisite for all consultant certs; validates day-to-day admin work
-2. **Service Cloud Consultant** — validates the case-management / console / entitlement / knowledge patterns that dominate intake-and-review workflows
-3. **Nonprofit Cloud Consultant** — validates NPSP-specific and Agentforce Nonprofit data-model knowledge for constituent management and fundraising; not a prerequisite for the others
+The case-management, console, entitlement, and knowledge patterns in this skill apply to any intake-and-review workflow across any industry vertical. For NPSP/Nonprofit Cloud-specific operational guidance — NPSP Data Import, Household Accounts, donor pipeline, program management — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).

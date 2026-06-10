@@ -1,6 +1,6 @@
 # Platform Developer II — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Developer II exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Developer II exam.
 
 ## Credential logistics
 
@@ -38,30 +38,6 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 - [Apex Hours](https://www.apexhours.com/apex-design-patterns/) — Community blog/YouTube covering design patterns, LWC, integrations
 - [Apex Design Patterns — SFDC Brewery (Medium)](https://medium.com/@sfdcbrewery/apex-design-patterns-sfdc-brewery-salesforce-developer-interview-preparation-series-2c5296a9ed0f) — Deep dives on Singleton, Strategy, Decorator, Facade, Composite, Bulk State Transition
 
-## Relevance to NPSP and Nonprofit Cloud
+## Nonprofit/NPSP applications
 
-The PD2 skill set maps directly onto the hardest parts of building on NPSP.
-
-### NPSP TDTM, not raw triggers
-NPSP governs Contact/Account/Opportunity automation through **Table-Driven Trigger Management**. To add behavior to an NPSP object, extend `npsp.TDTM_Runnable`, override `run()`, and register the handler with a **Load Order** in `Trigger_Handler__c` so it sequences correctly relative to NPSP's own handlers. Dropping a raw trigger on Contact fights NPSP automation — and NPSP's hidden managed-package automation (e.g., the `npe01` workflow that copies `Phone → MobilePhone` when `PreferredPhone__c = "Mobile"`) will silently mutate your data if you don't account for execution order first.
-
-### Apex Managed Sharing
-NPSP has its own sharing model for Households, Organizations, and Opportunities. Custom code reaching records outside a user's role hierarchy needs the PD2 `Share`-object / row-cause / `without sharing` toolkit — applied carefully, since FLS must still be enforced in code.
-
-### Inbound REST + External Id upsert
-A common NPSP integration pattern POSTs to NPSP via REST and upserts on a custom External Id field for idempotency — the exact PD2 inbound-integration pattern, and a clean hook for later related-record re-linking without new write logic.
-
-### Platform Events for status flow-back
-"Record status changes flow back to an external portal" is a textbook Platform Events use case (`EventBus.publish` → subscriber, `ReplayId` durability) — decoupled, fire-and-forget, no polling.
-
-### Custom Metadata Types for config
-NPSP keeps config in CMTs (`Trigger_Handler__mdt`, relationship auto-create config). PD2's CMT skills (free SOQL, deployable, packageable) are essential for reading/extending NPSP config safely without mutating settings that drive core behavior.
-
-### Large Data Volume
-As custom objects and Contact grow, PD2's LDV toolkit — selective queries, skinny tables, owner-skew avoidance, Big Objects for archival — keeps approval/processing logic performant past 10k/100k records.
-
-### Testing with mocks
-Any future status-webhook callouts must be mocked (`HttpCalloutMock`/`StubProvider`) to test without hitting real endpoints.
-
-### Source-driven deployment
-SFDX (`force-app/main/default/`) with `sf project deploy start` is the exact source-driven workflow PD2 tests, and the home of every deployment gotcha above.
+See [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) for how these PD2 rules apply to NPSP orgs (TDTM framework and package trigger coexistence, Apex Managed Sharing for Household records, inbound REST + External Id upsert patterns, CMT-based package config, LDV tuning as custom objects grow, and source-driven SFDX deployment alongside managed-package metadata).

@@ -1,6 +1,6 @@
 # Sales Cloud Consultant — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Sales Cloud Consultant exam or mapping the operational rules to an NPSP/Nonprofit Cloud org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Sales Cloud Consultant exam.
 
 ## Credential logistics
 
@@ -67,51 +67,6 @@ the Trailhead credential page is the authoritative current source.
 
 ---
 
-## Relevance to NPSP & Nonprofit Cloud
+## Relevance to other Salesforce verticals
 
-The Sales Cloud Consultant exam is a **for-profit CRM credential**, but the
-platform skills transfer directly to NPSP/Nonprofit Cloud.
-
-### Direct Skill Transfers
-
-| Sales Cloud Skill | NPSP / Nonprofit Equivalent |
-|---|---|
-| Lead → Contact + Account on convert | Application/inquiry → Contact + Household Account |
-| Opportunity stages/forecast | Donation/grant pipeline |
-| Account hierarchy (B2B) | Household Account model; org donors |
-| Price books & products | Donation amounts, campaigns, membership tiers |
-| Sharing model (OWD + role + sharing rules) | Volunteer/staff/board access to PII donor & constituent records |
-| Reports, dashboards, snapshots | Program/backlog list views; fundraising pipeline |
-| Data migration (upsert, External ID) | Paper/spreadsheet → NPSP; failed-record recovery |
-| Duplicate/Matching rules | Preventing duplicate Households/Contacts |
-| Integration patterns (REST, Platform Events, CDC) | Online form → NPSP Contact/custom object |
-| Declarative-vs-code judgment + governor limits | Approval Apex; bulk-safe Contact upsert + Relationship creation |
-
-### Key Differences: Sales Cloud vs. NPSP
-
-- **Account model:** Sales Cloud = Business Accounts + Contacts. NPSP = **Household
-  Account model** (individuals are Contacts under a Household). This is the biggest
-  conceptual shift.
-- **Opportunities:** Sales Cloud = deals; NPSP = **donations, grants, pledges,
-  memberships** — the fundraising backbone.
-- **Lead object:** NPSP usually skips Leads; prospects are Contacts from the start.
-- **Forecasting:** Sales Cloud Collaborative Forecasting → NPSP Gift Entry,
-  Recurring Donations, Pledges.
-- **Territory Management:** rarely used in nonprofits; geographic routing is
-  typically handled with custom fields + automation.
-- **CPQ/Quoting:** N/A for fundraising; NPSP has Gift Entry / Batch Gift Entry.
-
-### Certification Path for Nonprofit-Focused Salesforce Professionals
-
-1. **Salesforce Certified Administrator** (prerequisite for everything)
-2. **Salesforce Certified Sales Cloud Consultant** (this document) — consulting +
-   platform-design muscles that transfer to nonprofit work
-3. **Salesforce Certified Nonprofit Cloud Consultant (NPSP)** — exam NP-Con-101 —
-   Household Accounts, Donations, Recurring Gifts, Engagement Plans, Gift Entry
-4. **Salesforce Certified Nonprofit Cloud Consultant (NPC)** — exam NP-Con-102 —
-   the post-2023 native Nonprofit Cloud data model
-
-The Sales Cloud Consultant credential is not a prerequisite for the NPSP/NPC
-exams, but its consulting methodology and platform-design rigor (declarative-vs-code,
-sharing, governor limits, deployment discipline) apply identically to nonprofit
-engagements and are often undertested by pure-nonprofit candidates.
+The platform skills in this skill (sharing models, declarative-vs-code decisions, data migration, governor limits, deployment discipline) transfer to any Salesforce org or vertical. For NPSP/Nonprofit Cloud-specific operational guidance — Household Accounts, donation pipeline, Recurring Donations, NPSP Data Import, LYBUNT/SYBUNT analytics — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).

@@ -1,6 +1,6 @@
 # Advanced Administrator — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Administrator II exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Administrator II exam.
 
 ## Credential logistics
 
@@ -38,44 +38,6 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 
 ---
 
-## Relevance to NPSP & Nonprofit Cloud
+## Nonprofit/NPSP applications
 
-The Advanced Administrator credential maps directly onto day-to-day NPSP administration.
-Highest-leverage domains for a nonprofit org:
-
-**Security and Access — directly applicable.**
-NPSP orgs have layered sharing requirements: volunteers must not see donor giving history;
-board members need campaign read access but not Contact financial data; staff scope varies by
-program. The OWD → role hierarchy → sharing rules → FLS stack is exactly how sensitive
-medical/PII fields are kept correctly scoped — and why every custom field needs an explicit
-`<fieldPermissions>` grant to be queryable at all.
-
-**Process Automation — directly applicable.**
-NPSP ships heavy native automation (gift entry, recurring donations, Household maintenance)
-plus managed-package workflow rules. Order-of-execution mastery is what lets you extend the
-org without triggering recursion or governor failures — and is the exact knowledge that
-diagnoses a managed-package field overwrite.
-
-**Data and Analytics Management — directly applicable.**
-NPSP's BDI has specific Contact/Account/Opportunity matching behavior; Data Loader vs. Data
-Import Wizard vs. BDI object support and upsert-by-External-ID drive every migration.
-Duplicate + Matching Rules keep one donor from fragmenting across web/check/event channels.
-
-**Environment Management and Deployment — directly applicable.**
-Deploying NPSP metadata (custom fields on Contact/Opportunity/npe01/npo02, permsets, layouts,
-Quick Actions) requires dependency-ordering and the FLS-isn't-carried gotcha. An SFDX
-source-driven pipeline maps straight to the exam's ALM/source-driven content.
-
-**Auditing and Monitoring — directly applicable.**
-Field History Tracking on Contact/Opportunity/npe03 is the standard way to prove to board
-auditors a gift record wasn't altered; Setup Audit Trail tracks who deployed what — essential
-in a shared-admin environment.
-
-**Objects and Applications — moderately applicable.**
-NPSP's Household Account model, Soft Credits (junction), and Relationships (junction between
-Contacts) are advanced relationship patterns; the exam's junction/master-detail content
-explains why NPSP behaves as it does.
-
-**Cloud Applications — partially applicable.**
-Sales/Service Cloud are largely out of scope for a fundraising org. Experience Cloud is the
-relevant one if a nonprofit ever builds a hosted volunteer/donor portal.
+See [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) for how these Advanced Admin rules apply to NPSP orgs (sharing model for donor/volunteer data, order-of-execution with NPSP managed-package automation, BDI import and Household matching, SFDX deployment of custom metadata alongside NPSP packages, Field History Tracking for gift-record audits, and Experience Cloud for donor/volunteer portals).

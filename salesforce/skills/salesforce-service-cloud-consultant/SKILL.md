@@ -21,7 +21,7 @@ The Salesforce Certified Service Cloud Consultant credential (exam code Service-
 
 Service Cloud concepts map cleanly onto any intake-and-review workflow: a custom intake object can play the role of the Case object (a record that gets reviewed → approved/declined → triggers follow-up), entitlements/milestones model a review SLA, Knowledge can power a self-service FAQ hub, Omni-Channel routes work to reviewers, and the Lightning Service Console skills apply to any role-specific contextual tabs on a record.
 
-> **Deeper context:** Study resources, recommended study schedule, and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources and recommended study schedule live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
 
@@ -77,7 +77,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 ## 3. Implementation Strategies — operational rules
 
 - **Migrate idempotently: always upsert on an External ID, never blind insert.** Choose a stable external key and key every load and re-link on it; re-running a load must update, not duplicate. An External-ID-keyed upsert is also what lets late/secondary records (e.g. document uploads arriving after the initial submission) re-attach to the right parent with no new write logic.
-- **For nonprofit data loads use NPSP Data Import**, not vanilla Data Loader / Data Import Wizard — it is purpose-built and respects NPSP's account-model and field mappings. Configure NPSP custom **Field Mappings once** for any custom Contact fields so recovery/import is **one-pass** instead of two.
+- **Use the org's purpose-built import tool when one exists.** Standard options: Data Import Wizard (≤50k records) or Data Loader (any volume, upsert). In managed-package orgs that ship their own import tool (e.g. NPSP Data Import for nonprofit orgs), use it — it is purpose-built for the package's account model. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP Data Import specifics.
 - **Sandbox tier selection:**
 
 | Tier | Use for | Data |
@@ -158,7 +158,7 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 - **DON'T** put `<fieldPermissions>` on a required field — the deploy fails; omit required fields.
 - **DO** make Lookup `relationshipName` unique per parent object (role-specific suffixes).
 - **DO** upsert on an External ID for idempotent loads/re-links — never blind insert.
-- **DO** use NPSP Data Import (with one-time Field Mappings) for nonprofit loads, not Data Loader.
+- **DO** use the org's purpose-built import tool (e.g. NPSP Data Import for nonprofit orgs) rather than vanilla Data Loader when one exists; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP specifics.
 - **DON'T** expect assignment/escalation rules to auto-fire on API/Apex inserts — set `AssignmentRuleHeader` explicitly.
 - **REMEMBER** assignment/auto-response/escalation: first matching entry wins; order entries specific→general.
 - **DO** bust the Quick Action cache by editing non-field metadata (`<description>`) when new QA fields don't render — logout/login alone won't.
@@ -253,7 +253,7 @@ Entitlement Processes are the template that governs which milestones apply and w
 
 **Scenario 5 — Web-to-Case submission spike drops cases silently**
 
-**Situation:** A nonprofit runs an annual open-enrollment drive. Historically they receive 200 applications/day but expect 800–1,000 on peak days during the two-week window. They plan to use native Web-to-Case.
+**Situation:** An organization runs an annual open-enrollment drive. Historically they receive 200 applications/day but expect 800–1,000 on peak days during the two-week window. They plan to use native Web-to-Case.
 
 **Competent move:** Native Web-to-Case is hard-capped at 500 cases/day — submissions beyond that are silently dropped (no error to the submitter, no record in Salesforce). For peak volumes that exceed 500/day, replace or supplement the intake path: either a custom web form that POSTs to an Experience Cloud / Salesforce Site Apex REST endpoint (no 500-cap), or a queue-based async path (e.g. Platform Events / MuleSoft). Implement a server-side acknowledgment email from the intake endpoint so applicants have proof of submission regardless of path.
 
@@ -265,7 +265,7 @@ Entitlement Processes are the template that governs which milestones apply and w
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community), the recommended study schedule, and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) and the recommended study schedule are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

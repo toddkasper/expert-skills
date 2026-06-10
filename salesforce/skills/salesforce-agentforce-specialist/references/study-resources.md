@@ -1,6 +1,6 @@
 # Agentforce Specialist — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Agentforce Specialist (AI-201) exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Agentforce Specialist (AI-201) exam.
 
 ## Credential logistics
 
@@ -72,39 +72,9 @@ page before purchasing a voucher.
 
 ---
 
-## Relevance to NPSP & Nonprofit Cloud
+## Relevance to other verticals
 
-As of December 2025, Salesforce stopped offering **NPSP (Nonprofit Success
-Pack)** as a preconfigured package in new production orgs, instead positioning
-**Agentforce Nonprofit** (built on core Salesforce + Nonprofit Cloud) as the
-successor. Existing NPSP orgs remain supported; Salesforce has confirmed no
-forced migration or sunsetting.
-
-### Where these skills apply in a nonprofit/NPSP org
-
-**Prompt Builder (high relevance, buildable today):**
-- Sales Email templates grounded on custom-object dynamic merge fields for
-  constituent outreach — mask PII via the Trust Layer (§6).
-- Field Generation for narrative fields surfaced via a Quick Action — size
-  output to the field length (verify with `describe`).
-- Record Summary for staff triaging incoming records (applications, cases).
-
-**Agentforce agents (medium relevance, often future):**
-- An **Employee Agent** answering staff status questions via a Flow action over
-  a custom object — least-privilege agent user, replacing manual SOQL.
-- A **Service Agent** for public FAQ — needs Knowledge enabled; grounds on
-  articles, not RAG.
-
-**Data Cloud / RAG:** Data Cloud is frequently not enabled in lean nonprofit
-orgs — Data Library, chunking, and vector search are then out of reach until it
-is provisioned. Plan around this; don't assume it.
-
-**Model Builder / BYOLLM:** Low-volume nonprofit workloads rarely justify a
-custom model; standard Einstein typically suffices.
-
-**Einstein Trust Layer (always relevant):** every AI feature passes through it;
-zero-retention keeps PII/medical data out of external model training. Configure
-masking for sensitive document content, SSN, and medical detail explicitly — see §6 in SKILL.md.
+Agentforce and Prompt Builder skills apply to any Salesforce org. For NPSP/Nonprofit Cloud-specific agent and AI guidance — Agentforce Nonprofit, constituent-outreach prompt templates, Data Cloud availability in nonprofit orgs — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

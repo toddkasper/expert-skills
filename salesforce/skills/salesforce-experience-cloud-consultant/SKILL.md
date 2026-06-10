@@ -25,7 +25,7 @@ harden the guest user surface. The recurring exam (and real-world) framing is no
 "how do I configure X" but "given this requirement, which approach is correct and
 **why**, and what breaks if I pick wrong."
 
-> **Deeper context:** Study resources and NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -50,7 +50,7 @@ Decision table — match the requirement to the model:
 | Authenticated customers need reports, dashboards, sharing rules, or cross-account visibility | Customer model | Customer Community **Plus** | Adds role hierarchy + reports |
 | Resellers/partners working Leads, Opportunities, Campaigns | Partner (Business Account) | Partner Community (PRM) | Full CRM objects + role hierarchy |
 | Custom high-object-count app, many logins | Customer model | External Apps license | Flexible object access, login- or member-based pricing |
-| Nonprofit donor/volunteer/program portal on NPSP | Customer model | **Experience Cloud for Nonprofits** | NPSP-aware, priced for nonprofits |
+| Managed-package org (e.g. NPSP nonprofit portal) | Customer model | **Experience Cloud for Nonprofits** (or vendor-specific tier) | Package-aware licensing; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP specifics |
 
 **Decision heuristic for unauthenticated, shared-device, or low-friction audiences:**
 when there is no Contact-with-Account to authenticate against and re-identifying a
@@ -224,14 +224,7 @@ Provisioning method decision table:
 - **Delegated External User Administration** lets partner super users create/manage
   lower-tier users without admin rights — scope which profiles/fields they can touch.
 
-- **RED FLAG / managed-package gotcha:** A self-registration handler that creates
-  Contacts will fire **every Contact-insert automation in the portal user's session
-  context**, including NPSP managed-package automation. NPSP in particular ships
-  workflow/automation that can silently mutate Contact fields on insert (a classic
-  example: a rule that copies `Phone → MobilePhone` when
-  `npe01__PreferredPhone__c = "Mobile"`, a value NPSP defaults on every insert).
-  Always test self-reg Contact creation end to end in sandbox for governor-limit
-  errors AND unexpected field mutations from managed-package automation.
+- **RED FLAG / managed-package gotcha:** A self-registration handler that creates Contacts will fire **every Contact-insert automation in the portal user's session context**, including any managed-package automation installed in the org. Always test self-reg Contact creation end to end in sandbox for governor-limit errors AND unexpected field mutations from managed-package automation. (e.g. NPSP ships a workflow rule that copies `Phone → MobilePhone` on every Contact insert; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for details.)
 
 ---
 
@@ -332,8 +325,7 @@ Read this first. Each is imperative and concrete.
     customer/partner models).
 12. **DO use a Contact external ID for any bulk/API user provisioning** (upsert
     idempotency).
-13. **DON'T let self-registration Contact creation fire untested** — managed-package
-    (NPSP) automation runs in the portal session and can mutate fields or hit limits.
+13. **DON'T let self-registration Contact creation fire untested** — managed-package automation runs in the portal session and can mutate fields or hit limits.
 14. **DO set Flow running context explicitly** in Experience Cloud; guest flows run
     with guest permissions.
 15. **DON'T embed third-party scripts without a CSP Trusted Site entry** — check the
@@ -416,7 +408,7 @@ are in [references/scenarios.md](references/scenarios.md).
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

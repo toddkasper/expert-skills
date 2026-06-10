@@ -1,6 +1,6 @@
 # Technical Architect — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the CTA review board or mapping the operational rules to a nonprofit (NPSP / Nonprofit Cloud) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the CTA review board.
 
 ## Credential logistics
 
@@ -42,20 +42,6 @@ Additional logistics: Part 1 is virtual (Zoom screen-share). Part 2 is virtual o
 - [Architect Ohana Slack Community](https://salesforce-architect.slack.com) — Slack / community; mock partners and feedback
 - [The Salesforce CTA Exam Guide](https://the-salesforce-cta-exam-guide.com/) — community study guide; domain-by-domain coverage
 
-## Relevance to NPSP & Nonprofit Cloud
+## Relevance to other verticals
 
-The seven CTA domains map directly to common NPSP / Nonprofit Cloud decisions:
-
-**Data — NPSP data model complexity.** The Household Account model (one Account per household, Contacts as members) vs. the Individual Account model is a canonical CTA decision with downstream effects on reporting, dedup, Relationships, and portal access. Approval automation that upserts a `Contact` (matched on email + birthdate) and creates NPSP `Relationship` records for spouse/buddy/emergency contacts exercises exactly the LDV, dedup, and parent-child-load-order concerns the Data domain tests.
-
-**Security — Experience Cloud, FLS, and least-privilege.** The hardest-won scar (FLS separate from object access) lives here, as does the JWT Bearer integration-user design and the ECA permission-assignment trap. A tokenized magic-link upload (high-entropy, write-only, single-record bearer) is a deliberate alternative to community-user licensing — a board-grade "right-sized auth for the audience" decision.
-
-**Integration — Salesforce as system of record.** A submit pipeline (form → object storage → sweep job → JWT upsert → email) embodies fire-and-forget async + idempotent external-ID upsert + resilient failure handling. Donor/payment/email integrations extend the same pattern catalog (Bulk API for imports, CDC/Platform Events for change-driven sync).
-
-**Solution Architecture — managed-package constraints.** NPSP's `npe01` automation (e.g. a workflow rule that overwrites a phone field) is the textbook "design around the managed package" case the domain probes. The declarative-vs-Apex discipline shows up in picklist-edit approvals vs. a native approval flow.
-
-**Development Lifecycle — SFDX + sandbox strategy for NPSP.** NPSP must be installed before metadata deploy; deploy from the SFDX root; FLS/required-field/relationshipName gotchas are caught by the smoke test; production is never touched outside a planned cutover with backfill-first sequencing.
-
-**System Architecture — nonprofit licensing.** Salesforce's Power of Us program (10 free licenses + discounts) shapes the license mix; anonymous-submit + tokenized-upload designs deliberately avoid per-user community licensing for low-tech or senior applicant audiences.
-
-**Communication — presenting to a volunteer board.** Architecture trade-offs must be expressed to a non-technical executive director and volunteer board in cost/risk/time-saved terms — the same audience-adjustment the Communication domain scores.
+The CTA domains — data modeling, security, integration patterns, solution architecture, development lifecycle, system architecture, and communication — apply to any enterprise Salesforce engagement. For NPSP/Nonprofit Cloud-specific architectural decisions (Household Account model, NPSP managed-package constraints, nonprofit licensing, donor-pipeline integration patterns), see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).

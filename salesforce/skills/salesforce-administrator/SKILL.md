@@ -17,7 +17,7 @@ The Salesforce Certified Platform Administrator credential (formerly "Salesforce
 
 **This file is an operational playbook, not an exam outline.** Each section states the actual rules an agent must apply when doing admin work in an org, the concrete limits, the decision criteria for picking a tool, and the anti-patterns to catch in review. A recurring principle throughout: when in doubt about org state, **query the org — never assume from metadata XML**, because XML in a repo is not always deployed, and metadata does not carry runtime state (FLS, cache, active flows).
 
-> **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). Nonprofit/NPSP applications of these rules live in [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). For org-specific specifics, keep a per-org appendix in your own project, referenced from a CLAUDE.md.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference. The SOQL and describe calls below are written to work through any of them.
 
@@ -148,7 +148,7 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 
 **Bulkify everything.** Never put a Get Records / Create / Update / Delete element (or SOQL/DML) **inside a Loop**. Pattern: Get once into a collection → Loop in memory to build a second collection → one Create/Update **after** the loop. Same rule in Apex: query into a Map, iterate in memory, collect into a List, DML once.
 
-**Managed-package automation silently mutates your data.** A managed package can ship its own Workflow Rules, flows, and triggers in its namespace that fire on your records — often driven by package-default picklist values you never set. The canonical example: NPSP's Contacts & Organizations package ships a workflow rule that copies `Phone → MobilePhone` when its preferred-phone picklist defaults to "Mobile", which can silently overwrite data on every new Contact. **Lesson:** when a field changes value with no code of yours responsible, **suspect managed-package automation** (workflow rules, flows, triggers in a namespace), not your own — and check it *before* blaming a more visible package. An Apex debug-log probe in a sandbox is the fastest way to catch the real culprit; the fix is usually to deactivate the offending rule in Setup.
+**Managed-package automation silently mutates your data.** A managed package can ship its own Workflow Rules, flows, and triggers in its namespace that fire on your records — often driven by package-default picklist values you never set. (Canonical scar: an NPSP-shipped workflow rule that copies `Phone → MobilePhone` off a defaulted preferred-phone picklist, silently overwriting data on insert — worked example in [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).) **Lesson:** when a field changes value with no code of yours responsible, **suspect managed-package automation** (workflow rules, flows, triggers in a namespace), not your own — and check it *before* blaming a more visible package. An Apex debug-log probe in a sandbox is the fastest way to catch the real culprit; the fix is usually to deactivate the offending rule in Setup.
 
 **Approval processes** — action timing you must place correctly: Initial Submission Actions, Approval Actions, Rejection Actions, Recall Actions, and Final Approval/Rejection Actions. Approver sources: specific user, role, queue, related-user field, or manager. A native Approval Process and a picklist-edit-plus-flow are both valid patterns; pick by complexity.
 
@@ -171,7 +171,7 @@ This is the most-tested domain. Access is computed by **layering**, and you must
 | Built-in dup matching | ✅ | ❌ |
 | Interface | Browser wizard | Desktop app / CLI (CLI for scheduled jobs) |
 
-For nonprofit (NPSP) orgs, **NPSP Data Import** is purpose-built and supports NPSP custom field mappings — prefer it over vanilla Data Loader for bulk Contact loads and recovery imports. Configure NPSP custom Field Mappings once so recovery is one-pass.
+**On a managed-package org, prefer the package's own loader when it owns the data model** — it understands the package's required relationships and field mappings that a generic loader will get wrong (e.g. NPSP Data Import for Household/Contact/gift loads; worked example in [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 **Recycle Bin retention is 15 days**; hard delete (Data Loader) skips it and is unrecoverable.
 
@@ -191,14 +191,14 @@ For nonprofit (NPSP) orgs, **NPSP Data Import** is purpose-built and supports NP
 
 ## 6. Sales & Marketing — Sales Cloud objects
 
-The exam tests Sales Cloud even where an org doesn't run a traditional pipeline; NPSP repurposes several of these objects.
+Sales Cloud objects apply even in orgs that don't run a classic pipeline, and managed packages routinely rename or repurpose them.
 
-- **Leads:** assignment rules route by criteria to a user or queue; web-to-lead default cap is **500/day**; lead conversion maps Lead fields → Account/Contact/Opportunity and the Lead becomes read-only/archived. NPSP largely bypasses Leads in favor of direct Contact creation.
-- **Accounts/Contacts:** NPSP uses **Household Accounts** by default — every Contact rolls up to a Household Account (Contact → Account → Household). Understand this before reporting on "donors per household."
-- **Opportunities** = donations/gifts in NPSP; stages carry probability; Opportunity Contact Roles link multiple people to one gift.
-- **Campaigns** = NPSP appeals/outreach; campaign member statuses, hierarchy, and ROI fields (Actual Cost, Expected Revenue).
+- **Leads:** assignment rules route by criteria to a user or queue; web-to-lead default cap is **500/day**; lead conversion maps Lead fields → Account/Contact/Opportunity and the Lead becomes read-only/archived.
+- **Accounts/Contacts:** the **account model** (Business Accounts, Person Accounts, or a package's Household model) determines how Contacts roll up — confirm which is active before reporting on relationships or membership.
+- **Opportunities:** stages carry probability; Opportunity Contact Roles link multiple people to one deal. A managed package may repurpose Opportunities for a non-sales process.
+- **Campaigns:** member statuses, hierarchy, and ROI fields (Actual Cost, Expected Revenue).
 
-**Red flag:** treating NPSP Opportunities as a sales pipeline; forgetting Household Account rollup when counting donors.
+**Red flag:** treating a repurposed Opportunity as a sales pipeline; ignoring the active account model when counting or rolling up Contacts. Worked nonprofit example (NPSP Households, gift Opportunities, appeal Campaigns): [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 
@@ -211,7 +211,7 @@ The exam tests Sales Cloud even where an org doesn't run a traditional pipeline;
 - **Omni-Channel** routes by presence/capacity/skills. Agent status (Available/Busy/Away) is set by the agent; a supervisor can override. Routing configurations define the priority and model (most available, least active, or external routing).
 - **Knowledge:** articles attach to cases and are searchable by support agents and in Experience Cloud portals; article visibility is controlled by data categories and the user's data category visibility settings.
 
-**Relevance flag:** Knowledge + entitlements apply wherever a staff/volunteer support portal is added; "missing-document reminder" automation is conceptually case escalation.
+**Note:** Knowledge + entitlements apply to any support portal; a time-based "awaiting action / missing-document reminder" is conceptually the same business-hours-aware mechanism as case escalation.
 
 ---
 
@@ -220,9 +220,9 @@ The exam tests Sales Cloud even where an org doesn't run a traditional pipeline;
 - **Quick Actions:** object-specific (create/update/log-a-call on a record) vs global. Contextual record tabs backed by object-specific Quick Actions are **subject to the QA cache trap in §3** — apply the cache-bust after editing their field lists.
 - **Activities:** Tasks/Events; group tasks assign to up to 200 users (creates a copy per user); shared activities link one activity to multiple contacts.
 - **Email:** org-wide email addresses, letterhead/HTML templates, merge fields, Email-to-Salesforce BCC logging. Transactional email is often handled outside SF (e.g. SES), while approval-notification copy lives in SF Flow email actions.
-- **AppExchange:** install in **sandbox first**, look for the security-review badge, manage managed-package updates centrally. NPSP itself is a managed package — never edit managed components directly; extend alongside.
+- **AppExchange:** install in **sandbox first**, look for the security-review badge, manage managed-package updates centrally. A managed package (e.g. NPSP, CPQ) ships locked components — never edit managed metadata directly; extend alongside it.
 
-**Red flag:** editing managed-package (NPSP) metadata directly; adding Quick Action fields and not cache-busting.
+**Red flag:** editing managed-package metadata directly; adding Quick Action fields and not cache-busting.
 
 ---
 
@@ -326,7 +326,7 @@ Read this first. Each rule is concrete and imperative.
 - **DON'T** give two Lookups to the same parent the same `relationshipName` — use role-specific suffixes.
 - **DO** derive form/integration string `max()` and picklist constraints from live field metadata; regenerate after any field resize/picklist edit; never hand-edit generated schema files.
 - **DO** cache-bust a Quick Action after adding fields: edit `<description>`/`<label>` and redeploy, or the new fields won't render on the contextual tab.
-- **DON'T** use Data Import Wizard for >50k rows or unsupported objects — use Data Loader (5M cap); for nonprofit loads use NPSP Data Import.
+- **DON'T** use Data Import Wizard for >50k rows or unsupported objects — use Data Loader (5M cap); on a managed-package org prefer the package's own loader (e.g. NPSP Data Import).
 - **DO** remember Recycle Bin is 15 days; hard delete is unrecoverable — back up first.
 - **DON'T** delete a user — deactivate (frees license) or freeze (instant lockout, keeps license).
 - **DO** check Setup Audit Trail (180-day) first when org behavior changes unexpectedly.
@@ -337,7 +337,7 @@ Read this first. Each rule is concrete and imperative.
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. For nonprofit/NPSP applications of these rules, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

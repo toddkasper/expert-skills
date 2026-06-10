@@ -23,8 +23,7 @@ ability to translate business requirements into scalable, maintainable Sales
 Cloud configurations across the full sales lifecycle (lead → opportunity →
 order → analytics). The lasting value is the platform-design judgment it
 exercises: sharing models, declarative-vs-code decisions, data migration,
-governor limits, and deployment discipline — all of which transfer directly to
-any Salesforce org, including NPSP / Nonprofit Cloud.
+governor limits, and deployment discipline — applicable to any Salesforce org.
 
 **Exam code:** Sales-Con-201
 **Credential level:** Consultant (intermediate)
@@ -37,7 +36,7 @@ labels/groupings changed. Current blueprint: Practical Application of Sales Clou
 Expertise 33%, Sales Lifecycle 23%, Implementation Strategies 15%, Data
 Management 15%, Consulting Practices 14%.
 
-> **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -77,10 +76,7 @@ flex.
 - Apex doing what a validation rule does.
 - Multiple record-triggered Flows + a trigger on the same object with no defined
   order.
-- A managed-package Workflow Rule silently mutating your data. Managed packages
-  (NPSP among them) can ship workflow rules that copy or overwrite field values
-  on insert/update — always audit installed automation when a field value
-  changes unexpectedly.
+- A managed-package Workflow Rule silently mutating your data. Managed packages can ship workflow rules that copy or overwrite field values on insert/update — always audit installed automation when a field value changes unexpectedly. (e.g. NPSP's `npe01` package; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP-specific details.)
 
 ---
 
@@ -236,7 +232,7 @@ access selectively.
 | **Data Import Wizard** | ≤ 50,000 records, standard + some custom objects, simple loads, built-in dedupe. |
 | **Data Loader** | Bulk (millions), all objects, insert/update/**upsert**/delete, scriptable/automatable. |
 | **Bulk API 2.0** | Programmatic large-volume loads; async, chunked. |
-| **NPSP Data Import / Gift Entry** | Nonprofit-shaped imports (Contacts + Households + Donations in one row). |
+| **Purpose-built package import tools** | e.g. NPSP Data Import / Gift Entry for nonprofit-shaped imports — use the org's native import tool when one exists. |
 
 **Rules:**
 - **Use upsert with an External ID** for idempotent, re-runnable migrations — no
@@ -245,8 +241,7 @@ access selectively.
   children, **permission sets before assignments**, FLS before data that needs
   the fields visible.
 - **Always have a rollback plan** (keep source keys, load in reversible batches).
-- **Dedupe before and after**: configure Matching + Duplicate Rules; for NPSP,
-  prevent duplicate Household Accounts and Contacts.
+- **Dedupe before and after**: configure Matching + Duplicate Rules to prevent duplicate records.
 
 **Anti-patterns / red flags:**
 - Insert (not upsert) on a re-runnable migration → duplicate explosion.
@@ -277,7 +272,7 @@ filter) → query timeout / `QueryException`.
 
 ## 8. Lead, Opportunity & sales pipeline design
 
-**Rules (Sales Cloud canonical; map to NPSP equivalents below):**
+**Rules:**
 - **Lead conversion maps Lead → Account + Contact + (optional) Opportunity.**
   Configure field mapping in Setup so custom lead fields don't vanish on convert.
 - **Opportunity Stage drives Forecast Category and probability.** Keep them
@@ -487,7 +482,7 @@ should → data leak.
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For nonprofit/NPSP-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their respective owners. "Salesforce," "Sales Cloud," "Einstein," "Flow," "Apex," and related marks are property of Salesforce, Inc., used here solely to identify subject matter. Guidance only — verify against official Salesforce documentation and live orgs before acting. No certification outcome is implied or guaranteed.*

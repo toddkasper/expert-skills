@@ -128,3 +128,14 @@ These are the **synchronous** per-transaction limits:
 - **LYBUNT** = gave **L**ast **Y**ear **B**ut **U**nfortunately **N**ot **T**his year. **SYBUNT** = gave **S**ome **Y**ear But not this year. Both are donor-retention/lapse reports built from time-bound giving rollups.
 - Run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API), or run a SOQL query with date filters (MCP / `sf data query` / Developer Console) for ad-hoc retention math, rather than rebuilding report types blindly.
 - Decision: standard Reports/Dashboards for internal KPIs; CRM Analytics/Tableau only when you need blended data sources or external-stakeholder dashboards — don't recommend the heavier tool for a small nonprofit's basic fundraising KPIs.
+
+---
+
+## 16. Experience Cloud / external portals on an NPSP org
+
+External-facing portals (donor, volunteer, program-participant) layer Experience Cloud on top of the NPSP data model. The general external-sharing discipline (CRUD + FLS + OWD + sharing set/share group, guest-user hardening) lives in [salesforce-experience-cloud-consultant](../../salesforce-experience-cloud-consultant/SKILL.md); the NPSP-specific deltas are:
+
+- **License tier:** for a nonprofit portal, default to the **Experience Cloud for Nonprofits** tier (not standard Customer/Partner Community) and confirm the NPSP objects you need are license-exposed **before** designing the sharing model — an object the license doesn't expose can't be shared into the portal no matter how the sharing set is built.
+- **Donor Portal sharing set — key on the Household, not the Contact.** A donor's gifts are Opportunities whose primary contact is reached via `Opportunity.npe01__Contact_Opp_For__r`. Because the Household Account model creates **one Account per household**, configure the sharing set against the **Household Account**, not the Contact, or spouses won't see shared household giving. Also in scope: `npe01__OppPayment__c` (payments), Enhanced Recurring Donations (RD2), and soft-credit/household roll-ups. **Verify:** describe `Opportunity` to confirm the `npe01__Contact_Opp_For__r` lookup path before building the sharing set.
+- **Volunteer Portal (Volunteers for Salesforce / V4SF):** the objects `Volunteer_Job__c`, `Volunteer_Shift__c`, `Volunteer_Hours__c` get the **same** CRUD + FLS + sharing-set discipline as any external-user scenario — being managed-package objects does not exempt them from the external-access layers.
+- **Program-participant access (Nonprofit Case Management / NCCM):** maps to the Customer Account Portal template + self-registration so participants can view referrals and update their own contact info.

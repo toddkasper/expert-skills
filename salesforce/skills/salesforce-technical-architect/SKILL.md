@@ -143,7 +143,7 @@ Automation tool selection:
 
 **One trigger per object, logic in a handler class.** Triggers must be bulk-safe: no SOQL/DML inside a `for` loop. Query once into a `Map<Id, SObject>`, iterate in memory, collect into a `List`, DML once. Recursion-guard with a static boolean. Approval handlers that copy fields to a Contact should be **additive** — role flags are OR-merged, never overwritten to `false` on re-approval.
 
-**Design around the managed package, don't fight it.** NPSP ships its own triggers/automation in the `npe01`/`npsp` namespaces. You cannot edit managed Apex; you design your automation to coexist. A common scar: a managed workflow rule silently overwrites a standard field (e.g. copying `Phone → MobilePhone` based on a managed `PreferredPhone` default) on every insert. The fix is a config change — deactivate the managed workflow rule in Setup — not code. Always suspect managed-package automation when a field changes value with no code of yours touching it.
+**Design around the managed package, don't fight it.** Managed packages ship their own triggers/automation in namespaced Apex you cannot edit; design your automation to coexist. A common scar: a managed workflow rule silently overwrites a standard field on every insert (e.g. NPSP copies `Phone → MobilePhone` on every Contact insert). The fix is a config change — deactivate the managed workflow rule in Setup — not code. Always suspect managed-package automation when a field changes value with no code of yours touching it. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP-specific automation details.
 
 **Quick Action cache-bust trick.** Adding fields to an existing Quick Action via SFDX updates the metadata, but the runtime QA cache (driving Lightning contextual tabs via `console:relatedRecord`) often does NOT invalidate — even after logout/login. The new fields are silently absent with no error. Fix: edit any non-field-list metadata on the QA (`<description>`, `<label>`, `<layoutSectionStyle>`) and redeploy; SF treats it as a structural change and flushes the cache.
 
@@ -172,7 +172,7 @@ Automation tool selection:
 
 **Idempotency via external-ID upsert is mandatory.** Upsert keyed on a stable external ID (e.g. a submission ID) so a retried job does not create duplicates. Any new write path must reuse that key — a late re-link by the same external ID needs no new SF write logic.
 
-**Resilience: on SF write failure, persist and alert — do not silently drop.** A sound pattern: the caller catches the SF error, writes the full payload to durable storage (e.g. object storage), and alerts staff; a converter turns it into an import-ready row (e.g. an NPSP Data Import CSV). Consider 3-try exponential backoff before falling to manual. Never let a write succeed to the user but vanish before reaching Salesforce with no trace.
+**Resilience: on SF write failure, persist and alert — do not silently drop.** A sound pattern: the caller catches the SF error, writes the full payload to durable storage (e.g. object storage), and alerts staff; a converter turns it into an import-ready row for manual recovery. Consider 3-try exponential backoff before falling to manual. Never let a write succeed to the user but vanish before reaching Salesforce with no trace.
 
 **API-limit awareness for the integration user.** Bulk API 2.0 is the right tool for any multi-thousand-row load (imports, backfills); it batches server-side and respects daily API limits far better than row-by-row REST. The daily API request allowance scales with licenses — design imports to use Bulk, not thousands of individual REST upserts.
 
@@ -199,7 +199,7 @@ Automation tool selection:
 
 **Run a smoke test after any metadata, cert, or sandbox change.** A fast JWT/metadata smoke script catches the FLS, required-field, relationshipName, and JWT gotchas at the layer they bite, in seconds. Keep a known-good end-to-end baseline (e.g. an E2E harness count) and treat regressions as blockers.
 
-**Sandbox-bringup gotchas to pre-empt:** some org policies require a Public Group (with the admin as member) before sandbox creation. NPSP managed package must be installed before metadata deploy. Partial-copy sandboxes carrying NPSP data can fire NPSP automation unexpectedly on load.
+**Sandbox-bringup gotchas to pre-empt:** some org policies require a Public Group (with the admin as member) before sandbox creation. Managed packages (e.g. NPSP) must be installed before metadata deploy in sandboxes that depend on them. Partial-copy sandboxes carrying managed-package data can fire package automation unexpectedly on load — plan for this in any managed-package org.
 
 **Destructive changes need a plan.** Field deletion, permset removal, and JSON-to-discrete migrations can drop data. Sequence: backfill → verify → destructive deploy → re-verify. Never destructive-deploy before the data it would orphan has been migrated.
 
@@ -363,7 +363,7 @@ Read this first. Each is imperative and concrete.
 - **DO** give each lookup to the same parent a unique `relationshipName` (role-suffixed).
 - **DO** keep one trigger per object with logic in a bulk-safe handler; make role-flag writes additive, never overwriting to false.
 - **DON'T** create new Workflow Rules or Process Builders — they're deprecated; use Record-Triggered Flow or Apex.
-- **DO** suspect NPSP managed-package automation (`npe01`) when a field changes with no code of yours involved.
+- **DO** suspect managed-package automation when a field changes with no code of yours involved (e.g. NPSP `npe01`; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 - **DO** bust the Quick Action cache by editing non-field metadata (`<description>`) and redeploying when new QA fields don't render.
 - **DO** run all `sf project` commands from the SFDX project root, never the repo root.
 - **DON'T** make incidental deploys to production Salesforce — sandbox only; cutover is a separate planned event.
@@ -378,7 +378,7 @@ Read this first. Each is imperative and concrete.
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/Nonprofit Cloud relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

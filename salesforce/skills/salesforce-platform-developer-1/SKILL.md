@@ -15,7 +15,7 @@ The Salesforce Certified Platform Developer I (PD1) credential validates that a 
 
 **This file is an operational playbook, not an exam outline.** Each section below states the actual rule as an actionable instruction, gives the concrete limit/number, provides decision criteria for choosing one tool over another, flags the anti-patterns to catch in review, and names the live-org verification step. Always verify a structural assumption against the live org before trusting it — SFDX metadata in source control can lag the org, and FLS/required/picklist state is *not* fully captured in the metadata XML.
 
-The target audience is developers with object-oriented background building on or customizing Salesforce orgs. PD1 is Salesforce's entry-level developer credential and the practical prerequisite for Platform Developer II, Application Architect, and most advanced developer credentials. On an NPSP org, PD1 underpins writing safe Apex that coexists with NPSP's Table-Driven Trigger Management (TDTM) without blowing governor limits or causing trigger recursion.
+The target audience is developers with object-oriented background building on or customizing Salesforce orgs. PD1 is Salesforce's entry-level developer credential and the practical prerequisite for Platform Developer II, Application Architect, and most advanced developer credentials.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -42,7 +42,7 @@ These are the hard ceilings the runtime enforces per transaction. Internalize th
 | `@future` calls per transaction | 50 | n/a |
 | Queueable jobs enqueued (sync) | 50 | 1 (chaining) |
 
-**Apply it:** when a managed package (e.g. NPSP) has its own triggers firing inside the same transaction, they consume part of the SOQL/DML budget *before* your code runs, so you have far less than the full 100/150 in practice. Treat the budget as shared.
+**Apply it:** when a managed package has its own triggers firing inside the same transaction, they consume part of the SOQL/DML budget *before* your code runs, so you have far less than the full 100/150 in practice. Treat the budget as shared.
 
 **Verify:** when reasoning about a real batch size, query the actual record count first — `SELECT COUNT() FROM Object__c WHERE ...` — rather than assuming.
 
@@ -98,9 +98,8 @@ Deploying a custom field via SFDX `field-meta.xml` creates the field but grants 
 |---|---|---|---|
 | Import Wizard | < 50k | standard + custom | one-off, UI-driven, dedup needed |
 | Data Loader | 5M+ | all | bulk, CLI/scriptable, scheduled |
-| **NPSP Data Import** | any | NPSP objects | nonprofit recovery/load (purpose-built for nonprofits) |
 
-For nonprofit orgs, prefer NPSP Data Import over vanilla Data Loader for failed-write recovery and bulk loads that must respect NPSP's data model.
+For nonprofit and package-heavy orgs, some managed packages supply a purpose-built import tool that respects their data model — e.g. NPSP Data Import. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 
@@ -145,7 +144,7 @@ update accts.values();
 - **Recursion control:** guard with a static Boolean so a re-entrant save doesn't re-run the handler.
 - **Context variables:** `Trigger.new/old/newMap/oldMap`, `Trigger.isInsert/isUpdate/isDelete`, `Trigger.isBefore/isAfter`. `Trigger.old`/`oldMap` are null on insert.
 
-**NPSP note:** NPSP uses **TDTM (Table-Driven Trigger Management)** — one managed master trigger per object delegates to handler classes registered in `TDTM_Config__mdt`. Custom handlers implement `npsp.TDTM_Runnable` and register *without* touching managed code. PD1's "one trigger per object + handler" pattern *is* the TDTM pattern. Do not add a second raw trigger to an NPSP-managed object; register a TDTM handler instead.
+**Package coexistence note:** some managed packages own their own trigger framework on managed objects — the correct approach is to register your custom logic into that framework rather than adding a second raw trigger (e.g. NPSP uses TDTM, where custom handlers implement `npsp.TDTM_Runnable`). See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for TDTM details.
 
 ### Order of Execution — the 14 steps that decide what fires when
 
@@ -253,7 +252,7 @@ Declarative Quick Actions drive per-record Lightning contextual tabs/panels with
 - **Callouts in tests are prohibited** without a mock: implement `HttpCalloutMock`, register via `Test.setMock(...)` before invoking.
 - Use real assertions: `Assert.areEqual(expected, actual, msg)` (or legacy `System.assertEquals`). Test single-record, **bulk (200+ records)**, and negative/exception paths. Never hardcode Ids.
 
-**NPSP caveat:** NPSP managed code does not auto-run in tests; rollups/household/relationship automation only fire if you explicitly enable NPSP features in the test setup. Don't assume NPSP side effects in assertions unless you've enabled them.
+**Managed-package caveat:** managed-package code does not auto-run in tests by default (`SeeAllData=false`); package-specific automation (rollups, household logic, etc.) only fires if you explicitly enable it in the test setup. Don't assume package side effects in assertions unless you've enabled them (e.g. NPSP — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 ### Debugging
 
@@ -272,7 +271,7 @@ Declarative Quick Actions drive per-record Lightning contextual tabs/panels with
 
 **SFDX rules:**
 - The **SFDX project root is the directory containing `sfdx-project.json`, not necessarily the repo root.** All `sf project ...` commands must run from that directory or they fail with `InvalidProjectWorkspaceError`.
-- DX source format is decomposed (one XML per field) — Git-diffable. Custom fields/permsets/flows/Apex on top of a managed package are SFDX-managed; the managed package itself (e.g. NPSP) cannot be retrieved/modified via SFDX.
+- DX source format is decomposed (one XML per field) — Git-diffable. Custom fields/permsets/flows/Apex on top of a managed package are SFDX-managed; the managed package itself cannot be retrieved/modified via SFDX.
 - After any metadata change, cert rotation, or new sandbox, run a smoke test that exercises the full auth → describe → upsert idempotency → cleanup chain — it catches FLS/required/relationship gotchas at the layer they bite.
 - **Sandbox types:** Developer (200 MB), Developer Pro (1 GB), Partial Copy (5 GB, 10k records/object), Full Copy (exact prod copy, UAT/perf).
 - **Test levels in deploy:** `RunLocalTests` (excludes managed-package tests) is the right CI default; `RunAllTestsInOrg` includes managed. Production deploys run tests automatically.
@@ -289,9 +288,9 @@ Declarative Quick Actions drive per-record Lightning contextual tabs/panels with
 Read this first. Each rule is imperative and concrete.
 
 - **DON'T** put any SOQL/DML inside a loop. Query into a Map once, DML a List once. (100 SOQL sync / 150 DML / 50k rows / 10s CPU.)
-- **DO** assume managed-package triggers (e.g. NPSP) already ate part of your SOQL/DML budget — leave headroom.
+- **DO** assume managed-package triggers already ate part of your SOQL/DML budget — leave headroom.
 - **DON'T** write a trigger for what a validation rule, formula field, or roll-up summary does declaratively.
-- **DO** keep exactly one trigger per object; all logic in a handler class. On NPSP objects, register a TDTM handler — never add a second raw trigger.
+- **DO** keep exactly one trigger per object; all logic in a handler class. On objects managed by a package trigger framework (e.g. NPSP/TDTM), register through that framework — never add a second raw trigger.
 - **DO** use `before` triggers to set fields on the saving record (free persistence); `after` triggers to touch related records / system fields.
 - **DON'T** assume a field is queryable after an SFDX deploy — `field-meta.xml` grants FLS to nobody. Add explicit `<fieldPermissions>`, or confirm with a live SOQL query.
 - **DON'T** put a `<fieldPermissions>` entry on a `required` field — deploy fails. Required fields need no FLS entry.
@@ -334,7 +333,7 @@ PD1 tests object-oriented foundations in the Developer Fundamentals domain (23�
 - `virtual` → can be overridden. `abstract` → must be overridden (class is also abstract). `override` keyword is required on the child method.
 - Access modifiers: `public`, `private`, `protected` (visible in subclasses), `global` (visible to managed-package consumers and external code). Default is `private`.
 
-**NPSP application:** `implements npsp.TDTM_Runnable` is a PD1 interface pattern. The interface declares `run(List<SObject>, List<SObject>, npsp.TDTM_Runnable.Action, Schema.DescribeSObjectResult)`; your handler provides the body.
+**Package framework pattern:** plugging into a managed package's trigger framework (e.g. implementing `npsp.TDTM_Runnable` for NPSP) is a direct application of PD1's interfaces/inheritance content — `implements`, signature matching, and access modifiers all come into play.
 
 ### Exception handling
 
@@ -374,15 +373,15 @@ The five scenarios below cover the highest-value operational gotchas for PD1 wor
 
 ---
 
-**Scenario 3 — NPSP object trigger: raw trigger vs. TDTM registration**
+**Scenario 3 — Package-owned object: raw trigger vs. framework registration**
 
-> **Situation:** A developer needs custom logic to run whenever a `Contact` is inserted or updated on an NPSP org. They write a standard `ContactTrigger.trigger` and deploy it.
+> **Situation:** A developer needs custom logic to run whenever a `Contact` is inserted or updated on an org where a managed package already owns the `Contact` trigger (e.g. an NPSP org where NPSP has its own master `ContactTrigger`). The developer writes a new `ContactTrigger.trigger` and deploys it.
 >
-> **Competent move:** NPSP already has its own master `ContactTrigger` managing its TDTM framework. Deploying a second raw `ContactTrigger` either fails on deploy (duplicate trigger name error) or, on a different API name, creates a second trigger with **undefined firing order relative to NPSP's trigger**. The correct approach: create a handler class that implements `npsp.TDTM_Runnable`, then register it in `TDTM_Config__mdt` with the target object, action (Insert/Update), and load order. This slots the custom logic into NPSP's managed execution sequence without touching managed code.
+> **Competent move:** When a managed package already owns a trigger on an object, deploying a second trigger of the same name fails on deploy (duplicate trigger name error). Even with a different API name, the result is two triggers on the same object with **undefined firing order** — which can corrupt the package's automation or cause recursion. The correct approach: use the package's own extension mechanism. For NPSP this means creating a handler class that implements `npsp.TDTM_Runnable` and registering it in `TDTM_Config__mdt` with the target object, action, and load order, slotting custom logic into the managed execution sequence without touching managed code. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for TDTM specifics.
 >
-> **Tempting-but-wrong:** Naming the custom trigger something like `CustomContactTrigger` to avoid the duplicate-name problem. This appears to work but produces two triggers on the same object firing in unpredictable order, which can corrupt NPSP's household and relationship rollups or cause recursion that hits governor limits.
+> **Tempting-but-wrong:** Naming the custom trigger something like `CustomContactTrigger` to avoid the duplicate-name error. This appears to work but produces two triggers on the same object firing in unpredictable order, which can interfere with the package's automation or cause recursion that hits governor limits.
 >
-> **Verify:** After registering the TDTM handler, insert a Contact in a sandbox and pull the debug log. Confirm the custom handler's entry and exit appear inside NPSP's trigger execution stack, not after it. Run the full suite of NPSP Apex tests to confirm no regressions.
+> **Verify:** After registering the handler in the package framework, insert a Contact in a sandbox and pull the debug log. Confirm the custom handler's entry and exit appear within the package's trigger execution stack. Run the package's Apex test suite to confirm no regressions.
 
 ---
 
@@ -412,7 +411,7 @@ The five scenarios below cover the highest-value operational gotchas for PD1 wor
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path. For nonprofit/NPSP applications of these rules, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

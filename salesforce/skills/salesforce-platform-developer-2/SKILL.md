@@ -18,7 +18,7 @@ The credential has **two parts**: a multiple-choice exam **and four Trailhead Su
 
 **This file is an operational playbook, not an exam outline.** It states the rules as actionable instructions with concrete limits, decision criteria, and anti-patterns to catch in review. Read **Operational Rules Quick Reference** first, then drill into the topic sections.
 
-> **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For nonprofit/NPSP applications, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md). For org-specific applications, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -74,7 +74,7 @@ Map<Id, Account> byId = new Map<Id, Account>([SELECT Id FROM Account WHERE Id IN
 
 The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-pattern:** two triggers on the same object — execution order between them is undefined, and you get duplicate/conflicting automation. If you find a second trigger on an object, consolidate.
 
-**NPSP-specific:** NPSP objects (Contact, Account, Opportunity) are governed by **TDTM (Table-Driven Trigger Management)**, not raw triggers. To add behavior to an NPSP object, write a class extending `npsp.TDTM_Runnable`, override `run()`, and register it in the `Trigger_Handler__c` table with a **Load Order** controlling sequence relative to NPSP's own handlers. Do not drop a raw `trigger` on Contact in an NPSP org — it runs outside TDTM's ordering and fights NPSP automation.
+**Package trigger framework note:** some managed packages own objects through their own trigger framework rather than raw Apex triggers. To add behavior to such an object, plug into the framework's registration mechanism rather than dropping a second raw trigger — which runs outside the framework's ordering and can corrupt the package's automation (e.g. NPSP uses TDTM; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
 ### Trigger contexts — pick the right one
 
@@ -98,7 +98,7 @@ The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-patt
 
 **One-automation-per-object principle:** don't have a Flow AND a trigger both mutating the same object on the same event — ordering is hard to reason about and you double the limit consumption. Pick one owner per (object, event).
 
-**Verify before extending:** before adding automation to an object, describe it and check existing flags/automation; query `Trigger_Handler__c` rows to see TDTM registrations in an NPSP org. If an object uses boolean role flags instead of Record Types to distinguish record kinds, branch on the flags, not RecordTypeId.
+**Verify before extending:** before adding automation to an object, describe it and check existing flags/automation; on a package-managed org, query the package's handler-registration table to see existing registrations (e.g. `Trigger_Handler__c` for NPSP). If an object uses boolean role flags instead of Record Types to distinguish record kinds, branch on the flags, not RecordTypeId.
 
 ---
 
@@ -270,7 +270,7 @@ Developer Console (logs, Query Plan, checkpoints) · VS Code + Apex Replay Debug
 ## Advanced Fundamentals
 
 - **Custom Metadata Types vs Custom Settings:**
-  - **CMT (`__mdt`):** deployable, packageable, queryable in SOQL **without consuming the SOQL governor limit** (cached). Use for configuration that ships with the app / varies by environment. NPSP stores config in CMTs (e.g., `Trigger_Handler__mdt`, relationship config). Write programmatically via `Metadata.Operations.enqueueDeployment` (async).
+  - **CMT (`__mdt`):** deployable, packageable, queryable in SOQL **without consuming the SOQL governor limit** (cached). Use for configuration that ships with the app / varies by environment. Managed packages commonly store config in CMTs (e.g. NPSP's `Trigger_Handler__mdt` and relationship config). Write programmatically via `Metadata.Operations.enqueueDeployment` (async).
   - **Custom Settings:** `List` (global constants) or `Hierarchy` (per-profile/per-user fallback). In-memory, no SOQL cost via `getInstance()/getValues()`. Use for per-user/per-profile runtime toggles.
   - **Decision:** configuration that needs deployment/packaging/relationships → CMT. Per-user/profile runtime override → Hierarchy Custom Setting.
 - **Multi-currency:** `CurrencyIsoCode` on records; `DatedConversionRate` for historical rates; guard logic with `UserInfo.isMultiCurrencyOrganization()`; never hardcode currency math.
@@ -283,7 +283,7 @@ Developer Console (logs, Query Plan, checkpoints) · VS Code + Apex Replay Debug
 Read this first. Each is imperative and concrete.
 
 - **DO** query once into a `Map` and DML once outside loops. **DON'T** ever put SOQL/DML/`EventBus.publish` inside a `for` loop (100 SOQL / 150 DML / 50k rows ceiling).
-- **DO** keep one trigger per object with logic in a handler class. **DON'T** add a second trigger to an object, or a raw trigger to an NPSP object (use `npsp.TDTM_Runnable` + Load Order).
+- **DO** keep one trigger per object with logic in a handler class. **DON'T** add a second trigger to an object, or a raw trigger to an object owned by a package's trigger framework (register through the framework instead).
 - **DO** mutate records in `before` contexts; create related records / roll-ups in `after`. **DON'T** assign to `Trigger.new` in an `after` trigger (throws).
 - **DO** use Validation Rule → Flow → Apex in increasing order of complexity; one automation owner per (object, event). **DON'T** have a Flow and a trigger both mutating the same object on the same event.
 - **DO** check how an object distinguishes record kinds before branching (Record Types vs. boolean flags) and branch accordingly. **DON'T** assume every object uses Record Types.
@@ -321,7 +321,7 @@ TriggerGuard.hasRun = true;
 
 Static variables reset per transaction, so the guard is scoped to one execution chain. **Edge case:** if you intentionally need the trigger to fire twice (e.g., initial insert then a follow-up update), scope the guard to context (`before insert`, `after update`) rather than a single Boolean.
 
-**NPSP orgs:** TDTM has its own recursion detection built in. Handlers extending `npsp.TDTM_Runnable` only need a guard if they themselves issue a DML that would re-fire the same TDTM handler at the same load-order slot.
+**Package framework note:** some managed-package trigger frameworks (e.g. NPSP's TDTM) have built-in recursion detection. Handlers plugged into such a framework only need an additional guard if they themselves issue a DML that would re-fire the same handler slot.
 
 ---
 
@@ -429,7 +429,7 @@ These scenarios target the highest-value operational gotchas — places where a 
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path. For nonprofit/NPSP applications of these rules, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

@@ -1,6 +1,6 @@
 # Platform Developer I — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Developer I exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Developer I exam.
 
 ## Credential logistics
 
@@ -41,40 +41,8 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 
 - [David K. Liu YouTube Channel (SFDC99 / Apex Academy)](https://www.youtube.com/@dvdkliu) — Salesforce MVP (Hall of Fame); beginner-to-advanced Apex video tutorials; the go-to starting point for developers coming from a non-Salesforce background
 - [SFDC99 Apex Academy](https://www.sfdc99.com/apex-academy/) — Written + video curriculum that parallels PD1 topics; free foundational content with paid advanced tiers
-- [Apex Hours YouTube (Community)](https://www.youtube.com/@ApexHours) — Community-run channel with live coding sessions, PD1/PD2 prep walkthroughs, and NPSP-specific Apex content
+- [Apex Hours YouTube (Community)](https://www.youtube.com/@ApexHours) — Community-run channel with live coding sessions and PD1/PD2 prep walkthroughs
 
-## Relevance to NPSP & Nonprofit Cloud
+## Nonprofit/NPSP applications
 
-Virtually every PD1 topic has direct application when developing on or alongside Salesforce NPSP (Nonprofit Success Pack). Key intersections:
-
-### Governor Limits & Bulkification
-
-NPSP's own triggers (Contacts, Opportunities, Accounts, Relationships, Households) consume a significant portion of each transaction's SOQL and DML budget *before* custom code runs. Any Apex that issues SOQL inside loops will hit the 100-query limit in bulk — the exact failure tested in PD1. Integration writes and upserts must produce bulkified records.
-
-### NPSP's TDTM Framework
-
-NPSP uses Table-Driven Trigger Management — one master trigger per object delegating to handler classes registered in `TDTM_Config__mdt`. PD1's "one trigger per object, handler class pattern" *is* TDTM. Custom handlers implement `npsp.TDTM_Runnable` without modifying managed code; trigger context, before/after semantics, and recursion control all apply.
-
-### Apex Interfaces & Inheritance
-
-Implementing `npsp.TDTM_Runnable` is a direct application of PD1's interfaces/inheritance content — `implements`, signature matching, and access modifiers all come into play wiring a class into TDTM.
-
-### Order of Execution
-
-NPSP fires TDTM handlers in the after-trigger phase; custom handlers, validation rules, and any legacy managed-package workflow all compete in the same transaction. PD1's 14-step order is essential for predicting why a Contact upsert mutates or fails.
-
-### Asynchronous Apex
-
-NPSP-heavy transactions (Opportunity close, household merges) can exhaust synchronous limits. PD1's async patterns are the offload tools. Where integration writes happen via REST from an external runtime, in-org post-processing (SF Files / ContentDocumentLink) should use Queueable/Batch.
-
-### Testing
-
-NPSP managed code doesn't run by default in tests (`SeeAllData=false`); rollups/household/relationship automation fire only if NPSP features are explicitly enabled in the test. PD1's test isolation and data-management content is the foundation for valid NPSP test classes.
-
-### Deployment
-
-Deploy via `sf project deploy start` (DX source format). PD1 covers SFDX, `package.xml`, sandbox types, and the 75% coverage gate. NPSP managed metadata can't be retrieved/modified via SFDX, but custom fields, permsets, flows, and Apex on top of it are fully SFDX-managed.
-
-### Integration / LWC
-
-`@AuraEnabled` + `@wire` are how a Lightning staff UI surfaces custom data in-org. Declarative Quick Actions cover simple per-record displays; a richer approval UI would be LWC with wired Apex.
+See [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) for how these PD1 rules apply to NPSP orgs (TDTM framework, governor limit budgets shared with package triggers, test isolation for managed-package automation, SFDX deployment of custom metadata alongside NPSP, and package-aware bulk loading).

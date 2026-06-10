@@ -1,6 +1,6 @@
 # Business Analyst — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Business Analyst (BA-201) exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Business Analyst (BA-201) exam.
 
 ## Credential logistics
 
@@ -54,23 +54,6 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 
 ---
 
-## Relevance to NPSP and Nonprofit Cloud
+## Relevance to other verticals
 
-The BA skill set is the invisible foundation of any NPSP implementation. The connections are direct and operational:
-
-**Customer Discovery → requirements baseline.** Understanding the existing (often paper-based) workflow, the data-entry burden it imposes, and the gaps a Salesforce solution must close is Customer Discovery in practice: assess current state (including a managed-package automation audit), categorize gaps, and scope what Salesforce solves without custom code.
-
-**Collaboration with Stakeholders → staff alignment.** Decisions like anonymous vs. authenticated submission, optional vs. required documents, and magic-link vs. login portals emerge from validating what real users need (e.g. elderly users on shared devices) versus what a technically elegant solution would impose — each recorded in a decision log.
-
-**Business Process Mapping → Salesforce data model design.** A pipeline such as application → storage snapshot → sweep job → SF upsert → approval → Contact create → downstream assignment is a swimlane expressed in code. A single custom object with a record-type/discriminator field often comes from recognizing that review/approval is the same process regardless of type.
-
-**Requirements → validation schemas and field lists.** Validation schemas and generated field-length/picklist constants are functional requirements expressed in code; keeping them synced to the org is requirements lifecycle management with full traceability to the org as source of truth.
-
-**User Stories → backlog items.** A phased roadmap is a backlog; each TODO item is a story awaiting proper "As a [persona], I want… so that…" form with Given/When/Then criteria.
-
-**User Acceptance Testing → the e2e test harness.** An automated test harness (one scenario per story, happy path plus known edge cases like date validation, restricted-picklist mismatches, and optional fields), run in a sandbox and never prod, is the automated UAT layer.
-
-**NPSP-specific BA considerations:**
-- NPSP's opinionated, Contact-centric model means "create a Contact on approval" carries hidden complexity: Household Account auto-creation, the `npe01__PreferredPhone__c` workflow rule that copies `Phone → MobilePhone`, and Relationship processing. A BA must understand these side effects before writing a requirement that assumes a simple `Contact.create()`.
-- Nonprofits keep board members, volunteers, donors, and program participants as Contacts in one org; the BA must elicit which persona each story serves and ensure security (profiles, permission sets, FLS, sharing) enforces appropriate access.
-- The Salesforce Certified Nonprofit Cloud Consultant (formerly NPSP Consultant) credential is the natural next step: this BA credential provides the methodology; the consultant credential adds the data-model and configuration depth on top.
+The BA methodology in this skill — requirements elicitation, process mapping, user stories, UAT — is platform-agnostic and applies to any Salesforce implementation. For NPSP/Nonprofit Cloud-specific BA considerations — Household Account side effects, NPSP managed-package automation audit checklist, donor/volunteer/participant persona security modeling — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).

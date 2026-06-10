@@ -33,7 +33,7 @@ The certification sits between entry-level **AI Associate** (conceptual, no
 hands-on) and senior architecture credentials. Recommended (not required)
 prior knowledge: Salesforce Administrator or Platform App Builder.
 
-> **Deeper context:** Study resources and NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -272,11 +272,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
   (drafted outreach from CRM), **Call Summary/Coaching** (transcription + next
   steps), **Lead/Opportunity Scoring** (predictive scores on records), **Pipeline
   Inspection** (deal-risk surfacing).
-- Sales Cloud agents only fit orgs that actually run a sales motion. In a
-  nonprofit/NPSP context the analogue is donor engagement, which lives in
-  NPSP/Nonprofit Cloud constructs (Opportunities as donations), not the standard
-  sales pipeline — don't force-fit SDR/Coach/pipeline agents where there's no
-  pipeline.
+- Sales Cloud agents only fit orgs that actually run a sales pipeline. In orgs where there is no sales motion (e.g. nonprofits using NPSP where Opportunities represent donations rather than deals), don't force-fit SDR/Coach/pipeline agents — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for the NPSP/Nonprofit Cloud context.
 
 ---
 
@@ -466,7 +462,7 @@ Original teaching scenarios — distinct from held-out eval scenarios in `evals/
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community, practice exams, hands-on environments), NPSP/nonprofit relevance notes, and supplemental rules for **Model Builder** and **Agent Channels** (blueprint-covered topics with lower exam weight) are kept in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path, mapping these rules to a nonprofit org, or working on those supplemental topics.
+Study resources (official Salesforce + community, practice exams, hands-on environments) and supplemental rules for **Model Builder** and **Agent Channels** (blueprint-covered topics with lower exam weight) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

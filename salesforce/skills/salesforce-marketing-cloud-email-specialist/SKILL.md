@@ -22,9 +22,7 @@ for advanced credentials such as Marketing Cloud Consultant, Marketing Cloud Dev
 Marketing Cloud Account Engagement Specialist. Salesforce recommends 6–12 months of hands-on
 Marketing Cloud experience before attempting.
 
-**When to reach for Marketing Cloud:** SFMC is the platform for *marketing* sends — donor appeals,
-program updates, recruitment — with engagement tracking, unsubscribe management, and journey
-automation. *Transactional* 1:1 mail (submit confirmations, password resets, magic-link delivery)
+**When to reach for Marketing Cloud:** SFMC is the platform for *marketing* sends — campaigns, program updates, recruitment, lifecycle messaging — with engagement tracking, unsubscribe management, and journey automation. *Transactional* 1:1 mail (submit confirmations, password resets, magic-link delivery)
 is often better served by a cheaper transactional email service (e.g. Amazon SES) unless a
 Triggered Send is already justified by the broader MC adoption. The rules below let an agent make
 the transactional-vs-marketing call, design a compliant journey, and avoid the deliverability and
@@ -34,10 +32,7 @@ data-model traps that bite teams integrating MC with a CRM.
 an agent must apply, the concrete limits, the decision criteria for picking a tool, and the
 anti-patterns to catch in review.
 
-> **Deeper context:** Study resources (official Salesforce + community) and the NPSP/nonprofit
-> relevance notes live in [references/study-resources.md](references/study-resources.md)
-> (loaded on demand). For org-specific applications of these rules, keep a per-org appendix in
-> your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources (official Salesforce + community) live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, keep a per-org appendix in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -162,7 +157,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 | Criterion | Journey Builder | Automation Studio |
 |---|---|---|
 | Pattern | 1:1, contact-centric, real-time orchestration | Batch, data-centric, scheduled processing |
-| Best for | Donor welcome series, lapsed-donor nurture, event drip | Nightly data import, SQL segmentation, file transfer/extract |
+| Best for | Welcome series, nurture sequences, event drip | Nightly data import, SQL segmentation, file transfer/extract |
 | Multi-step waits & branching | Yes (Decision/Engagement/Random splits, Wait) | Limited (sequential steps) |
 | Entry | Entry Source (DE, Salesforce Data, API, CloudPage…) | Schedule (cron-like) or File Drop (SFTP) |
 | Decision rule | "react to each contact as they qualify" → JB | "process a batch on a cadence" → AS |
@@ -177,7 +172,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
   | **Re-entry Any Time** | Contact can be in multiple instances simultaneously |
   | **Re-entry Only After Exiting** | Must finish/exit before qualifying again |
 
-  Welcome series → usually **No Re-entry** (don't welcome a donor twice). Recurring reminder →
+  Welcome series → usually **No Re-entry** (don't welcome a contact twice). Recurring reminder →
   **Re-entry Only After Exiting**.
 - **Decision Split** branches on a contact *attribute*; **Engagement Split** branches on *opened/clicked*
   a prior journey email. Use Engagement Split to send a follow-up only to non-openers.
@@ -405,8 +400,7 @@ as a list-scoped opt-out.
 
 ### Scenario 3 — Journey re-entry mode for a recurring reminder
 
-**Situation:** A nonprofit sends a recurring "membership renewal reminder" journey. Contacts who
-renewed last year should re-enter the journey again when their next renewal window opens.
+**Situation:** An organization sends a recurring "membership renewal reminder" journey. Contacts who renewed last year should re-enter the journey again when their next renewal window opens.
 
 **Competent move:** Set re-entry mode to **Re-entry Only After Exiting**. This lets a contact re-enter
 after they have fully exited the journey (renewal cycle completed), while preventing them from being
@@ -474,8 +468,7 @@ and confirm the fallback renders.
 
 ## Study resources & relevance
 
-Study resources, recommended study plan, exam traps, and NPSP/nonprofit notes:
-[references/study-resources.md](references/study-resources.md).
+Study resources and recommended study plan: [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

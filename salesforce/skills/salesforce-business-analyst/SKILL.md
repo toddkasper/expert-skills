@@ -16,7 +16,7 @@ The Salesforce Certified Business Analyst credential (exam code BA-201) validate
 
 This file is an **operational playbook**, not an exam outline. Each section below states the rules a BA actually applies at decision time — when to write a requirement vs. a user story, how to size a story, what makes acceptance criteria testable, how to run UAT to a defensible go/no-go — plus the anti-patterns to catch in review and the way to verify against the live org before trusting any assumption. The recurring discipline throughout is to confirm org reality (objects, fields, picklists, active automations) before committing to a requirement or estimate.
 
-> **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 > **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
@@ -85,7 +85,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 **Translate vague goals into measurable success criteria before design.** "We want less data entry" → "reduce volunteer keying time per record from ~15 min to 0; eliminate transcription errors; give applicants self-service status." If you can't attach a number or a yes/no outcome, keep digging.
 
-**Do a real current-state assessment of the actual org — don't assume.** Inventory: installed managed packages (e.g. NPSP `npe01`/`npe5`/`npo02` namespaces), the live data model, active automations (workflow rules, flows, triggers, process builders), integrations, and data quality. **Rule:** enumerate active automations on any object you plan to write to, because side effects are invisible until they bite — a managed-package workflow rule can silently corrupt data on insert, and only a current-state automation audit catches it.
+**Do a real current-state assessment of the actual org — don't assume.** Inventory: installed managed packages (note their namespaces), the live data model, active automations (workflow rules, flows, triggers, process builders), integrations, and data quality. **Rule:** enumerate active automations on any object you plan to write to, because side effects are invisible until they bite — a managed-package workflow rule can silently corrupt data on insert, and only a current-state automation audit catches it.
 
 **Categorize every gap so the build path is obvious:**
 
@@ -103,10 +103,10 @@ Credential logistics and study path: see [references/study-resources.md](referen
 **Scope discipline:** write down what is explicitly *out*. A scope statement without an out-of-scope list invites scope creep.
 
 **Anti-patterns / red flags:**
-- Assuming the org is a clean slate. NPSP is opinionated: Contact-centric, auto Household Accounts, Relationships, Affiliations. A requirement that says "just create a Contact" hides Household auto-creation and managed workflow side effects.
+- Assuming the org is a clean slate. Managed-package orgs are opinionated: a package like NPSP adds auto Household Accounts, Relationships, Affiliations, and hidden workflow rules so that a requirement like "just create a Contact" hides significant side effects. Always audit managed-package automation before scoping. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP specifics.
 - Promising a cloud/feature you haven't verified is licensed/enabled in the org.
 
-**Verification step:** List the real object inventory; describe core objects (e.g. `Contact`) to see real fields and record types; review the NPSP data shape (Households, Opportunities) before scoping anything that touches them.
+**Verification step:** List the real object inventory; describe core objects (e.g. `Contact`) to see real fields and record types before scoping anything that touches them.
 
 ---
 
@@ -218,7 +218,7 @@ Read this first. Each rule is imperative and concrete.
 10. **DO** translate vague goals into measured success criteria before any design.
 11. **DO** audit all active automations on an object before writing to it — managed-package workflow rules can cause silent data corruption.
 12. **DO** categorize each gap as config / customization / package / process; prefer the lowest-cost option that still meets non-functional requirements.
-13. **DON'T** assume NPSP is a clean slate — Contact creation triggers Household Accounts, Relationships, and managed-package side effects.
+13. **DON'T** assume a managed-package org is a clean slate — Contact creation can trigger managed-package side effects (e.g. NPSP auto-creates Household Accounts and fires workflow rules; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 14. **DO** classify requirements (business / functional / non-functional / technical) and capture non-functionals explicitly (PII handling, accessibility, audit, throttling).
 15. **DON'T** phrase a requirement as a solution ("add a trigger"); phrase the need ("on approval the person must exist as a Contact").
 16. **DO** maintain traceability: requirement → story → test → defect; never break the chain (e.g., hand-editing a generated schema file).
@@ -276,6 +276,8 @@ Five original scenarios covering the skill's highest-value operational gotchas. 
 ---
 
 **Scenario 1 — Automation audit before writing a requirement (Customer Discovery)**
+
+> *This scenario illustrates the general "automation audit before requirements" rule (§3 / Quick Reference 11) using NPSP as a concrete example. The same principle applies to any managed-package org; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP details.*
 
 > **Situation:** A stakeholder asks the BA to write a requirement: "When a volunteer applicant is approved, create a Contact in Salesforce." The BA has assessed the org and confirmed it runs NPSP. The developer says "a flow that calls `Contact.insert` is straightforward."
 
@@ -337,7 +339,7 @@ Five original scenarios covering the skill's highest-value operational gotchas. 
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 

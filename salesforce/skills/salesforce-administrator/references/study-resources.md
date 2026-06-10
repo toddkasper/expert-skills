@@ -1,6 +1,6 @@
 # Administrator — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Administrator exam or mapping the operational rules to a nonprofit (NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Platform Administrator exam.
 
 ## Credential logistics
 
@@ -38,15 +38,6 @@ Blueprint domains and weights: Data & Analytics 17%, Configuration & Setup 15%, 
 - [OpenExamPrep — Free Salesforce Admin Practice Questions 2026](https://open-exam-prep.com/practice/salesforce-admin) — free practice questions updated for the 2026 blueprint
 - [Trailblaze Prep — Salesforce Exam Retake Policy](https://www.trailblazeprep.com/salesforce-exam-retake-policy) — clear explanation of retake fees, timing, and voucher behavior
 
-## Relevance to NPSP and Nonprofit Cloud
+## Nonprofit / NPSP applications
 
-The Administrator certification is the direct prerequisite for the Nonprofit Success Pack Consultant credential, and every domain maps to live nonprofit-org work:
-
-- **Security model:** permission sets, explicit FLS on custom fields, and OWD on custom objects are textbook scenarios — and the "required fields are always FLS-visible, never in fieldPermissions" rule is a live constraint in any SFDX-managed nonprofit org.
-- **Object Manager:** custom fields, external-ID upsert keys, and role-suffixed Lookups are exam-grade configuration that NPSP orgs exercise daily.
-- **Data & Analytics:** NPSP Household Accounts (Contact → Account → Household) require the same relational reasoning the exam tests; Data Loader / NPSP Data Import drive bulk recovery and Contact backfills.
-- **Automation:** The Dec 2025 Workflow Rule retirement forced NPSP's own migration to Flow, making Flow mastery essential. The NPSP MobilePhone overwrite is the canonical "managed-package automation bites you" lesson.
-- **Service & Support:** Even orgs with no Cases use the time-based escalation pattern conceptually (e.g. "awaiting documents" reminders); Knowledge/entitlements apply if a staff support portal is added.
-- **Agentforce:** Forward-looking for AI-assisted review/donor engagement; the agent-permission model is the same access stack used throughout — critical wherever PII/medical data is handled.
-
-**Practical recommendation:** A team member who configured a nonprofit org (permsets, custom objects, FLS, flows, NPSP data model) already has hands-on exposure to ~70% of exam content. Remaining gaps are typically Forecasting/Territories, Service Cloud case configuration, Campaigns/Web-to-Lead, and Agentforce setup — close them with a focused Trailhead pass plus a Focus on Force practice set.
+This skill stays org-agnostic. For nonprofit-specific applications of these admin rules (Household Accounts, NPSP Data Import, the managed-package phone-overwrite scar, donor analytics), see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) and its [npsp-deep-dive.md](../../salesforce-nonprofit-cloud-consultant/references/npsp-deep-dive.md). Note the Administrator credential is the prerequisite for the Nonprofit Success Pack Consultant credential.
