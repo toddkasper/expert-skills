@@ -10,4 +10,11 @@ Status legend: `new` · `validated` · `rejected` · `integrated`.
 
 | Date | Skill | Source | Severity | Summary | Evidence | Status |
 |---|---|---|---|---|---|---|
-| _none yet_ | | | | | | |
+| 2026-06-09 | salesforce-experience-cloud-consultant | audit | high | D9=1: all 5 decision scenarios deferred to references; body has 0 inline → fails publish bar | scorecards/salesforce-experience-cloud-consultant.md | new |
+| 2026-06-09 | salesforce-business-analyst | audit | high | D10=1: body 5,086 words (>5,000) → fails publish bar; trim Quick Reference + niche prose | scorecards/salesforce-business-analyst.md | new |
+| 2026-06-09 | aws-devops-engineer-professional | audit | high | D9=1: only 1 inline scenario (5 in references) → fails publish bar | scorecards/aws-devops-engineer-professional.md | new |
+| 2026-06-09 | aws-security-specialty | audit | high | D9=1: only 1 inline scenario (5 in references) → fails publish bar | scorecards/aws-security-specialty.md | new |
+| 2026-06-09 | aws-solutions-architect-professional | audit | high | D9=1: only 1 inline scenario; D3=2 (body-only depth thinned by §4 reference moves) | scorecards/aws-solutions-architect-professional.md | new |
+| 2026-06-09 | github-actions | audit | high | D9=1: only 1 inline scenario; D1/D2=2 (no sibling slugs — structural, no GH sibling exists) | scorecards/github-actions.md | new |
+| 2026-06-09 | react | audit | high | D9=1: only 1 inline scenario (4 in references) → fails publish bar | scorecards/react.md | new |
+| 2026-06-09 | react-native | audit | high | D9=1: only 1 inline scenario (5 in references) → fails publish bar | scorecards/react-native.md | new |

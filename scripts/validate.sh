@@ -53,6 +53,12 @@ while IFS= read -r skill; do
   grep -qi 'Load this skill when' "$skill" || fail "no Scope block (Load this skill when…)"
   # 4c. Quick Reference
   grep -qi 'Quick Reference' "$skill" || fail "no Quick Reference"
+  # 4c-i. Uncertainty & Escalation (D7)
+  grep -qiE '^##+ +Uncertainty' "$skill" || fail "no Uncertainty & Escalation section"
+  # 4c-ii. Executable Workflows (D8)
+  grep -qiE '^##+ +Executable Workflows' "$skill" || fail "no Executable Workflows section"
+  # 4c-iii. Feedback protocol (C1)
+  grep -qiE '^##+ +Feedback protocol' "$skill" || fail "no Feedback protocol section"
   # 4d. Decision Scenarios — in body OR a linked references/scenarios.md
   if grep -qi 'Decision Scenario' "$skill"; then :; \
   elif [ -f "$dir/references/scenarios.md" ] && grep -q 'scenarios.md' "$skill"; then :; \
@@ -81,6 +87,12 @@ while IFS= read -r skill; do
       [ "$n" -ge 12 ] || fail "$f has $n numbered items (<12)"
     fi
   done
+  # 7b. trigger tests (Lens 2) and application evals (Lens 4) present
+  [ -f "$ev/triggers.md" ] || fail "missing $ev/triggers.md"
+  [ -f "$ev/tasks.md" ] || fail "missing $ev/tasks.md"
+
+  # 8. scorecard exists
+  [ -f "evals/scorecards/$folder.md" ] || fail "missing evals/scorecards/$folder.md"
 
 done < <(find . -name SKILL.md | sort)
 
