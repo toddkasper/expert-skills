@@ -1,5 +1,7 @@
 # Eval situations — salesforce-nonprofit-cloud-consultant (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A nonprofit org has NPSP installed. A new consultant logs in and is asked to configure a recurring gift for a major donor. The client calls the feature "Gift Commitments" and says their previous consultant set one up last year. Before creating any records, what must you verify, and how do you verify it?

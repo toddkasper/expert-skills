@@ -2,7 +2,7 @@
 name: salesforce-business-analyst
 description: Salesforce business-analysis work — eliciting and documenting requirements, writing and sizing user stories (INVEST, Given/When/Then, MoSCoW), facilitating stakeholder workshops and discovery, mapping current/future-state processes (swimlanes, RACI, RAID), defect triage, and running user acceptance testing to a go/no-go decision. Use when gathering requirements, mapping process, or driving UAT on a Salesforce project. This is the requirements/process discipline — not building the config or code (see salesforce-administrator and the platform-developer skills). Scoped and benchmarked by the Business Analyst (BA-201) blueprint.
 metadata:
-  credential: Salesforce Certified Business Analyst
+  anchor-credential: Salesforce Certified Business Analyst
   exam-code: BA-201
   domain: salesforce
   type: certification-playbook

@@ -37,3 +37,6 @@
 **Tempting-but-wrong:** The custom ETL + batch Apex design is not wrong in isolation, but it ignores the platform capability that exists for this exact requirement. In a board session, proposing custom-built solutions where a Salesforce product directly covers the need — without even mentioning that product — is scored as an architectural gap.
 
 **Verify:** Confirm Data Cloud licensing is included or procured before committing to this architecture — it is a separate SKU. Validate that the specific Commerce Cloud and Marketing Cloud connectors (Data Streams) cover the data sources in the scenario. Then prototype a Data Stream and Identity Resolution ruleset in a sandbox before presenting the design as final.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

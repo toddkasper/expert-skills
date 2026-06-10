@@ -1,5 +1,7 @@
 # Answer key — react-native (grading rubric, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap. FAIL = wrong action or falls for the trap.
 
 ---

@@ -38,3 +38,6 @@ Enterprise Territory Management (ETM) is blueprint-tested and often skipped in p
 - Trying to run territory assignment rules while the model is in Planning state — rules don't fire until the model is Active.
 - Expecting Opportunity territory to update automatically when Account territory changes — it does not; you must trigger Opportunity territory alignment explicitly.
 - Assuming the role hierarchy and territory hierarchy are the same — they are independent structures with independent forecast rollups.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

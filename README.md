@@ -1,9 +1,15 @@
 # Expert Skills
 
+[![validate](https://github.com/toddkasper/expert-skills/actions/workflows/validate.yml/badge.svg)](https://github.com/toddkasper/expert-skills/actions/workflows/validate.yml)
+
 Reusable **agent skills** that upskill AI agents with the operational competence of expert
 practitioners — the rules, real limits, decision criteria, and anti-patterns an expert applies
 on the job. Built on the open [`SKILL.md`](https://agentskills.io) format and packaged as
 Claude Code plugins.
+
+> **Unofficial.** Independent educational content — not affiliated with, authorized by, or
+> endorsed by Salesforce, Amazon Web Services, GitHub, or any other vendor. All product and
+> certification names are trademarks of their owners, used only to identify subject matter.
 
 > **The product is AI competence — not certification.** Certification blueprints are used only
 > as the *scaffold* (what a competent practitioner must know) and the *benchmark* (the held-out
@@ -16,7 +22,7 @@ Claude Code plugins.
 
 | Plugin | Skills | Coverage |
 |---|---|---|
-| [`salesforce/`](salesforce/) | 13 | Administrator, Advanced Administrator, Platform Developer I/II, JavaScript Developer I, Technical Architect, the Consultants, Business Analyst, Agentforce Specialist |
+| [`salesforce/`](salesforce/) | 13 | Administrator, Advanced Administrator, Platform Developer I/II, JavaScript Developer I, Technical Architect, the Sales/Service/Experience/Nonprofit Consultants, Marketing Cloud Email Specialist, Business Analyst, Agentforce Specialist |
 | [`aws/`](aws/) | 3 | Solutions Architect – Professional, DevOps Engineer – Professional, Security – Specialty |
 | [`github/`](github/) | 1 | GitHub Actions |
 | [`web/`](web/) | 5 | nodejs, typescript, react, nextjs, react-native |
@@ -27,10 +33,10 @@ As a Claude Code plugin marketplace:
 
 ```
 /plugin marketplace add toddkasper/expert-skills
-/plugin install salesforce@expert-skills
+/plugin install salesforce-skills@expert-skills
 ```
 
-Installed skills are namespaced, e.g. `/salesforce:salesforce-administrator`. Install only the
+Installed skills are namespaced, e.g. `/salesforce-skills:salesforce-administrator`. Install only the
 plugins a project needs — progressive disclosure keeps context lean (only each skill's short
 description is always loaded; the full body loads on demand when relevant).
 
@@ -67,6 +73,21 @@ collects those into [feedback/INBOX.md](feedback/INBOX.md), where a curation pas
 item against official docs, integrates accepted ones, and closes the loop with a new held-out
 eval scenario + a changelog entry + a `last-reviewed` bump.
 
+## For consuming projects
+
+When a skill is loaded into your project and you hit a wrong, missing, or ambiguous claim, the
+skill's **Feedback protocol** footer tells the agent to log it to `.skill-feedback/<skill>.md`
+at your project root. To get those lessons back into the skills:
+
+- **Commit `.skill-feedback/`** in your project (don't gitignore it) so the entries persist, then
+  either run `scripts/harvest-feedback.sh /path/to/your/project` from a clone of this repo, or
+- **File a [skill-feedback issue](../../issues/new?template=skill-feedback.yml)** — the human
+  channel into the same curation pipeline.
+
+Either way the entry is validated against official docs before any skill changes (see
+[docs/LEARNING-LOOP.md](docs/LEARNING-LOOP.md)). Concrete evidence (a doc URL, error text, query
+output) is what lets a report be accepted rather than deferred.
+
 ## Per-org / per-project specialization
 
 The skills are deliberately org-agnostic. To tie a rule to one organization's specific fields,
@@ -75,6 +96,7 @@ project's `CLAUDE.md` — keeping the shared skills clean and reusable.
 
 ## Contributing & policy
 
-Read [POLICY.md](POLICY.md) before adding skills: original content only, **never** real exam
-questions, competence-not-credential framing, and the vendor non-affiliation disclaimer.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the author → validate → scorecard → eval → publish
+sequence, and [POLICY.md](POLICY.md) for the content rules: original content only, **never** real
+exam questions, competence-not-credential framing, and the vendor non-affiliation disclaimer.
 Licensed under [MIT](LICENSE).

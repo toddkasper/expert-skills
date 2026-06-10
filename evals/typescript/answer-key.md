@@ -1,5 +1,7 @@
 # Answer key — typescript (grading rubric)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap.
 
 1. **Competent:** TypeScript 6.0 changed the default for `"types"` from `["*"]` (load all installed

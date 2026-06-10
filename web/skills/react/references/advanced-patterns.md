@@ -33,9 +33,18 @@ A custom hook is a JavaScript function whose name starts with `use` that calls o
 
 ## Concurrent Features
 
-- `useTransition` / `startTransition` — mark a state update as non-urgent; React can interrupt it to stay responsive. Use for expensive renders triggered by user input (e.g., filtering a large list while keeping the input responsive).
-- `useDeferredValue` — defer re-rendering a slow child with a stale value until the browser is idle. Similar to debounce but integrated with React's scheduler.
-- `Suspense` — declaratively show a fallback while async content (lazy-loaded components, data-fetching with frameworks) is loading. Wrap slow subtrees; place boundaries close to where the loading state should appear.
+- **`useTransition` / `startTransition`** — mark a state update as non-urgent; React can interrupt and restart the deferred work to stay responsive. Use when you control the state update (e.g., you own the `setState` call). **Critical constraint:** `useTransition` cannot be used to control text inputs — react.dev states this explicitly. Trying to wrap `setInputValue` in `startTransition` will not work correctly for controlled inputs. Source: react.dev/reference/react/useTransition.
+- **`useDeferredValue`** — pass a value whose derived/expensive rendering should be deferred. React immediately starts an interruptible background re-render with the new value while keeping the previous value visible. **This is not a debounce/timer** — no delay is introduced; the deferred render starts immediately but is interruptible by more-urgent updates. **`useDeferredValue` only helps when the expensive consumer is wrapped in `React.memo`** (or otherwise memoized) — without memoization, the child re-renders synchronously regardless of the deferred value. Correct pattern for a laggy controlled filter input: keep `value` in state (controlled), pass `useDeferredValue(value)` to a `memo`-wrapped expensive list. Source: react.dev/reference/react/useDeferredValue.
+- **`Suspense`** — declaratively show a fallback while async content (lazy-loaded components, data-fetching with frameworks) is loading. Wrap slow subtrees; place boundaries close to where the loading state should appear.
+
+**Quick tool-selection guide:**
+
+| Scenario | Correct tool |
+|---|---|
+| You control the state update (non-text) | `useTransition` / `startTransition` |
+| Laggy *controlled* text input + expensive child | `useDeferredValue` + `memo` on consumer (or two-state split) |
+| You receive a value you don't control (from prop/context) | `useDeferredValue` + `memo` on consumer |
+| Slow-loading component or data source | `Suspense` + lazy / data library |
 
 ---
 
@@ -64,3 +73,17 @@ useEffect(() => {
 
 - **Next.js concerns** (App Router, Server Components, Server Actions, layouts, `generateStaticParams`): see the `nextjs` skill. This skill covers React client components only. The React 19 `use()` hook, `useActionState`, `useOptimistic`, and `useFormStatus` are React-layer primitives usable across frameworks — they are in scope here.
 - **React Native / Expo concerns** (StyleSheet, navigation, native modules, Metro bundler): see the `react-native` skill.
+
+---
+
+## Accessibility: Input Accessible Name
+
+| Scenario | Correct fix |
+|---|---|
+| Text input missing a label | `<label htmlFor="inputId">` + matching `id` on input (or wrap input inside label) |
+| Icon-only button (no visible text) | `aria-label="Descriptive action"` on the button — correct and complete here |
+| Input with only placeholder text | Add a visible label; placeholder disappears on type and has poor contrast |
+| Input where space truly forbids a visible label | `aria-label` or `aria-labelledby` as last resort; document the trade-off |
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

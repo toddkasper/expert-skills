@@ -94,3 +94,6 @@ An org running the **NPSP managed package** makes **NP-Con-101** the most direct
 1. **Salesforce Certified Administrator** — prerequisite for both nonprofit credentials; covers the security model, automation, and data management foundations used daily in any NPSP org.
 2. **Salesforce Certified Nonprofit Success Pack Consultant (NP-Con-101)** — directly tests an NPSP org's current configuration. Highest-leverage cert for anyone managing or developing an NPSP-based nonprofit org today.
 3. **Salesforce Certified Nonprofit Cloud Consultant (NP-Con-102)** — future-relevant as Salesforce shifts nonprofits from NPSP toward Industries-based Nonprofit Cloud. Pursue after NP-Con-101 once a concrete NPSP migration timeline is announced.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

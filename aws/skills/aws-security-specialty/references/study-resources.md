@@ -11,7 +11,7 @@
 | Field | Value |
 |---|---|
 | Exam code | SCS-C03 |
-| Questions | 65 total (mix of scored and unscored pretest items — AWS does not publish the scored/unscored split for this exam) |
+| Questions | 65 total — **50 scored + 15 unscored** pretest items (you cannot distinguish scored from unscored during the exam) |
 | Question formats | Multiple choice, multiple response, ordering, matching |
 | Time limit | 170 minutes |
 | Passing score | 750 / 1000 (scaled) |

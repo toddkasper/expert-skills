@@ -18,3 +18,6 @@
 | Custom gap | Requires Apex, integration, or managed package | Estimate, scope, justify — last resort |
 
 A requirement that lands in "Custom gap" should always be challenged with "can we accept a slightly different business process that fits Standard?" before committing to code.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

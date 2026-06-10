@@ -46,3 +46,6 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 ## Nonprofit/NPSP applications
 
 See [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) for how these PD1 rules apply to NPSP orgs (TDTM framework, governor limit budgets shared with package triggers, test isolation for managed-package automation, SFDX deployment of custom metadata alongside NPSP, and package-aware bulk loading).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

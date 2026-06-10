@@ -1,5 +1,7 @@
 # Eval situations — salesforce-experience-cloud-consultant (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A nonprofit organization wants to build a donor portal where supporters can log in, update their contact information, and view their own giving history. The nonprofit runs NPSP. The program director says, "Partners see each other's deals in our vendor portal, so we should use Partner Community for donors too — it's more capable." What license do you recommend for the donor portal, and why is the program director's reasoning wrong?

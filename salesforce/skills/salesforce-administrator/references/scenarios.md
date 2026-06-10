@@ -37,3 +37,6 @@ These scenarios are referenced from the main SKILL.md body. Load this file when 
 > **Tempting-but-wrong:** Assume the Flow has a bug because it returns results when run as an admin. Or rebuild the Flow. The Flow itself is correct — the access problem is upstream of it. Elevating the running user to System Administrator "to fix" is a security anti-pattern that bypasses all OWD/FLS/sharing controls for every action the agent can perform.
 
 > **Verify:** Run `SELECT PermissionsRead FROM ObjectPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE IsOwnedByProfile=true AND Profile.Name='<running_user_profile>') AND SObjectType='Case'` (MCP / `sf data query` / Developer Console) to confirm Case Read. Then run the Case SOQL with a `LIMIT 1` filter matching the scenario as the running user context. Check Setup Audit Trail for any recent change to Case OWD.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

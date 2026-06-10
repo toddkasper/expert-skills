@@ -37,3 +37,6 @@ Referenced from the main SKILL.md body. Load this file when diagnosing sharing-m
 > **Tempting-but-wrong:** Using a `{!$GlobalVariable}` to guard recursion — Flow's global variables are re-initialized each transaction interview; they don't persist across a re-fire within the same transaction. An Apex-based static boolean is the correct cross-trigger guard, or simply move to before-save.
 
 > **Verify:** Reproduce by updating `Email` on a Contact in a debug log session. A non-recursive fix shows exactly one flow interview for the email change. Confirm `Last_Email_Updated__c` is set after a single pass.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

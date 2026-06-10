@@ -1,9 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
-  "name": "web",
-  "displayName": "Web Development Skills",
-  "description": "5 operational web/runtime skills: nodejs (mapped to the OpenJS Node.js certifications), typescript, react, nextjs, and react-native (the latter four are competence skills — no first-party certification exists). Each carries rules, decision tables, red flags, and tsc/node/test verify steps. Guidance, not ground truth — verify against official docs.",
-  "version": "0.1.0",
+  "name": "web-skills",
+  "displayName": "Expert Skills for Web & Runtime Competence",
+  "description": "5 operational web/runtime skills: nodejs (mapped to the OpenJS Node.js certifications), typescript, react, nextjs, and react-native (the latter four are competence skills — no first-party certification exists). Each carries rules, decision tables, red flags, and tsc/node/test verify steps. Independent content; project/vendor marks (Node.js, TypeScript, React, Next.js, Expo) used for identification only. Guidance, not ground truth — verify against official docs.",
+  "version": "0.2.0",
   "author": {
     "name": "Todd Kasper"
   },

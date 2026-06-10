@@ -2,7 +2,7 @@
 name: salesforce-technical-architect
 description: End-to-end Salesforce architecture and trade-off design — multi-org strategy, security and identity (SSO, OAuth, JWT Bearer, SAML, FLS), enterprise data modeling and LDV, solution architecture across clouds, integration patterns (Named Credentials, Platform Events, Bulk/REST API, middleware), governor-limit-aware design, and development-lifecycle/deployment governance. Use when designing or reviewing cross-cloud architecture, integration pipelines, access models, or org strategy. Not single-cloud config or hands-on coding (see the cloud-consultant and platform-developer skills). Scoped and benchmarked by the Certified Technical Architect (CTA) review-board blueprint.
 metadata:
-  credential: Salesforce Certified Technical Architect
+  anchor-credential: Salesforce Certified Technical Architect
   domain: salesforce
   type: certification-playbook
   status: current

@@ -1,5 +1,7 @@
 # Eval situations — salesforce-platform-developer-1 (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A developer writes an `after insert` trigger on `Opportunity` that queries the related Account and updates its `Last_Opp_Date__c` field. In testing with a single record it works. A colleague points out that the same trigger also fires when the nightly batch job processes 5,000 Opportunities. The developer insists it is safe because the trigger already does just one `SELECT` and one `update`. Why is this wrong, and what must change?

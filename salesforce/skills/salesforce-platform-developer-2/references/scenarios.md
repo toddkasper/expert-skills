@@ -37,3 +37,6 @@ Overflow scenarios from [../SKILL.md](../SKILL.md). Load when working through pl
 > **Tempting-but-wrong:** Validating the `status` value against an allowlist in Apex before concatenating it. Allowlist validation is a useful defense-in-depth measure but should never replace parameterization — the platform's bind variable mechanism is the correct primary defense.
 >
 > **Verify:** Write a test that passes a value like `' OR '1'='1` as the status parameter and assert it throws an exception or returns 0 rows (not all rows). With bind variables, the value is treated as a literal string, so the injected SQL logic is inert.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

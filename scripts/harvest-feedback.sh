@@ -52,12 +52,16 @@ for proj in "$@"; do
       f_claim="$(printf '%s' "$line" | awk -F'|' '{gsub(/^ +| +$/,"",$3); print $3}')"
       f_obs="$(printf '%s' "$line" | awk -F'|' '{gsub(/^ +| +$/,"",$4); print $4}')"
       f_evid="$(printf '%s' "$line" | awk -F'|' '{gsub(/^ +| +$/,"",$5); print $5}')"
+      f_fix="$(printf '%s' "$line" | awk -F'|' '{gsub(/^ +| +$/,"",$6); print $6}')"
 
       id="$(hashid "$skill|$f_date|$f_claim")"
       if grep -q "fb:$id" "$INBOX"; then continue; fi   # already harvested
 
+      # NOTE: fields are split on '|', so a literal pipe inside a cell shifts later fields.
+      # In a .skill-feedback entry, escape pipes inside evidence/fix text as '\|'.
       summary="$f_claim"
-      [ -n "$f_obs" ] && summary="$f_claim — observed: $f_obs"
+      [ -n "$f_obs" ] && summary="$summary — observed: $f_obs"
+      [ -n "$f_fix" ] && summary="$summary — suggested fix: $f_fix"
       row="| $f_date | $skill | field | — | $summary | ${f_evid:-—} | new <!-- fb:$id --> |"
 
       if [ "$DRY" -eq 1 ]; then

@@ -47,8 +47,9 @@ and write the entries. Skills must never *depend* on that hook.
 
 ## C2 — Harvest & inbox
 
-[`../feedback/INBOX.md`](../feedback/INBOX.md) is the single repo-level intake queue (one table:
-date, skill, source [field/eval/audit], summary, evidence link, status). `scripts/harvest-feedback.sh`
+[`../feedback/INBOX.md`](../feedback/INBOX.md) is the single repo-level intake queue (one table,
+7 columns: date, skill, source [field/eval/audit], severity, summary, evidence link, status).
+`scripts/harvest-feedback.sh`
 collects `.skill-feedback/*.md` entries from one or more project paths into the inbox with
 dedupe. **Eval failures (Lens 3–4) and audit findings (Lens 5) are filed into the same inbox** —
 exactly one queue.

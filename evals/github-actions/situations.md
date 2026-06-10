@@ -1,5 +1,7 @@
 # Eval situations — github-actions
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. You have a CD workflow triggered by `push:` with no `branches:` filter. It runs a matrix across four OSes and deploys to production. A teammate argues the matrix is the expensive part; you argue the trigger is. Who is right, and what is the single highest-leverage fix?

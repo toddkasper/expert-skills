@@ -1,5 +1,7 @@
 # Eval situations — salesforce-advanced-administrator
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A finance team member submits an Opportunity for approval. Immediately after submission, an after-save record-triggered flow fires (triggered by the Status change that approval submission causes) and attempts to stamp a `Finance_Review_Date__c` field on that same Opportunity. The flow errors with `ENTITY_IS_LOCKED`. No one recalls seeing this in a sandbox because sandbox testing used non-submitted records. What is the root cause and the correct fix?

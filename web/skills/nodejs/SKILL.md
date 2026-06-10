@@ -2,7 +2,7 @@
 name: nodejs
 description: Building and reviewing Node.js applications and services — the event loop and async patterns, streams and buffers, the module system (ESM/CJS), packaging and the toolchain, error handling and diagnostics, and HTTP services with security. Use when writing, reviewing, or debugging Node.js code, CLIs, services, or AWS Lambda handlers. Stays on the Node runtime; excludes React (see react), Next.js (see nextjs), and TypeScript typing (see typescript). Competence skill mapped to the retired OpenJS JSNAD/JSNSD curriculum.
 metadata:
-  credential: OpenJS Node.js Application Developer (JSNAD) / Services Developer (JSNSD) — both retired September 30, 2025
+  anchor-credential: OpenJS Node.js Application Developer (JSNAD) / Services Developer (JSNSD) — both retired September 30, 2025
   domain: web
   type: certification-playbook
   status: operational

@@ -94,3 +94,6 @@ AMPscript edge cases, Intelligence Reports, or publication/suppression list wiri
 - MCC uses tenant-specific endpoints + an integration user with API access. **Verify the CRM objects you intend to segment on are actually synced** before building a journey on them.
 - **Verify field-level security for the MCC integration user.** A field can be synced but unreadable — if FLS isn't granted to the integration user, the synced field returns blank or "Invalid field." Confirm read access for every field you intend to segment on.
 - **Exposing a custom object to MC** is possible via the connected/external client app, but the app's permission assignment and consumer-key retrieval often have org-specific friction — verify the integration user can actually query the object before designing segments on it.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

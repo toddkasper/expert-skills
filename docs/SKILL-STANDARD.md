@@ -21,7 +21,7 @@ evidence** per dimension in the skill's scorecard (`evals/scorecards/<skill>.md`
 The `description` frontmatter is the only always-loaded text. It leads with **task vocabulary**
 (the words an agent doing the real work has in context — "LWC wire adapter," not "JavaScript
 Developer I"), states explicit use-when conditions, and ends with a scope boundary naming
-sibling skills. ≤ ~600 chars. Cert framing lives in `metadata:` only.
+sibling skills. **Single line, ≤ 750 chars** (the always-loaded budget; the validator enforces it). Cert framing lives in `metadata:` only.
 **3:** a realistic task phrase matches exactly one skill across the whole marketplace, and it's the right one.
 
 ## D2 — Scope contract

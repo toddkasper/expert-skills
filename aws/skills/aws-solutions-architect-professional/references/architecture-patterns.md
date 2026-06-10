@@ -40,3 +40,6 @@ Lambda works well for: API backends (API Gateway), event processors (S3/DynamoDB
 | Full-text search | OpenSearch |
 
 **Red flag:** migrating a stateful monolith to Lambda without externalizing state; using RDS MySQL for a key-value workload; refactoring to microservices without first establishing service contracts and observability.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

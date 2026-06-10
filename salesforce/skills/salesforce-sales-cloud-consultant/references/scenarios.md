@@ -25,3 +25,6 @@
 > **Tempting-but-wrong:** Changing the OWD to Private in a panic. OWD affects the sharing baseline for all access mechanisms; changing it to fix a territory rule misconfiguration can break other access paths (sharing rules, team access). Fix the territory rules, not the OWD.
 >
 > **Verify:** In ETM Setup, use the "Preview" feature before activating to see which Accounts each territory will claim. After fix, log in as a rep and confirm Account visibility matches their assigned territory only.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

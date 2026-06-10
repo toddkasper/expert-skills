@@ -39,7 +39,7 @@ while IFS= read -r skill; do
   desc="$(fm description "$skill")"
   if [ -z "$desc" ]; then fail "description missing"; else
     len=${#desc}
-    [ "$len" -le 1024 ] || fail "description $len chars > 1024"
+    [ "$len" -le 750 ] || fail "description $len chars > 750"
   fi
 
   # 3. last-reviewed present (YYYY-MM-DD)
@@ -70,11 +70,13 @@ while IFS= read -r skill; do
   hits="$(body_after_fm "$skill" | grep -inE "$LOGISTICS_RE" | head -3)"
   [ -z "$hits" ] || fail "exam-logistics keyword(s) in body: $(echo "$hits" | tr '\n' '|')"
 
-  # 6. every references/*.md referenced from SKILL.md
+  # 6. every references/*.md referenced from SKILL.md AND carries a disclaimer (R4)
   if [ -d "$dir/references" ]; then
     while IFS= read -r ref; do
       base="$(basename "$ref")"
       grep -q "$base" "$skill" || fail "references/$base not linked from SKILL.md"
+      grep -qiE 'not affiliated|independent educational|Companion reference' "$ref" \
+        || fail "references/$base has no disclaimer line"
     done < <(find "$dir/references" -maxdepth 1 -name '*.md')
   fi
 
@@ -95,6 +97,19 @@ while IFS= read -r skill; do
   [ -f "evals/scorecards/$folder.md" ] || fail "missing evals/scorecards/$folder.md"
 
 done < <(find . -name SKILL.md | sort)
+
+# Reverse checks: no orphaned eval dirs or scorecards (catches a skill rename/removal).
+skill_folder() { find . -path "*/skills/$1/SKILL.md" | head -1; }
+for d in evals/*/; do
+  name="$(basename "$d")"
+  [ "$name" = "scorecards" ] && continue
+  [ -n "$(skill_folder "$name")" ] || { echo "[orphan]"; fail "evals/$name/ has no matching skill"; }
+done
+for sc in evals/scorecards/*.md; do
+  name="$(basename "$sc" .md)"
+  [ "$name" = "_TEMPLATE" ] && continue
+  [ -n "$(skill_folder "$name")" ] || { echo "[orphan]"; fail "evals/scorecards/$name.md has no matching skill"; }
+done
 
 echo "-----------------------------------------"
 if [ "$FAILS" -eq 0 ]; then

@@ -25,3 +25,6 @@ Two additional judgment scenarios (Scenarios 2–4 are now inlined in the SKILL.
 > **Tempting-but-wrong:** Using permission boundaries as region guardrails. Boundaries are the right tool for limiting what an individual developer or Lambda function can do — not for enforcing org-wide account-level invariants. A developer with IAM admin rights in the workload account can create a new role without the boundary and bypass the control entirely.
 
 > **Verify:** `aws organizations list-policies-for-target --target-id <ou-id> --filter SERVICE_CONTROL_POLICY` confirms an SCP is attached to the target OU; `aws ec2 run-instances --image-id <ami> --region ap-southeast-1` from a principal in the OU should return `ExplicitDeny` — confirm via CloudTrail `errorCode: Client.UnauthorizedOperation` with `errorMessage` citing the SCP.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

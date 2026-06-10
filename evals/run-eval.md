@@ -5,9 +5,12 @@ competence eval for one skill and record the result. It implements the two-condi
 in [../EVALS.md](../EVALS.md). A fresh agent should be able to run a full eval for one skill
 using only this file.
 
-> **Held-out discipline (non-negotiable):** the *answer key is never shown* to a baseline or
-> skilled agent. Only the judge sees it. Never paste `answer-key.md` into a solving agent's
-> context. Never copy eval text into a skill or skill text into an eval.
+> **Held-out discipline (non-negotiable) — the solver fence:** a baseline or skilled (solver)
+> agent sees ONLY `<skill-path>/` (skilled condition) and the `situations.md` / `tasks.md`
+> **prompt** text. It must NEVER see `answer-key.md`, the `tasks.md` grading rubrics,
+> `evals/scorecards/*`, or `evals/RESULTS.md` — those quote the competent answer, the seeded
+> traps, and the skill's known weaknesses, any of which leaks the test. Only the judge sees the
+> answer key / task rubric. Never copy eval text into a skill or skill text into an eval.
 
 ---
 
@@ -48,18 +51,29 @@ Spawn another **fresh** sub-agent. Give it the **full `SKILL.md` body plus its `
 files** (paste them, or instruct it to read `<skill-path>/`), then the **same** situations and
 the same instruction as Step 1. Collect `skilled_answers`. Still NO answer key.
 
-### Step 3 — Judge each answer
-Spawn a **judge** sub-agent (ideally a panel of 3 for reliability; take the majority/мaverage).
-For each scenario `i`, give the judge: the situation text, the scenario's entry from
-`answer-key.md`, and ONE candidate answer (run the judge once per condition per scenario).
-Instruct the judge to grade on the EVALS.md rubric:
+### Step 3 — Judge each answer (3-judge panel, per-scenario, blinded)
+Use a **panel of 3 judge sub-agents** (not one) — the panel is what makes a 0.5 reproducible.
+Grade **one scenario at a time**, never a whole transcript in one pass:
 
-- **1.0 (PASS)** — identifies the competent action AND avoids the tempting-but-wrong trap.
-- **0.5 (Partial)** — right instinct, misses the key rule or the trap.
-- **0.0 (FAIL)** — wrong action, or falls for the trap.
+- For each scenario `i`, give each of the 3 judges: the situation text, scenario `i`'s entry
+  from `answer-key.md`, and the **two candidate answers labelled A and B in randomized order**
+  (blinded — the judge is NOT told which is baseline vs skilled, and the A/B assignment varies
+  per scenario so it can't infer). The judge scores BOTH candidates for that scenario.
+- Each judge returns `{A: score, B: score, one-line justification each}` on the EVALS.md rubric:
+  - **1.0 (PASS)** — identifies the competent action AND avoids the tempting-but-wrong trap.
+  - **0.5 (Partial)** — right instinct, misses the key rule or the trap.
+  - **0.0 (FAIL)** — wrong action, or falls for the trap.
+- The scenario's score for each candidate is the **median of the 3 judges** (median, not mean,
+  resists a single outlier judge). Un-blind A/B only after all 3 have scored, to map back to
+  baseline/skilled.
 
-The judge returns `{score, one-line justification}`. Blind the judge to which condition it is
-grading (don't tell it "baseline" vs "skilled").
+**Validity guards (Cycle-2 lessons):** judges must read the `answer-key.md` entry (and, for
+Lens 4, the `tasks.md` rubric) from disk, not from memory; a single judge grading both
+candidates in one un-blinded pass is NOT acceptable (it was the Cycle-2 deviation — see
+RESULTS.md). If the eval set **saturates** (baseline already ≈ skilled ≈ ceiling, i.e. near-zero
+lift because the base model already knows the material), that is a signal the scenarios don't
+probe the skill's value-add — file an inbox item to sharpen them toward post-cutoff / recent
+operational specifics, don't report the null lift as success.
 
 ### Step 4 — Aggregate
 - `baseline_rate = mean(baseline scores) / 1.0` as a percentage.

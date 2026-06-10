@@ -2,11 +2,11 @@
 name: react
 description: Building and reviewing React applications — components and JSX, hooks (useState/useReducer/useEffect/useRef/useContext, custom hooks), the rules of hooks, state and data flow, rendering and memoization, concurrent features, accessibility, and testing with React Testing Library. Use when writing, reviewing, or debugging React UIs, re-renders/effects, or state architecture. Excludes Next.js (see nextjs) and React Native/Expo (see react-native). Competence skill anchored on react.dev — no first-party certification.
 metadata:
-  credential: None — competence skill (no first-party React certification exists)
+  anchor-credential: None — competence skill (no first-party React certification exists)
   domain: web
   type: competence-playbook
   status: operational
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
 ---
 
 # React — Skills Reference
@@ -28,7 +28,7 @@ No vendor certification exists for React. This playbook encodes the working comp
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** React evolves rapidly — hooks, concurrent features, and the React Compiler change behavior across minor versions. `[volatile — verify live]` marks apply to: React Compiler availability and defaults (production-ready late 2025 — check the project's `babel-plugin-react-compiler` or `eslint-plugin-react-compiler` version before assuming it is active); `useActionState` and `useOptimistic` (React 19+ only — `[volatile — verify live]`); React 18 batching behavior in non-React-managed event handlers (verify with React 18+); TanStack Query and SWR API surface (major-version breaking changes — always check installed version). Check `react` in `package.json` — React 18 and 19 differ on form actions, optimistic updates, and compiler support.
+- **Always re-verify live:** React evolves rapidly — hooks, concurrent features, and the React Compiler change behavior across minor versions. `[volatile — verify live]` marks apply to: React Compiler availability and defaults (production-ready late 2025 — check the project's `babel-plugin-react-compiler` version before assuming it is active); compiler lint rules — `eslint-plugin-react-compiler` is superseded by `eslint-plugin-react-hooks` v6, which folds in the compiler rules (React 19.2, Oct 2025) `[volatile — verify live]`; `useActionState` and `useOptimistic` (React 19+ only — `[volatile — verify live]`); React 18 batching behavior in non-React-managed event handlers (verify with React 18+); TanStack Query and SWR API surface (major-version breaking changes — always check installed version). Check `react` in `package.json` — React 18 and 19 differ on form actions, optimistic updates, and compiler support.
 - **Live wins:** the installed React version's actual behavior and [react.dev](https://react.dev) are authoritative over this file → log discrepancies via Feedback protocol below.
 - **Escalate to a human:** upgrading from React 17→18 or 18→19 in a production app (concurrent mode and batching changes can surface latent bugs); removing `StrictMode` from a production app; major data-fetching library upgrades (TanStack Query v4→v5 API changes); production deploys.
 - **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
@@ -48,7 +48,7 @@ No vendor certification exists for React. This playbook encodes the working comp
 1. Call hooks only at the top level of a React function — never inside loops, conditionals, or early returns.
 2. Call hooks only from React function components or from other custom hooks, never from plain functions.
 
-Violating either rule makes hook call order unstable across renders; React will corrupt state. ESLint's `eslint-plugin-react-hooks` enforces both rules automatically — enable and trust it.
+Violating either rule makes hook call order unstable across renders; React will corrupt state. ESLint's `eslint-plugin-react-hooks` (v6+ in React 19.2 projects, which folds in the former `eslint-plugin-react-compiler` rules) `[volatile — verify live]` enforces both rules automatically — enable and trust it. See react.dev/blog/2025/10/01/react-19-2.
 
 ### `useState` — right tool, right scope
 
@@ -56,19 +56,14 @@ Violating either rule makes hook call order unstable across renders; React will 
 - **Lift state to the closest common ancestor** of all components that need it. Over-lifting (global state for local concerns) creates unnecessary coupling and re-renders.
 - **Don't mirror props into state** at initialization unless you explicitly intend to decouple updates. If you do decouple, name the variable to signal it: `const [editedTitle, setEditedTitle] = useState(initialTitle)`.
 
-**Prop-mirroring trap — and the two correct fixes:**
-
-When a child holds internal state that should reset when a controlling prop changes (e.g. a `<TabContent>` that tracks its own selection, reset when the parent's `tab` prop changes), there are exactly two correct approaches:
+**Prop-mirroring trap:** when a child's state should reset on a controlling prop change, two correct approaches:
 
 | Situation | Correct fix |
 |---|---|
 | Child should reset all state when prop changes | Give the child a `key` equal to the controlling prop from the parent: `<TabContent key={tab} />`. React unmounts and remounts the child cleanly — no effect needed. |
 | Child should be fully controlled (no local selection state) | Remove the local state entirely; accept the value as a prop. |
 
-**Red flags — wrong approaches for this scenario:**
-- `useEffect(() => { setState(prop); }, [prop])` — still fires a double render (the stale state renders first, then the effect corrects it) and produces a brief flash of the old value.
-- Adding a guard (`if (localState !== prop) setLocalState(prop)`) inside the effect — same double-render problem; the component still renders once with stale state before the effect runs.
-- Using `useEffect` to "sync" prop-derived state is almost always avoidable; the `key` prop or full controlled pattern removes the need entirely.
+**Wrong:** `useEffect(() => { setState(prop); }, [prop])` — still fires a double render (stale state visible before the effect corrects it). Guard conditions inside the effect have the same problem. The `key` prop or a fully-controlled pattern eliminates this effect entirely.
 
 **`useReducer`** — prefer over `useState` when next state depends on previous in complex ways, multiple fields change together as a unit, or you want pure update logic outside the component for testability. Reducer functions are pure: state + action → next state, no side effects.
 
@@ -82,6 +77,8 @@ When a child holds internal state that should reset when a controlling prop chan
 - An empty dep array `[]` means "run once after mount and clean up on unmount" — correct for subscriptions, wrong for effects that should react to prop/state changes.
 
 **Always return a cleanup function** when the effect sets up a subscription, timer, or connection. Without cleanup, re-mounting, StrictMode double-invoke, or hot reload will leak.
+
+**`useEffectEvent` — non-reactive values in effects** `[volatile — verify live]`: Stable since React 19.2 (Oct 2025). When an effect needs to read a prop or state value (e.g., a logging callback or analytics flag) without re-running the effect every time that value changes, wrap the non-reactive read in `useEffectEvent`. The event function always sees the latest value but is not a reactive dependency — you do not add it to the deps array. This replaces the previous workaround of holding the value in a `useRef` and reading `ref.current` inside the effect. Source: react.dev/reference/react/useEffectEvent.
 
 **Common effect over-use patterns — and the fix:**
 
@@ -105,7 +102,7 @@ When a child holds internal state that should reset when a controlling prop chan
 
 ### How React renders
 
-Rendering = calling your component function to produce a new JSX tree. React compares the new tree to the previous one (reconciliation) and commits only the changed DOM nodes. The DOM is NOT touched unless something changed. Three phases: **Trigger** (state update or initial mount) → **Render** (pure function call) → **Commit** (DOM update).
+Rendering = calling your component function to produce a JSX tree. React reconciles it against the previous tree and commits only changed DOM nodes. Three phases: **Trigger** → **Render** → **Commit**.
 
 **State updates are batched** in React 18+. Multiple `setState` calls in a single event handler are batched into a single re-render.
 
@@ -115,7 +112,7 @@ Rendering = calling your component function to produce a new JSX tree. React com
 
 Giving a component a different `key` tells React to unmount the old instance and mount a new one, resetting all its state. This is the correct fix for "reset form when user changes" — `<Form key={userId} />` — not an effect that clears state fields.
 
-**Concurrent features (React 18+) — load [references/advanced-patterns.md](references/advanced-patterns.md) → "Concurrent Features" for `useTransition`, `useDeferredValue`, and `Suspense` usage patterns.**
+**Concurrent features (React 18+) — load [references/advanced-patterns.md](references/advanced-patterns.md) → "Concurrent Features" for `useTransition`, `useDeferredValue`, and `Suspense` usage patterns.** Key constraint: `useTransition` cannot be used to control text inputs (react.dev is explicit). For a laggy *controlled* filter/text input, the correct tool is `useDeferredValue` + `memo` on the expensive consumer, or a two-state split — not `useTransition`.
 
 ### Profiling
 
@@ -161,6 +158,16 @@ Avoid writing `useEffect` + `fetch` + `useState` for server data — you get no 
 
 **Folder / feature structure and framework scope boundary** (Next.js/RN handoff rules, feature-based co-location guidance): [references/advanced-patterns.md](references/advanced-patterns.md) → "Folder Structure and Framework Scope."
 
+### React 19 / 19.2 Notable Additions `[volatile — verify live]`
+
+These features are in scope for this skill and ship with React 19 / 19.2 (Oct 2025). Source: react.dev/blog/2025/10/01/react-19-2.
+
+- **`use()` hook** — reads a resource (a Promise or a Context) during render. `use(SomeContext)` replaces `useContext(SomeContext)`. `use(promise)` suspends until the promise resolves (must be inside a Suspense boundary). Unlike hooks, `use()` can be called conditionally. Use for data-loading patterns that pair with Suspense; prefer `useContext` for simple context reads (more explicit).
+- **`ref` as a prop** — function components now accept `ref` directly as a prop (e.g. `function Input({ ref, ...props })`). `forwardRef` is no longer needed for new components. Existing `forwardRef` usage continues to work but is considered legacy.
+- **`<Context>` as a provider** — render `<MyContext value={…}>` directly; `<MyContext.Provider value={…}>` still works but is no longer required.
+- **`<Activity>` component** — hides/shows a subtree without unmounting it, preserving state while the subtree is visually hidden. Intended for tabs, expandable panels, and off-screen pre-rendering. Use instead of CSS `display:none` when you need preserved state across visibility changes.
+- **Performance Tracks in DevTools** — React DevTools 19.2 adds a "Performance Tracks" panel in the browser profiler timeline, visualizing when React components render, commit, and suspend alongside native browser tasks. Use it to pinpoint jank sources more precisely than the Profiler flame chart alone.
+
 ---
 
 ## 4. Accessibility & Testing
@@ -171,17 +178,8 @@ React renders to the DOM — all standard HTML accessibility rules apply. React-
 
 - **Prefer semantic HTML.** A `<button>` is keyboard-focusable and announces its role to screen readers automatically. A `<div onClick>` is not. Use the correct element before reaching for ARIA.
 - **Every interactive element needs an accessible name.** Buttons and links must have visible text or `aria-label`/`aria-labelledby`. Icon-only buttons (no visible text by design) must have `aria-label` — that is the correct and complete fix for that case.
-- **`aria-label` is not a substitute for a visible `<label>`.** For form inputs that sighted users will interact with, the correct fix is always a persistent visible label (`<label htmlFor="id">` or wrapping the input). Adding `aria-label` to an unlabeled input satisfies the programmatic-name requirement for screen readers but leaves sighted users — including cognitive accessibility users — without a persistent field name. The label disappears on focus; `aria-label` is invisible. Treat `aria-label` on a form field as a lower-quality fix; flag it in review and prefer the visible label.
-
-  **Decision table — input accessible name:**
-
-  | Scenario | Correct fix |
-  |---|---|
-  | Text input missing a label | `<label htmlFor="inputId">` + matching `id` on input (or wrap input inside label) |
-  | Icon-only button (no visible text) | `aria-label="Descriptive action"` on the button — this is the right answer here |
-  | Input with only placeholder text | Add a visible label; placeholder alone disappears on type and has poor contrast |
-  | Input where space truly forbids a visible label | `aria-label` or `aria-labelledby` as last resort; document the trade-off |
-- **Associate form inputs with labels.** Use `<label htmlFor="inputId">` (note: `htmlFor` not `for` in JSX) or wrap the input inside the label. Never rely on placeholder text alone — it disappears on input and has poor contrast.
+- **`aria-label` is not a substitute for a visible `<label>`.** For form inputs, the correct fix is a persistent visible label (`<label htmlFor="id">`). `aria-label` satisfies screen readers but leaves sighted/cognitive-accessibility users without a persistent field name. Reserve `aria-label` for icon-only buttons; on form fields it is a lower-quality fix. Decision table: [references/advanced-patterns.md](references/advanced-patterns.md) → "Accessibility: Input Accessible Name."
+- **Associate form inputs with labels.** Use `<label htmlFor="inputId">` (`htmlFor`, not `for` in JSX) or wrap the input inside the label. Never rely on placeholder text alone.
 - **Focus management on dynamic content.** When a modal opens, move focus inside it; trap Tab within the modal; when it closes, return focus to the trigger. Use `useRef` + `element.focus()`. For lists that update (e.g. after a filter), ensure the user's position is not lost.
 - **ARIA roles supplement, not replace, semantics.** Add `role`, `aria-expanded`, `aria-controls`, `aria-live` when native HTML can't convey the interaction. An `aria-live="polite"` region announces dynamic updates (search results count, toast notifications) to screen readers without moving focus.
 - **Keyboard navigation.** Every action available by mouse must be reachable by keyboard. Tab/Shift-Tab navigate focusable elements; Enter/Space activate buttons; Escape dismisses overlays. Custom widgets (combobox, date picker, slider) must implement the ARIA Authoring Practices patterns.
@@ -197,12 +195,7 @@ React renders to the DOM — all standard HTML accessibility rules apply. React-
 
 **Core principle:** test what the user sees and does, not what the component stores internally. Tests that assert on state variables or component internals break on refactor while behavior stays the same.
 
-**Query priority (use the highest-confidence query first):**
-1. `getByRole` — finds by ARIA role + accessible name. The most robust query; also validates accessibility.
-2. `getByLabelText` — finds form inputs by their label.
-3. `getByPlaceholderText` — acceptable fallback for inputs without labels (but fix the a11y issue too).
-4. `getByText` — for non-interactive text.
-5. `getByTestId` — last resort; use when nothing else is stable. Prefer a `data-testid` attribute over class names or DOM structure.
+**Query priority:** `getByRole` (most robust; validates a11y) → `getByLabelText` → `getByPlaceholderText` (fix the a11y issue too) → `getByText` → `getByTestId` (last resort; use `data-testid`, not class names).
 
 **Interaction:** use `@testing-library/user-event` (`userEvent.click`, `userEvent.type`) rather than `fireEvent`. `userEvent` simulates the full browser event sequence (pointerdown, mousedown, focus, click, etc.); `fireEvent` fires a single synthetic event and misses side effects.
 
@@ -321,7 +314,8 @@ Read this before writing or reviewing any React code.
 - **DON'T** use `useEffect` to sync a prop into local state (`useEffect(() => { setState(prop) }, [prop])`). The component renders once with stale state before the effect fires. Use `key` to remount or make the component fully controlled instead.
 - **DON'T** treat `aria-label` as a substitute for a visible `<label>` on form inputs — it satisfies screen readers but leaves sighted users without a persistent label. Use a visible label element for inputs; reserve `aria-label` for icon-only buttons and other cases where no visible label text is appropriate.
 - **DON'T** memoize (`React.memo` / `useMemo` / `useCallback`) without measuring first — in React Compiler projects, the compiler handles this automatically.
-- **DO** use `useTransition` to keep the UI responsive during expensive non-urgent renders.
+- **DO** use `useTransition` (`startTransition`) to keep the UI responsive during expensive non-urgent state updates — but **not** to fix a laggy *controlled* text input. react.dev is explicit: "Transitions can't be used to control text inputs." For a laggy controlled input, use `useDeferredValue` (defer the derived/expensive work while keeping the input controlled) plus `memo` on the expensive consumer — or a two-state split.
+- **DO** use `useDeferredValue` to defer the expensive re-render of a *memoized* child component while keeping the controlled input immediately responsive. Note: `useDeferredValue` only helps when the expensive consumer is wrapped in `React.memo`; without `memo` the deferred value still triggers a synchronous re-render.
 - **DO** use semantic HTML first (`<button>`, `<label htmlFor>`, `<nav>`, `<main>`) before reaching for ARIA.
 - **DON'T** put `onClick` on a non-interactive element without `role` and `tabIndex`.
 - **DO** manage focus programmatically when modals open/close or content changes significantly.
@@ -345,7 +339,8 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 - **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: useEffect cleanup/Strict Mode, useActionState vs useState, renderHook/act) to meet the teaching-scenario standard (≥4 inline). references/scenarios.md deleted (all scenarios now inline). Custom hooks, Concurrent features, race-condition code block, and Folder/framework scope subsections moved to references/advanced-patterns.md to offset body length.
+- **2026-06-10** — Curation pass C3 (inbox 2026-06-10). Six findings integrated: (1) **useTransition/controlled-input correctness bug** — corrected guidance: useTransition cannot be used to control text inputs (react.dev); useDeferredValue+memo is the right tool; updated Operational Rules and Section 2 pointer; eval answer-key scenario 6 rewritten. (2) **useEffectEvent added** — new paragraph in useEffect section covering stable React 19.2 API for non-reactive deps in effects. (3) **useDeferredValue mischaracterization fixed** — corrected in references/advanced-patterns.md: not a debounce/timer; immediate interruptible background re-render; only helps with memo'd consumer; added tool-selection table. (4) **Stale tooling** — `eslint-plugin-react-compiler` superseded by `eslint-plugin-react-hooks` v6 (React 19.2); updated Uncertainty section and Rules of Hooks paragraph. (5) **Coverage gaps** — added React 19/19.2 Notable Additions section: `use()` hook, ref-as-prop, Context-as-provider, `<Activity>` component, Performance Tracks in DevTools. (6) **Trademark + link** — disclaimer updated from Meta to React Foundation (Linux Foundation, Feb 2026); Rules-of-Hooks link in study-resources.md corrected to react.dev/reference/rules/rules-of-hooks; study-resources footer updated. Eval: situations.md scenario 6 prompt clarified for coherence with corrected answer; 6 new held-out scenarios added (13–18) probing useEffectEvent, useDeferredValue+memo, Activity, use(), ref-as-prop, and useTransition/controlled-input distinctions.
 
 ---
 
-_Independent educational content for upskilling AI agents. React is a trademark of Meta Platforms, Inc. Not affiliated with, authorized by, endorsed by, or sponsored by Meta. All guidance is provided as-is; verify against official documentation and the live react.dev site before acting. No credential or certification outcome is implied._
+_Independent educational content for upskilling AI agents. React is a trademark of the React Foundation (a Linux Foundation project) `[volatile — verify live]` — see react.dev/blog/2026/02/24/the-react-foundation. Not affiliated with, authorized by, endorsed by, or sponsored by the React Foundation or any contributor. All guidance is provided as-is; verify against official documentation and the live react.dev site before acting. No credential or certification outcome is implied._

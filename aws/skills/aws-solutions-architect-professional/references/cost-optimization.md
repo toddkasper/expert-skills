@@ -33,3 +33,6 @@
 - Replace NAT Gateway egress for S3 and DynamoDB with **free Gateway endpoints** — add the endpoint to the VPC and update private subnet route tables.
 - For EC2 ↔ S3 in the same region (but different AZ than the NAT Gateway), using the Gateway endpoint eliminates both the NAT Gateway charge and the inter-AZ data transfer charge.
 - Evaluate **CloudFront** for frequently accessed S3 objects — CloudFront's origin-fetch from S3 is free (no S3 egress charge), and CloudFront per-GB pricing is typically lower than direct S3-to-internet egress `[volatile — verify live]`.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

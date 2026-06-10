@@ -1,5 +1,7 @@
 # Eval situations — salesforce-platform-developer-2 (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A developer writes a Queueable job that processes a list of Lead records and, partway through `execute()`, needs to fire a callout to an external enrichment API. The class implements `Queueable`. In testing, the job is enqueued and runs without errors, but the callout never reaches the external endpoint. What is missing, and what is the minimum correct fix?

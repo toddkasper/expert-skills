@@ -41,3 +41,6 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 ## Nonprofit/NPSP applications
 
 See [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) for how these PD2 rules apply to NPSP orgs (TDTM framework and package trigger coexistence, Apex Managed Sharing for Household records, inbound REST + External Id upsert patterns, CMT-based package config, LDV tuning as custom objects grow, and source-driven SFDX deployment alongside managed-package metadata).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

@@ -33,3 +33,6 @@
 - Hard-coded record IDs.
 - Recursion with no static guard (trigger re-firing itself).
 - Truncation that silently loses data instead of validating upstream. A defensive truncate in Apex is at best a last-line fallback for legacy / direct-API records — it is never a substitute for validating field length at the application/integration boundary against the field's real max length.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

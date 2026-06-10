@@ -1,5 +1,7 @@
 # Answer key — aws-devops-engineer-professional (grading rubric)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the key rule/trap.
 
 1. **Competent:** The root cause is SSE-S3 on the artifact bucket. Cross-account pipelines require a **customer-managed KMS key (CMK)** — SSE-S3 keys are owned by the tools account and cannot have cross-account grant policies, so the prod account's role cannot decrypt the artifacts. Fix: re-encrypt the artifact bucket with a CMK, add `kms:Decrypt` and `kms:GenerateDataKey` to the prod account's pipeline role, and grant cross-account access in the CMK key policy. **Trap:** assuming IAM role permissions alone are the problem and adding more S3 permissions, which will not resolve a KMS decryption failure. **Verify:** `aws kms describe-key --key-id <arn>` to confirm it is a CMK; `aws kms get-key-policy --key-id <arn> --policy-name default` to confirm the prod account principal is in the key policy.

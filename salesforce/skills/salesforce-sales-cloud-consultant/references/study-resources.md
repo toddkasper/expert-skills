@@ -70,3 +70,6 @@ the Trailhead credential page is the authoritative current source.
 ## Relevance to other Salesforce verticals
 
 The platform skills in this skill (sharing models, declarative-vs-code decisions, data migration, governor limits, deployment discipline) transfer to any Salesforce org or vertical. For NPSP/Nonprofit Cloud-specific operational guidance — Household Accounts, donation pipeline, Recurring Donations, NPSP Data Import, LYBUNT/SYBUNT analytics — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

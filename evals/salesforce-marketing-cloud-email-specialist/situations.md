@@ -1,5 +1,7 @@
 # Eval situations — salesforce-marketing-cloud-email-specialist (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A marketing team launches a new dedicated sending IP for their SFMC account. On day one they queue their entire 500,000-subscriber donor list for a single send. Deliverability reports show Gmail deferring 60% of the messages. What caused this, and what should they have done instead?

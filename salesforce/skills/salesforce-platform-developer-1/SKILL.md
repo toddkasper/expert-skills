@@ -2,7 +2,7 @@
 name: salesforce-platform-developer-1
 description: Writing, reviewing, and deploying Apex, SOQL/SOSL, triggers, and Lightning Web Components on the Salesforce platform — trigger handlers (before/after, one-trigger-per-object), bulkification against governor limits (100 SOQL / 150 DML / 10s CPU), synchronous vs async Apex (@future, Queueable, Batch, Schedulable), LWC decorators and lifecycle, FLS/sharing enforcement in code, test classes to the 75% gate, and SFDX deployment. Use when building or reviewing Apex/trigger/SOQL/LWC code. Not declarative-only config (see salesforce-administrator) or advanced integration/async/LDV patterns (see salesforce-platform-developer-2). Scoped and benchmarked by the Platform Developer I blueprint.
 metadata:
-  credential: Salesforce Certified Platform Developer I
+  anchor-credential: Salesforce Certified Platform Developer I
   domain: salesforce
   type: certification-playbook
   status: current
@@ -420,4 +420,4 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
-*Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. "Salesforce," "Apex," "Lightning," "NPSP," and related names are trademarks of Salesforce, Inc., used here solely to identify the subject matter. Guidance only — verify against official documentation and live orgs before acting.*
+*Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. "Salesforce," "Apex," "Lightning," "NPSP," and related names are trademarks of Salesforce, Inc., used here solely to identify the subject matter. Guidance only — verify against official documentation and live orgs before acting. No certification outcome is implied or guaranteed.*

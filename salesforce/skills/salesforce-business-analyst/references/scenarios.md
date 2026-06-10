@@ -37,3 +37,6 @@
 > **Tempting-but-wrong:** Designing the to-be process from the sponsor's description and handing it to the developer. The developer discovers an existing Record-Triggered Flow on the same object with overlapping entry criteria — two flows in the same transaction fighting over the same record, causing duplicate assignments or governor limit errors.
 
 > **Verify:** In the org, open Flow Builder → filter by object and trigger type; open Approval Processes → filter by object. List every active automation on the record type in scope before the to-be design session.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

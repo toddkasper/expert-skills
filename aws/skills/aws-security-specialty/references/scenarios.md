@@ -1,6 +1,6 @@
 # Decision Scenarios — AWS Security Specialty
 
-Two additional judgment scenarios (Scenarios 2–4 are now inlined in the SKILL.md body). These cover complementary high-lift judgment areas.
+Two additional judgment scenarios (Scenarios 1–4 are inlined in the SKILL.md body). These cover complementary high-lift judgment areas.
 
 ---
 
@@ -25,3 +25,6 @@ Two additional judgment scenarios (Scenarios 2–4 are now inlined in the SKILL.
 > **Tempting-but-wrong:** Treating Macie's green bucket status (no preventive-control findings) as a full data classification clearance. A bucket can have no public access, full encryption, and no cross-account sharing — and still contain unclassified PII that Macie has not yet analyzed because no discovery job was run. The continuous monitoring and the discovery job are complementary, not interchangeable.
 
 > **Verify:** In the Macie console or via `aws macie2 list-findings --finding-criteria '{"criterion":{"type":{"eq":["SensitiveData:S3Object/Personal"]}}}'` — findings only appear after a discovery job has run and detected sensitive data; an empty result means either no PII exists or no job has run yet (check `aws macie2 list-classification-jobs --filter-criteria '{"includes":{"simpleCriterion":[{"comparator":"EQ","key":"S3_BUCKET_NAME","values":["<bucket>"]}]}}'`).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

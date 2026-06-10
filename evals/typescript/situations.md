@@ -1,5 +1,7 @@
 # Eval situations — typescript
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. You upgrade a large Node.js CLI project from TypeScript 5.8 to 6.0. After the upgrade, the build

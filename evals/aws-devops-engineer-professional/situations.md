@@ -1,5 +1,7 @@
 # Eval situations — aws-devops-engineer-professional
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. Your cross-account CodePipeline deploys successfully to the dev account but fails at the artifact-download step in the prod account with "Access Denied." Both accounts' IAM roles have correct CodePipeline permissions. The artifact bucket lives in the tools account and uses SSE-S3 encryption. What is the root cause, and what must you change?

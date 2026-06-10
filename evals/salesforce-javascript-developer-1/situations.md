@@ -1,5 +1,7 @@
 # Eval situations — salesforce-javascript-developer-1 (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A component build pipeline snapshot-serializes a Salesforce SOQL response to a JSON file for later processing. The response includes a `CreatedDate` field whose value is a JavaScript `Date` object. A downstream script reads the file and tries to call `.getFullYear()` on the field — it throws `TypeError: createdDate.getFullYear is not a function`. No errors occurred during serialization. What happened, and what is the correct fix?

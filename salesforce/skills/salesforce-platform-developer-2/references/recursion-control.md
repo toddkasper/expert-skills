@@ -54,3 +54,6 @@ Some managed-package trigger frameworks (e.g. NPSP's TDTM) have built-in recursi
 ## Diagnosing Recursion
 
 Enable debug logs at `APEX_CODE: FINEST` during a test update. Count how many times the trigger handler's entry log line appears — it should appear once per DML. If it appears twice (or more), recursion is confirmed. The debug log will also show which DML statement triggered the second invocation, pointing you to the exact code path that needs the guard.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

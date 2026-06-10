@@ -54,3 +54,6 @@ Before recommending Service Cloud Voice:
 - [ ] Identify the toll-free / local number strategy — porting numbers to Amazon Connect has a lead time of weeks.
 
 If any of the above is uncertain, the correct recommendation is to confirm telephony feasibility before committing to a Service Cloud Voice architecture.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

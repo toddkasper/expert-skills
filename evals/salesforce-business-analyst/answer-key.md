@@ -1,5 +1,7 @@
 # Answer key — salesforce-business-analyst (grading rubric)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the key rule or trap.
 
 ---

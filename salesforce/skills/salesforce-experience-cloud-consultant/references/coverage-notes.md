@@ -19,3 +19,6 @@ Rate limits, keyword lists, member flagging, and review queues require hands-on 
 ## Mobile Publisher
 
 Salesforce Mobile App experience wrapping (Mobile Publisher) is occasionally tested on the exam. Not covered in the SKILL.md body. See the official Mobile Publisher documentation on Salesforce Help.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

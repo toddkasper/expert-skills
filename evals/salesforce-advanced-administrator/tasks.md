@@ -1,5 +1,7 @@
 # Application tasks — salesforce-advanced-administrator (Lens 4, held-out)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 A skilled agent produces the artifact; a judge grades it against the trap-keyed rubric. Run baseline vs skilled. Do not reveal this rubric to the solving agent.
 
 ## Task 1 — SFDX permission-set XML redline: fieldPermissions traps

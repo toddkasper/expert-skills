@@ -1,23 +1,25 @@
-# Salesforce Skills
+# Expert Skills for Salesforce Certification Domains (unofficial)
 
 A Claude Code **plugin** that upskills an agent with the operational competence of expert
 Salesforce practitioners. Thirteen skills, each scoped to a certification's domain (used as the
 scaffold and benchmark) and rewritten into actionable rules, decision tables, real limits, and
 anti-patterns.
 
-> **This is not test-prep.** Certification blueprints are used only as a map of *what a
-> competent practitioner knows*. See [../POLICY.md](../POLICY.md) for the content policy and
-> the vendor non-affiliation disclaimer. These files are **guidance, not ground truth** —
-> verify against the live org (your Salesforce MCP server or the `sf` CLI) before acting.
+> **Unofficial — not affiliated with, authorized by, or endorsed by Salesforce, Inc.**
+> "Salesforce," "Agentforce," "NPSP," and related marks are trademarks of Salesforce, Inc., used
+> here only to identify the subject matter. **This is not test-prep** — certification blueprints
+> are used only as a map of *what a competent practitioner knows*. These files are **guidance,
+> not ground truth** — verify against the live org (your Salesforce MCP server or the `sf` CLI)
+> before acting. Full policy and disclaimer: [POLICY.md](POLICY.md) · License: [LICENSE](LICENSE).
 
 ## Install (as a plugin)
 
 ```
 /plugin marketplace add toddkasper/expert-skills
-/plugin install salesforce@expert-skills
+/plugin install salesforce-skills@expert-skills
 ```
 
-Skills are then available namespaced, e.g. `/salesforce:salesforce-administrator`. You can
+Skills are then available namespaced, e.g. `/salesforce-skills:salesforce-administrator`. You can
 also just point a project's `CLAUDE.md` at `salesforce/skills/<name>/SKILL.md` directly.
 
 ## Structure

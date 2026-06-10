@@ -31,7 +31,7 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 ### Community & Third-Party
 
 - [Salesforce Ben — Advanced Administrator Certification Guide](https://www.salesforceben.com/advanced-administrator-certification-guide-tips/) — Free community guide; clear topic breakdowns with exam tips per domain; well maintained
-- [Focus on Force — Platform Administrator II Practice Exams](https://focusonforce.com/salesforce-advanced-admin-certification-practice-exams/) — Paid; widely regarded as the best practice-question bank; question style closely mirrors the real exam
+- [Focus on Force — Platform Administrator II Practice Exams](https://focusonforce.com/salesforce-advanced-admin-certification-practice-exams/) — paid third-party practice-exam set; check the date of last update before relying on it
 - [Automation Champion — How to Pass the Advanced Administrator Exam](https://automationchampion.com/2022/09/26/how-to-pass-salesforce-advanced-administrator-certification-exam-2/) — Free blog post by Rakesh Gupta; particularly strong on the Process Automation domain
 - [Salesforce Memo — Prep and Pass the Advanced Administrator Exam](https://salesforcememo.com/how-to-prepare-for-and-pass-advanced-administrator-exam/) — Free; detailed topic-by-topic notes including Apex order-of-execution and entitlements deep-dive
 - [Udemy — Salesforce Advanced Admin Practice Tests](https://www.udemy.com/course/salesforce-advanced-administrator-practice-tests/) — Paid (frequently discounted); 1,500+ practice questions; useful volume for repetition
@@ -41,3 +41,6 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 ## Nonprofit/NPSP applications
 
 See [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) for how these Advanced Admin rules apply to NPSP orgs (sharing model for donor/volunteer data, order-of-execution with NPSP managed-package automation, BDI import and Household matching, SFDX deployment of custom metadata alongside NPSP packages, Field History Tracking for gift-record audits, and Experience Cloud for donor/volunteer portals).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

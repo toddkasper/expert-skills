@@ -1,5 +1,7 @@
 # Answer key — salesforce-platform-developer-2 (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap.
 
 1. **Competent:** The class implements `Queueable` but not `Database.AllowsCallouts`. Without that marker interface, the platform silently blocks all HTTP callouts made inside `execute()` — no exception is thrown in most test contexts, and the call returns no error, which is why the endpoint never receives anything. The fix is to add `implements Queueable, Database.AllowsCallouts` to the class declaration. **Trap:** Assuming the callout is being blocked by a Named Credential or firewall, and spending time on connectivity debugging. Or wrapping the callout in a `@future(callout=true)` method called from inside the Queueable — this is unnecessary complexity; the Queueable itself can make callouts once it implements `Database.AllowsCallouts`. **Verify:** Add `Database.AllowsCallouts` to the class, re-enqueue in a sandbox, and confirm the external endpoint logs an inbound request. In the test class, ensure `Test.setMock(HttpCalloutMock.class, ...)` is called before `Test.startTest()`, and assert the mock was invoked.

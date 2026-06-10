@@ -1,5 +1,7 @@
 # Answer key — salesforce-experience-cloud-consultant (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap.
 
 1. **Competent:** Recommend **Customer Community** (or Experience Cloud for Nonprofits if on NPSP). Donors are customers — authenticated individuals who need to see only their own records — not channel partners. Partner Community is designed for resellers/channel users who work Leads, Opportunities, and Campaigns and require a full role hierarchy; it would be over-licensed and unnecessarily expensive for a donor portal. The program director's reasoning conflates "capable" with "correct": Partner Community adds features the use case doesn't need and mismatches the user model (donors have a Contact + Account relationship, not a business-partner relationship). **Trap:** Recommending Partner Community because it appears more feature-rich, or recommending Customer Community Plus (which adds cost for reports/dashboards donors don't need). **Verify:** Confirm the license choice against the decision table — identify whether donors need peer visibility, reports, or deal-object access. If they do not, base Customer Community (or the NPSP-specific variant) is the correct and cheapest authenticated tier.

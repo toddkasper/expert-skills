@@ -1,12 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
-  "name": "github",
-  "displayName": "GitHub Certification Skills",
-  "description": "Operational GitHub Actions skill — CI/CD workflows, reusable/composite workflows, custom actions, runners, secrets/OIDC, and supply-chain hardening — with the rules, decision tables, anti-patterns, and gh-CLI/workflow-lint verify steps a practitioner applies. Guidance, not ground truth — verify against official GitHub docs.",
-  "version": "0.1.0",
+  "name": "github-skills",
+  "displayName": "Expert Skills for GitHub Certification Domains (unofficial)",
+  "description": "Unofficial — not affiliated with, authorized by, or endorsed by GitHub. Operational GitHub Actions skill — CI/CD workflows, reusable/composite workflows, custom actions, runners, secrets/OIDC, and supply-chain hardening — with the rules, decision tables, anti-patterns, and gh-CLI/workflow-lint verify steps a practitioner applies. Guidance, not ground truth — verify against official GitHub docs.",
+  "version": "0.2.0",
   "author": {
     "name": "Todd Kasper"
   },
   "license": "MIT",
-  "keywords": ["github", "github-actions", "ci-cd", "devops", "automation", "certification"]
+  "keywords": ["github", "unofficial", "github-actions", "ci-cd", "devops", "automation"]
 }

@@ -13,3 +13,6 @@ Scenarios 1–4 have been inlined into the SKILL.md body. This file holds Scenar
 > **Tempting-but-wrong:** Adding a manual `Cache-Control` header to the image server and assuming the OS HTTP cache handles re-display. HTTP caching reduces network requests but does not prevent the decode-and-paint cost on re-render, which causes the flicker. `expo-image` caches the decoded bitmap in memory for instant re-display.
 
 > **Verify:** Install `expo-image`, replace the `Image` import, and scroll back and forth through the gallery. With `expo-image`, previously loaded thumbnails should appear instantly with no white frame. Monitor memory usage to confirm caching does not grow unboundedly (expo-image has a configurable cache size).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

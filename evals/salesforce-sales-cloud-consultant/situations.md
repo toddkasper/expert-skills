@@ -1,5 +1,7 @@
 # Eval situations — salesforce-sales-cloud-consultant (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A client's integration user runs a nightly SOQL query against the Opportunity object filtered on a custom text field `Integration_Key__c` that was recently deployed via SFDX. The query is returning zero rows even though Data Loader confirms 50,000 matching records exist in the org. No error is thrown — just an empty result set. What is the most likely cause, and how do you confirm and fix it?

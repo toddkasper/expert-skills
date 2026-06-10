@@ -29,3 +29,6 @@ Actions supports generating signed provenance attestations (SLSA Build L2+) via 
 **Required permission:** `attestations: write` (in addition to `id-token: write` for the signing step).
 
 **Verify:** `gh attestation verify <artifact-path> --repo <owner>/<repo>` — returns the signing workflow run details; a failed verification means the artifact was not produced by the expected workflow.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

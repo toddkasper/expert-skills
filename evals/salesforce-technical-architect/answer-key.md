@@ -1,5 +1,7 @@
 # Answer key — salesforce-technical-architect (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap.
 
 1. **Competent:** The deploy "succeeded" but it included `<fieldPermissions>` for `ApplicationType__c`, which is now a required field in the org. Salesforce does not reject the deploy outright in all cases — the required-field check behavior can vary by API version and context — but more critically, the permset XML that attempted to explicitly grant FLS on a required field may have silently corrupted or cleared the field's visibility for that permset, since required fields must be omitted from `<fieldPermissions>`. The correct response is to remove the `<fieldPermissions>` entry for `ApplicationType__c` from the permset XML (required fields are always visible/editable and must not appear there), redeploy the permset, and verify by running a SOQL query against `ApplicationType__c` as an affected user. **Trap:** Assuming the deploy is authoritative and the field just needs to be re-added to a page layout — the issue is in the permset metadata, not the layout. Also wrong: re-deploying the field itself. **Verify:** Run `SELECT ApplicationType__c FROM Grant__c LIMIT 1` as an affected user; if it succeeds, FLS is restored. Inspect the live permset via `SetupEntityAccess` to confirm no residual broken entry.

@@ -1,5 +1,7 @@
 # Eval situations — nextjs
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. You are reviewing a PR that adds a `UserDashboard` page. The `page.tsx` begins with `"use client"` and contains an `async` function that calls `db.query(...)` directly, rendering the results. A teammate says "it works in dev." What is wrong, and what is the correct structure?
