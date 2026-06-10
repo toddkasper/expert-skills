@@ -1,5 +1,7 @@
 # Eval situations — salesforce-agentforce-specialist (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A Prompt Builder Flex template was built to back an agent action that generates a follow-up message for a constituent record. The template preview pane works correctly in sandbox. After the org is refreshed, a developer deploys the template via change set and immediately wires it into a new agent action. The agent action fails at run time in the target org. No deployment error was raised. What is the most likely cause, and what is the fix?

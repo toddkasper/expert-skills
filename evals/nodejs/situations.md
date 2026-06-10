@@ -1,5 +1,7 @@
 # Eval situations — nodejs
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A Fastify service receives a POST body where `req.body.userId` is used as the `$where` clause in a MongoDB query. Input validation confirms the field is present and non-empty. Yet security review flags the endpoint as still vulnerable. What's missing, and what's the fix?

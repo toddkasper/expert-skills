@@ -25,3 +25,6 @@
 **Tempting-but-wrong:** Concluding that "no error = the lookup worked" and searching for a rendering bug in the HTML instead. The blank is not a rendering bug — the AMPscript ran successfully and returned an empty string exactly as designed. Without an `IF Empty()` guard, blank returns are invisible in Test Sends when the test subscriber happens to have a matching row.
 
 **Verify:** In Subscriber Preview, select a subscriber who received the blank line and inspect the rendered email. Then open the `GiftTiers` DE and query for that subscriber's gift amount value — a missing or mismatched row confirms the lookup miss. Add the guard, re-preview with the same subscriber, and confirm the fallback renders.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

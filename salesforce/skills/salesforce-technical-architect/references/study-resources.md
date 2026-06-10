@@ -45,3 +45,6 @@ Additional logistics: Part 1 is virtual (Zoom screen-share). Part 2 is virtual o
 ## Relevance to other verticals
 
 The CTA domains — data modeling, security, integration patterns, solution architecture, development lifecycle, system architecture, and communication — apply to any enterprise Salesforce engagement. For NPSP/Nonprofit Cloud-specific architectural decisions (Household Account model, NPSP managed-package constraints, nonprofit licensing, donor-pipeline integration patterns), see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

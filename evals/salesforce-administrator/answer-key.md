@@ -1,5 +1,7 @@
 # Answer key — salesforce-administrator (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap.
 
 1. **Competent:** When a manager loses upward visibility through the role hierarchy with no apparent security change, suspect a **change to the manager's role assignment** — the user may have been moved to a different role (or removed from one), silently losing their position above the subordinates. Role hierarchy grants upward visibility; if the user is no longer the role ancestor of the reps, they lose access. Check **Setup Audit Trail** (180-day log) for role-reassignment events, then verify the role hierarchy in Setup → Roles. **Trap:** Assuming OWD changed and resetting it to Public (which would expose everyone's records). Or checking sharing rules — sharing rules only open access above the OWD floor and cannot explain a manager losing hierarchy-based access. **Verify:** `soql_query("SELECT Id, Name, UserRoleId FROM User WHERE Id = '<manager_id>'")` to confirm current role, then inspect the role hierarchy to confirm the expected parent-child relationship with subordinate users.

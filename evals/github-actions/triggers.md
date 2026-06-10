@@ -1,5 +1,7 @@
 # Trigger tests — github-actions (Lens 2)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Routing regression set. Test each phrasing against skill DESCRIPTIONS only. Each routes to exactly one skill.
 
 ## Should route to github-actions (5)

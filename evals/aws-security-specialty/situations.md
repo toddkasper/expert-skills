@@ -1,5 +1,7 @@
 # Eval situations — aws-security-specialty
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A developer's Lambda function needs to call `kms:Decrypt` on a customer-managed key. You attached an IAM role to the function with `kms:Decrypt` allowed on that key ARN. The function still gets `AccessDenied`. No SCP denies KMS actions in this account. What is the most likely cause, and what is the fix?

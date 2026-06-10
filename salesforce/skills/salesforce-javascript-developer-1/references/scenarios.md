@@ -76,3 +76,6 @@ the right explicit tool for "wait for all, then act once."
 load handler, and assert with `Promise.all` that all three mocks were called and the component
 state reflects the combined result. Measure load time in a scratch org DevTools Network tab with
 throttling enabled — sequential calls produce a visible waterfall; parallel calls collapse it.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

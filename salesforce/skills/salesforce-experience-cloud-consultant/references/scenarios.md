@@ -26,3 +26,6 @@ introduces the NPSP-automation-fire gotcha (§5 of the main skill) if the org ru
 Entity ID and ACS URL. Enable JIT and map IdP assertion attributes to Salesforce User
 fields. Test with a new partner contact not yet in Salesforce; confirm the User record is
 created with the correct profile and site membership on first login.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

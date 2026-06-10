@@ -64,3 +64,6 @@ useEffect(() => {
 
 - **Next.js concerns** (App Router, Server Components, Server Actions, layouts, `generateStaticParams`): see the `nextjs` skill. This skill covers React client components only. The React 19 `use()` hook, `useActionState`, `useOptimistic`, and `useFormStatus` are React-layer primitives usable across frameworks — they are in scope here.
 - **React Native / Expo concerns** (StyleSheet, navigation, native modules, Metro bundler): see the `react-native` skill.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

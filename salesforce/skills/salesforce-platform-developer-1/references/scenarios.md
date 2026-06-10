@@ -37,3 +37,6 @@ Overflow scenarios from [../SKILL.md](../SKILL.md). Load when working through ed
 > **Tempting-but-wrong:** Clearing browser cache, logging out and back in, or using a different browser. The cache is server-side at the org level, not in the client browser. Client-side cache clearing has no effect.
 >
 > **Verify:** After the cache-bust redeploy, open the Quick Action in a fresh browser session (incognito). The new fields should render. If they still do not, confirm the `quickActionLayoutItems` XML is correctly structured and that the deploy completed without errors using `sf project deploy report`.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

@@ -71,3 +71,6 @@ Items tagged `[volatile — verify live]` in [../SKILL.md](../SKILL.md) and thei
 - **BA-201 blueprint topic weights (24% / 18% / 17% / 17% / 16% / 8%)** `[volatile — verify live]` — Salesforce updates exam blueprints; verify against the current official exam guide before studying or quoting weights.
 - **Workflow Rules and Process Builder "retired for new work" status** `[volatile — verify live]` — Salesforce has announced deprecation; verify the current enforcement date and any grace periods in the latest release notes.
 - **NPSP managed-package automation side effects** (Household Account creation, `npe01__PreferredPhone__c` workflow rule) `[volatile — verify live]` — package version-specific; confirm active automations in the target org before writing requirements.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

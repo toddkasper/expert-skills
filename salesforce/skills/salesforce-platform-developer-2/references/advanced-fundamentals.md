@@ -25,3 +25,6 @@ Referenced from the main SKILL.md Advanced Fundamentals section. Load this file 
 - **Bulk State Transition:** use `Trigger.oldMap`/`newMap` to act only on records whose watched field actually changed — avoids re-processing unchanged records in bulk operations.
 - **Facade:** simplify a complex subsystem behind a single class. Common in integration layers.
 - **Enterprise Service / Selector / Domain layering (fflib):** Service = orchestration logic; Selector = SOQL encapsulation with FLS; Domain = trigger handler logic. Enforces separation of concerns at scale.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

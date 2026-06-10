@@ -62,3 +62,6 @@ static void testMyPage() {
 - `Test.setCurrentPage(Page.MyPageName)` sets the page context for controller tests.
 - For URL parameters: `ApexPages.currentPage().getParameters().put('id', a.Id)`.
 - Coverage applies the same 75% rule as all Apex.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

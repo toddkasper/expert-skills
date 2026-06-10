@@ -41,3 +41,6 @@ WHERE s.Status = 'Active'
 ```
 
 Data Views retain ~6 months of data by default `[volatile — verify live]` — for longer history, extract to a DE on a schedule via Automation Studio.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

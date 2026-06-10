@@ -1,5 +1,7 @@
 # Eval situations — react
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A developer defines a `SearchResults` component inside the render body of a `SearchPage` component, because `SearchResults` needs a callback that's defined inside `SearchPage`. The code renders correctly in development. A reviewer flags it as a bug. What is wrong, and what is the correct fix?

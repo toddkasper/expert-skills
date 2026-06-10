@@ -1,5 +1,7 @@
 # Application tasks — nodejs (Lens 4, held-out)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 A skilled agent produces the artifact; a judge grades against the trap-keyed rubric. Run baseline vs skilled.
 
 ## Task 1 — Redline this HTTP handler for security and reliability flaws

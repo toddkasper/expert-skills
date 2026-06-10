@@ -72,3 +72,6 @@ both fail the exam and break a production portal.**
 ## Relevance to other verticals
 
 The sharing model, external license selection, and user-provisioning patterns in this skill apply to any external-facing portal regardless of vertical. For NPSP/Nonprofit Cloud-specific portal guidance — Experience Cloud for Nonprofits license, donor portal sharing set configuration, Volunteer for Salesforce (V4SF) object access, NPSP Household Account sharing, and NCCM participant access — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

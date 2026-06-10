@@ -100,3 +100,6 @@ Channels and conversation design are not covered in SKILL.md's main sections but
 - **Always configure an explicit hand-off to a live agent and an end-of-session action.** An agent without a defined escalation path traps users. The hand-off should transfer conversation context (summary, key entities) to the receiving agent or queue.
 - **Conversation design governs the agent's voice.** Set persona, tone, response-length guidance, and topic-level instructions consistently. Mismatched tone across topics signals poor prompt governance.
 - **Channel-specific constraints:** SMS and WhatsApp have character or media limits that differ from web widget. Size response templates to the most constrained channel you deploy to, or maintain per-channel variants.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

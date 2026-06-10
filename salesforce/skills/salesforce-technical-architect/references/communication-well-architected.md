@@ -73,3 +73,6 @@ Example: "We chose a single `Application__c` object with a `Type__c` discriminat
 - Single org wins on Easy (one security model, one deployment pipeline, shared reporting) and Trusted (no cross-org sync surface to secure or audit).
 - Multi-org wins on Trusted in specific scenarios: strict legal data-residency, M&A isolation, business units that are contractually separate.
 - Decision rule: the burden of proof is on multi-org. Every "let's add an org" proposal must name the specific legal, contractual, or M&A constraint that makes separation mandatory.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

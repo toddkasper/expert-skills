@@ -1,5 +1,7 @@
 # Eval situations — salesforce-administrator (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A manager at your org loses access to see their team's Opportunity records overnight — no one touched security settings. The manager is in the correct role and the role hierarchy is intact. OWD on Opportunity is Private. Where do you look first, and what likely happened?

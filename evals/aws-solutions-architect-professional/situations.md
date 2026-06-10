@@ -1,5 +1,7 @@
 # Eval situations — aws-solutions-architect-professional
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. Your company runs 40 AWS accounts under an AWS Organization. The security team wants a rule that prevents *any* IAM principal in *any* member account — including account-level administrators — from disabling AWS CloudTrail. They plan to attach an SCP with an explicit Deny to the **root** of the organization. A colleague says this will also block the management account's CloudTrail operations and is therefore risky. Who is correct, and what is the right attachment target?

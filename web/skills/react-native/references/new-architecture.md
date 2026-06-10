@@ -71,3 +71,6 @@ All items below are volatile — verify against current platform policy before e
 
 - **iOS:** requires building with the iOS 26 SDK or later (Apple updated this requirement for apps submitted from April 2026). Privacy manifest required (`PrivacyInfo.xcprivacy`). Account deletion flow required if the app has account creation. AI transparency disclosure required if the app uses external AI services.
 - **Android:** target API level must meet Google Play's current minimum — verify the floor at the [Google Play target API level requirement](https://support.google.com/googleplay/android-developer/answer/11917455). The floor advances annually.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

@@ -41,3 +41,6 @@ Blueprint domains and weights: Data & Analytics 17%, Configuration & Setup 15%, 
 ## Nonprofit / NPSP applications
 
 This skill stays org-agnostic. For nonprofit-specific applications of these admin rules (Household Accounts, NPSP Data Import, the managed-package phone-overwrite scar, donor analytics), see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md) and its [npsp-deep-dive.md](../../salesforce-nonprofit-cloud-consultant/references/npsp-deep-dive.md). Note the Administrator credential is the prerequisite for the Nonprofit Success Pack Consultant credential.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

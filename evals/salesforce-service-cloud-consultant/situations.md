@@ -1,5 +1,7 @@
 # Eval situations — salesforce-service-cloud-consultant (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A regional utility deploys Entitlement milestones with a "First Response" milestone set to 4 business hours. After go-live, agents notice that cases logged at 4:45 PM Friday are showing a `TargetDate` of Monday 9:00 AM rather than Monday 8:45 AM — a 15-minute discrepancy. Business Hours are configured as Mon–Fri 8:00 AM–5:00 PM. No one has changed the Entitlement Process. What is the most likely cause, and how do you confirm it?

@@ -1,5 +1,7 @@
 # Answer key — nodejs (grading rubric)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap.
 
 1. **Competent:** The check that the field is "present and non-empty" only validates existence — it never validates *type*. MongoDB `$where` and operator injection attacks pass objects (e.g. `{ "$gt": "" }`), not strings. The fix is to assert the value is a primitive string before use: `if (typeof req.body.userId !== 'string') return res.status(400).send()`. Use Fastify's schema validation or a library like Zod to enforce `type: 'string'` at the request boundary. **Trap:** assuming that "non-empty" string presence check defeats injection, or thinking the problem is SQL injection (it's NoSQL operator injection). **Verify:** send `{ "userId": { "$gt": "" } }` — a fixed endpoint returns 400; a broken one executes the operator.

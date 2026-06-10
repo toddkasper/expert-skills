@@ -17,3 +17,6 @@
 | Einstein Opportunity Scoring | Closed Won/Lost history, consistent stage usage | Stage data is inconsistent or org is new |
 | Einstein Copilot (email drafting) | Grounding data (Contact/Account data quality) | PII/compliance concerns not yet addressed |
 | Sales Engagement | High-volume SDR team, defined cadences | Low-volume account-based sales motion |
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

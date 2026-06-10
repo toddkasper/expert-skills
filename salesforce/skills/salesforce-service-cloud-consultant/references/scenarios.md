@@ -25,3 +25,6 @@
 **Tempting-but-wrong:** Assuming the cap is a soft throttle that queues overflow for later processing — it is not; over-cap submissions are lost. Another trap: proposing an authenticated Experience Cloud portal to solve the cap — that solves the volume problem but adds login friction that is a real cost for a one-time, low-tech applicant population.
 
 **Verify:** Load-test the custom intake path at 2× expected peak using a staging org or sandbox. Query `Case` count after the test to confirm all records landed. Monitor the sandbox error logs for any governor limit hits at the intake endpoint.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

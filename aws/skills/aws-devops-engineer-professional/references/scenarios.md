@@ -25,3 +25,6 @@ Two additional judgment scenarios (Scenarios 2–4 are now inlined in the SKILL.
 > **Tempting-but-wrong:** Triggering an ASG instance refresh after every Image Builder run without updating the launch template. Instance refresh replaces running instances — but if the launch template still points to the old AMI ID, all replacement instances also use the old AMI. The launch template version must be updated first.
 
 > **Verify:** `aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names <asg> --query 'AutoScalingGroups[0].LaunchTemplate'` shows the launch template ID and version; `aws ec2 describe-launch-template-versions --launch-template-id <id> --versions '$Default'` shows the AMI ID in use; compare to `aws ssm get-parameter --name /my/golden-ami-id` or the latest Image Builder output.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

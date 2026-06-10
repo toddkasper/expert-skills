@@ -1,5 +1,7 @@
 # Eval situations — react-native (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. A React Native app renders a list of 500 chat messages. The current implementation uses a `<ScrollView>` with a `.map()` that renders each message as a `<View>` containing two `<Text>` components. Users report the message screen takes 3–4 seconds to load and scrolling is janky. A teammate suggests adding `React.memo` to the message component. What is the actual root cause, and what is the correct structural fix?

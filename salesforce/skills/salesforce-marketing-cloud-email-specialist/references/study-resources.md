@@ -80,3 +80,6 @@ Complete in domain order:
 ## Relevance to other verticals
 
 The journey design, segmentation, deliverability, and automation patterns in this skill apply to any SFMC deployment. For NPSP/Nonprofit Cloud-specific guidance — Marketing Cloud for Nonprofits edition, donor-journey templates, NPSP Opportunity sync via MCC, and lapsed-donor segmentation — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

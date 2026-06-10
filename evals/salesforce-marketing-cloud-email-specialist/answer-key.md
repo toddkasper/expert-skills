@@ -1,5 +1,7 @@
 # Answer key — salesforce-marketing-cloud-email-specialist (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the key rule or trap.
 
 1. **Competent:** The team blasted full volume on a brand-new dedicated IP with no warm-up period. A new IP has no sending reputation, so ISPs throttle or defer high volumes from it. The correct approach is a **gradual IP warm-up over approximately 30 days**, starting with a small daily send (e.g., ~50–500 highly engaged subscribers on day one) and roughly doubling volume every few days, allowing ISPs to learn the IP's reputation before full volume is applied. **Trap:** Assuming that because the content and authentication (SPF/DKIM/DMARC) are correct, volume is irrelevant — IP reputation is built independently of content legitimacy. Some teams also try to split the send across two days to "warm up faster," which doesn't substitute for a multi-week ramp. **Verify:** Check the Email Performance by Domain report for deferral codes; a new-IP warm-up plan should show progressively improving delivery rates over 3–4 weeks. Monitor daily complaint and bounce rates against the volume curve.

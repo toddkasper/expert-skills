@@ -45,3 +45,6 @@ Referenced from the main SKILL.md §6. Load this file when configuring lead assi
 - **Managed-package updates:** updates install centrally (Setup → Installed Packages → Upgrade); review the release notes; updates can add new fields, automation, or change existing logic. Regression-test automation after a major package upgrade.
 - **Never edit managed metadata directly** — you can't save it (it's locked), but browser tooling may let you edit it temporarily; changes are overwritten on next package upgrade. The correct pattern is to **extend alongside**: custom fields, custom flow paths, override actions that call managed flows.
 - **Namespace isolation:** managed-package fields, flows, and triggers run under the package's namespace prefix (e.g. `npsp__`). When debugging mystery automation, filter by namespace in Setup → Workflow Rules and Setup → Flows (see SKILL.md §4 and Scenario 4).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

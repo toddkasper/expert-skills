@@ -32,3 +32,6 @@ Use a dedicated **log archive account** as the single destination for all log da
 **Red flag:** X-Ray active tracing disabled on Lambda functions — passive mode misses the majority of invocations. Enable via `aws lambda update-function-configuration --function-name <fn> --tracing-config Mode=Active`.
 
 **Verify:** `aws xray get-service-graph --start-time <epoch> --end-time <epoch>` returns nodes and edges; `aws xray get-trace-summaries --start-time <epoch> --end-time <epoch>` lists sampled trace IDs for inspection.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

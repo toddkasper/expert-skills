@@ -94,3 +94,6 @@ Breaking any link in this chain means a field change in Salesforce can silently 
 - [ ] Does a UAT test case reference a specific field length or picklist value? (must update)
 - [ ] Does any training material reference the old field value or label? (must update)
 - [ ] Does the data-import template hard-code a value set? (must update)
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

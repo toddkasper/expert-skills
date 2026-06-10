@@ -70,11 +70,13 @@ while IFS= read -r skill; do
   hits="$(body_after_fm "$skill" | grep -inE "$LOGISTICS_RE" | head -3)"
   [ -z "$hits" ] || fail "exam-logistics keyword(s) in body: $(echo "$hits" | tr '\n' '|')"
 
-  # 6. every references/*.md referenced from SKILL.md
+  # 6. every references/*.md referenced from SKILL.md AND carries a disclaimer (R4)
   if [ -d "$dir/references" ]; then
     while IFS= read -r ref; do
       base="$(basename "$ref")"
       grep -q "$base" "$skill" || fail "references/$base not linked from SKILL.md"
+      grep -qiE 'not affiliated|independent educational|Companion reference' "$ref" \
+        || fail "references/$base has no disclaimer line"
     done < <(find "$dir/references" -maxdepth 1 -name '*.md')
   fi
 

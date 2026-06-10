@@ -1,5 +1,7 @@
 # Answer key — github-actions (grading rubric)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the key rule/trap.
 
 1. **Competent:** Both are right about costs, but **the trigger is the higher-leverage fix**: without `branches:` filtering, every push to every branch fires the full matrix and the production deploy. Adding `branches: [main]` (or the appropriate branch filter) immediately eliminates all feature-branch runs. The matrix tuning is secondary — if the trigger is wrong, optimizing the matrix still deploys on every branch push. **Trap:** fixing `fail-fast` or reducing matrix dimensions without addressing the missing `branches:` filter. **Verify:** confirm the workflow no longer runs on non-main pushes after adding the branch filter.

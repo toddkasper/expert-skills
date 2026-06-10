@@ -88,3 +88,6 @@ Despite retirement, the domain curriculum remains an excellent competence map fo
 - `react` — React server-side rendering patterns that run on Node.js; use the `react` skill for React specifics
 - `nextjs` (sibling skill) — Next.js API routes and server components run on Node.js; defer Node.js fundamentals here
 - `react-native` — mobile runtime; not Node.js server-side; defer to that skill
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

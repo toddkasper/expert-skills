@@ -1,5 +1,7 @@
 # Answer key — aws-security-specialty (grading rubric)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the key rule or the trap.
 
 1. **Competent:** The KMS key policy does not delegate to the account root or the Lambda role. For a customer-managed key, the key policy is the primary access control — if it does not contain `"Principal": {"AWS": "arn:aws:iam::<account-id>:root"}` (or name the role directly), IAM policies granting `kms:Decrypt` have zero effect. Fix: add a key policy statement that allows the Lambda role (or delegates to the account root so IAM policies can take effect). **Trap:** Blaming the IAM policy, the Lambda VPC config, or SCPs — the first thing to check for a KMS `AccessDenied` is always the key policy, not the IAM policy. **Verify:** In the KMS console, view the key policy and confirm a statement covers the Lambda role; re-test the Lambda invocation.

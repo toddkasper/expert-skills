@@ -1,5 +1,7 @@
 # Eval situations — salesforce-business-analyst
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. During a requirements workshop for an NPSP org, a program director says "we need to track the primary contact for each volunteer cohort." You open Setup and notice NPSP's Relationships feature is already active and stores Contact-to-Contact relationships with a Role picklist. What do you do before writing any requirements about a new "Primary Contact" field or object?

@@ -1,5 +1,7 @@
 # Eval situations — salesforce-technical-architect (held-out set, 2026-06-07)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 Answer each: state the **competent action** and the **reason**. Be concise (2–4 sentences each).
 
 1. An SFDX deploy of a new permission set succeeds. The permset includes `<fieldPermissions>` for every custom field on `Grant__c`, including `Grant__c.ApplicationType__c`, which was set to Required in the org last sprint. The deploy call returns success. Within an hour, a support ticket arrives: the field `ApplicationType__c` is suddenly invisible to permission-set users who previously could see it. What happened, and what should the architect do now?

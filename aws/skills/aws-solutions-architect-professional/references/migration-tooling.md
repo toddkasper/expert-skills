@@ -26,3 +26,6 @@
 - **AWS Directory Service:** choose AD Connector (proxy to on-premises, no directory data in AWS) vs AWS Managed Microsoft AD (full AD in AWS, needed for trust relationships and domain-join of EC2).
 
 **Red flag:** using DMS for a schema conversion without running SCT first (leaves incompatible objects); choosing Snow family for a 500 GB dataset with a 1 Gbps link (DataSync is faster and cheaper); forgetting to re-point DNS during cutover (causes post-migration connectivity failures).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

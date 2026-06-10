@@ -66,3 +66,6 @@ The most effective preparation for the practical skills; all free on Trailhead:
 ## Relevance to other verticals
 
 The case-management, console, entitlement, and knowledge patterns in this skill apply to any intake-and-review workflow across any industry vertical. For NPSP/Nonprofit Cloud-specific operational guidance — NPSP Data Import, Household Accounts, donor pipeline, program management — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

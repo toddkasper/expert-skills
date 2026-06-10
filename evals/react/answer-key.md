@@ -1,5 +1,7 @@
 # Answer key — react (grading rubric)
 
+> _Held-out eval content — original, not exam material (no real exam questions; see POLICY.md). Do not paste into a skill body._
+
 PASS = competent move identified AND trap avoided. Partial = right instinct, misses the rule/trap.
 
 1. **Competent:** Move `SearchResults` to module top level and pass the callback as a prop. Defining a component inside another component's render body creates a new function reference on every render — React treats it as a different component type, unmounts the previous instance, and resets all its state, causing flicker and lost focus. **Trap:** leaving the definition inline but wrapping it with `useCallback` or `useMemo` (these memoize a value, not a stable component identity — React still sees a new type each render). **Verify:** confirm in React DevTools that `SearchResults` no longer unmounts on parent re-renders; check that any input state inside `SearchResults` survives parent updates.

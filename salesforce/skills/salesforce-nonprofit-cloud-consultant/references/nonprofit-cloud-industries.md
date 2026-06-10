@@ -73,3 +73,6 @@ Decision matrix:
 **Anti-pattern: reaching for OmniStudio when a plain screen Flow suffices.** OmniStudio adds licensing and maintenance overhead; use it when guided-flow complexity or Industries integration genuinely warrants it. Key signals to use OmniScript over Flow: multi-step with conditional branching across many objects, need for FlexCard integration, or the process must call an Integration Procedure.
 
 **Grantmaking** (NP-Con-102 domain): manages grant proposals, awards, and disbursements through Industries-native objects. Key objects: `Grant`, `GrantApplication`, `FundingAward`, `FundingDisbursement`. OmniStudio is commonly used to build grant application intake flows.
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

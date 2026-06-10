@@ -84,3 +84,6 @@ static void testCalculate() {
     Assert.isTrue(results[0] > 0);
 }
 ```
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

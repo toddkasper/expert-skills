@@ -46,3 +46,6 @@ keep the credential active.
 ## Relevance to other verticals
 
 The JavaScript and LWC rules in this skill apply uniformly to any Salesforce org or JavaScript stack — React front-ends, Node/Lambda back-ends, LWC, SFDX scripts. For NPSP/Nonprofit Cloud-specific LWC use cases (donor portals, volunteer check-in UIs, constituent-facing components), see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+*Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*
