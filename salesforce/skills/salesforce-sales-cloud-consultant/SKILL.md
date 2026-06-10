@@ -1,12 +1,15 @@
 ---
 name: salesforce-sales-cloud-consultant
-description: Operational playbook for designing and configuring Salesforce Sales Cloud (leads, opportunities, forecasting, pipeline, price books, CPQ). Use when selecting automation tools (validation rules, Flow, Apex), enforcing governor limits and bulkification, modeling the data layer (lookups, master-detail, external IDs, FLS), designing the sharing and security model, planning data migrations or deduplication, configuring reporting and dashboards, or evaluating AI and sales productivity features. Covers deployment discipline from sandbox through production.
+description: Designing and configuring Salesforce Sales Cloud — leads and lead conversion, opportunities and pipeline stages, forecasting, territory management, price books and products, campaigns, and sales-productivity/AI features. Use when scoping or implementing Sales Cloud, picking automation tools, modeling the sales data layer, designing the sharing model, planning migrations/dedupe, or building sales reports and dashboards. Not Service Cloud (see salesforce-service-cloud-consultant), external portals (see salesforce-experience-cloud-consultant), or general org admin (see salesforce-administrator). Scoped and benchmarked by the Sales Cloud Consultant (Sales-Con-201) blueprint.
 metadata:
   credential: Salesforce Certified Sales Cloud Consultant
   exam-code: Sales-Con-201
   domain: salesforce
   type: certification-playbook
   blueprint: June 2024 restructure (5 domains)
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Sales Cloud Consultant — Skills Reference
@@ -23,8 +26,7 @@ ability to translate business requirements into scalable, maintainable Sales
 Cloud configurations across the full sales lifecycle (lead → opportunity →
 order → analytics). The lasting value is the platform-design judgment it
 exercises: sharing models, declarative-vs-code decisions, data migration,
-governor limits, and deployment discipline — all of which transfer directly to
-any Salesforce org, including NPSP / Nonprofit Cloud.
+governor limits, and deployment discipline — applicable to any Salesforce org.
 
 **Exam code:** Sales-Con-201
 **Credential level:** Consultant (intermediate)
@@ -37,20 +39,25 @@ labels/groupings changed. Current blueprint: Practical Application of Sales Clou
 Expertise 33%, Sales Lifecycle 23%, Implementation Strategies 15%, Data
 Management 15%, Consulting Practices 14%.
 
-> **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Load this skill when…** scoping or implementing Sales Cloud; designing lead conversion, opportunity pipeline stages, or forecasting; picking automation tools (Flow vs Apex) for a sales workflow; modeling the sales data layer or sharing model; planning a data migration or deduplication; or building sales reports and dashboards.
+> **Not this skill:** service console or case management → see `salesforce-service-cloud-consultant`; external portals or communities → see `salesforce-experience-cloud-consultant`; general org admin, profiles, or permission sets not tied to a sales implementation → see `salesforce-administrator`.
+
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
 ---
 
-## Exam Details
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
-| Questions | Time Limit | Passing Score | Cost | Prerequisites | Retake Policy |
-|---|---|---|---|---|---|
-| 60 multiple-choice / multiple-select | 105 minutes | 68% (≈41 of 60) | USD 200 + applicable taxes | Salesforce Certified Administrator (ADM-201) | USD 100 + applicable taxes per attempt |
+---
 
-- **Delivery:** Online proctored or in-person testing center.
-- **Open-book:** No — no reference materials allowed.
-- **Recommended experience:** 2–5 years as a senior business analyst; 1–2 years
-  hands-on Sales Cloud configuration.
+## Uncertainty & Escalation
+
+- **Always re-verify live:** volatile facts in this skill include limits and caps (`[volatile — verify live]` inline below), license pricing and tier names, sandbox refresh intervals, feature availability (e.g. Einstein Scoring minimum record thresholds), and Apex governor-limit numbers — these can change between Salesforce releases.
+- **Live wins:** when the live org or official documentation contradicts a statement in this file, trust the live source and log the discrepancy via the Feedback protocol below.
+- **Escalate to a human before proceeding on:** OWD or sharing-model changes in production; any destructive data operation (delete, mass update) on production data; Connected App / ECA creation or authorization changes; deactivating managed-package automation in production; license purchases or org-type upgrades.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. If you act on an untagged fact and the live system disagrees, that is a signal to file feedback, not to silently trust this file.
 
 ---
 
@@ -84,50 +91,15 @@ flex.
 - Apex doing what a validation rule does.
 - Multiple record-triggered Flows + a trigger on the same object with no defined
   order.
-- A managed-package Workflow Rule silently mutating your data. Managed packages
-  (NPSP among them) can ship workflow rules that copy or overwrite field values
-  on insert/update — always audit installed automation when a field value
-  changes unexpectedly.
+- A managed-package Workflow Rule silently mutating your data. Managed packages can ship workflow rules that copy or overwrite field values on insert/update — always audit installed automation when a field value changes unexpectedly. (e.g. NPSP's `npe01` package; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP-specific details.)
 
 ---
 
 ## 2. Apex governor limits & bulkification
 
-**Bulkify everything. Never put SOQL or DML inside a `for` loop.** Query once
-into a `Map`, iterate in memory, collect into a `List`, DML once at the end.
+**Bulkify everything. Never put SOQL or DML inside a `for` loop.** Full limit table, decision criteria, and anti-patterns: [references/apex-limits.md](references/apex-limits.md) — load when writing or reviewing Apex triggers, Batch Apex, or callout logic.
 
-**The numbers you must hold (per synchronous transaction):**
-
-| Limit | Value |
-|---|---|
-| SOQL queries | **100** |
-| DML statements | **150** |
-| Rows retrieved by SOQL | **50,000** |
-| Rows processed per DML | **10,000** |
-| Records per trigger invocation (batch) | **200** |
-| CPU time (sync) | **10,000 ms** |
-| Heap (sync) | **6 MB** |
-| Callouts | **100** per transaction; **120 s** total callout time |
-| Future methods | **50** per transaction |
-| Async (Batch/Queueable) SOQL rows | **50,000**, CPU **60,000 ms**, heap **12 MB** |
-
-**Decision criteria:**
-- > 50,000 rows or > 10,000 DML rows in one go → **Batch Apex** (200-record
-  chunks) or **Bulk API** for data loads, not a single trigger transaction.
-- External HTTP calls → never inside a trigger's synchronous path if avoidable;
-  use `@future(callout=true)` or Queueable so a slow endpoint doesn't blow the
-  120 s callout ceiling and roll back the user's save.
-
-**Anti-patterns / red flags to catch in review:**
-- Any `[SELECT ...]` or `insert`/`update`/`delete`/`upsert` inside a `for` loop
-  body.
-- Trigger logic that assumes `Trigger.new` has one record (it can have 200).
-- Hard-coded record IDs.
-- Recursion with no static guard (trigger re-firing itself).
-- Truncation that silently loses data instead of validating upstream. A
-  defensive truncate in Apex is at best a last-line fallback for legacy /
-  direct-API records — it is never a substitute for validating field length at
-  the application/integration boundary against the field's real max length.
+Key numbers to hold `[volatile — verify live]`: 100 SOQL / 150 DML / 50,000 rows / 10,000 DML rows / 200 records per trigger batch / 10,000 ms CPU / 6 MB heap (sync).
 
 ---
 
@@ -240,10 +212,10 @@ access selectively.
 
 | Tool | Use when |
 |---|---|
-| **Data Import Wizard** | ≤ 50,000 records, standard + some custom objects, simple loads, built-in dedupe. |
+| **Data Import Wizard** | ≤ 50,000 records `[volatile — verify live]`, standard + some custom objects, simple loads, built-in dedupe. |
 | **Data Loader** | Bulk (millions), all objects, insert/update/**upsert**/delete, scriptable/automatable. |
 | **Bulk API 2.0** | Programmatic large-volume loads; async, chunked. |
-| **NPSP Data Import / Gift Entry** | Nonprofit-shaped imports (Contacts + Households + Donations in one row). |
+| **Purpose-built package import tools** | e.g. NPSP Data Import / Gift Entry for nonprofit-shaped imports — use the org's native import tool when one exists. |
 
 **Rules:**
 - **Use upsert with an External ID** for idempotent, re-runnable migrations — no
@@ -252,8 +224,7 @@ access selectively.
   children, **permission sets before assignments**, FLS before data that needs
   the fields visible.
 - **Always have a rollback plan** (keep source keys, load in reversible batches).
-- **Dedupe before and after**: configure Matching + Duplicate Rules; for NPSP,
-  prevent duplicate Household Accounts and Contacts.
+- **Dedupe before and after**: configure Matching + Duplicate Rules to prevent duplicate records.
 
 **Anti-patterns / red flags:**
 - Insert (not upsert) on a re-runnable migration → duplicate explosion.
@@ -265,26 +236,15 @@ access selectively.
 
 ## 7. Large Data Volume (LDV) & performance
 
-**Rules:**
-- **Avoid data skew.** *Ownership skew*: > ~10,000 records owned by one user
-  slows sharing recalculation. *Lookup skew*: > ~10,000 child records pointing at
-  one parent causes record-lock contention on parallel loads.
-- **Index your filters.** Selective SOQL (indexed field, < 10% / 300k rows
-  returned) avoids full table scans. Standard indexed fields: Id, Name, External
-  Id, lookups, audit fields. Custom: mark `External Id` or request a custom
-  index.
-- **Skinny tables / Big Objects** for read-heavy reporting on millions of rows
-  (Salesforce-support-managed).
-- **Defer sharing recalculation** during large loads; archive cold data.
+Data skew thresholds, SOQL selectivity rules, skinny tables, and Big Objects: [references/ldv-performance.md](references/ldv-performance.md) — load when designing for millions of records or diagnosing query timeouts.
 
-**Anti-pattern:** non-selective SOQL on a multi-million-row object (no indexed
-filter) → query timeout / `QueryException`.
+Core rules inline: avoid ownership skew (> ~10,000 records per user) and lookup skew (> ~10,000 children per parent); always filter SOQL on an indexed field to avoid full table scans.
 
 ---
 
 ## 8. Lead, Opportunity & sales pipeline design
 
-**Rules (Sales Cloud canonical; map to NPSP equivalents below):**
+**Rules:**
 - **Lead conversion maps Lead → Account + Contact + (optional) Opportunity.**
   Configure field mapping in Setup so custom lead fields don't vanish on convert.
 - **Opportunity Stage drives Forecast Category and probability.** Keep them
@@ -307,9 +267,9 @@ category drift; a product on a custom price book with no standard price.
 
 **Rules:**
 - **Sandbox → UAT → Production.** Never deploy untested metadata straight to prod.
-  Sandbox types: **Developer** (config only, daily refresh), **Developer Pro**
-  (more storage), **Partial Copy** (config + sample data, 5-day refresh), **Full**
-  (complete copy, 29-day refresh — use for UAT/performance/staging).
+  Sandbox types: **Developer** (config only, daily refresh `[volatile — verify live]`), **Developer Pro**
+  (more storage), **Partial Copy** (config + sample data, 5-day refresh `[volatile — verify live]`), **Full**
+  (complete copy, 29-day refresh `[volatile — verify live]` — use for UAT/performance/staging).
 - **Deployment order of operations:** objects → fields → FLS (permsets) →
   automation → assignments. Get this wrong and the deploy fails on missing
   dependencies.
@@ -360,19 +320,11 @@ should → data leak.
 
 ---
 
-## 11. AI & sales productivity features (know when to recommend, and the data prereqs)
+## 11. AI & sales productivity features
 
-**Rules:**
-- **Einstein Lead/Opportunity Scoring needs history** — predictive models require
-  a minimum volume of closed/converted records (hundreds+) to train. Don't
-  recommend it for a low-volume org with no history.
-- **Distinguish predictive AI** (scoring, forecasting — needs training data) from
-  **generative AI** (Einstein Copilot, email drafting — needs grounding data and
-  guardrails, not training history).
-- **Sales Engagement (formerly High Velocity Sales)** = cadences/call lists for
-  high-throughput SDR teams — overkill for a low-volume org.
-- The judgment this domain tests is recognizing when *not* to recommend a
-  heavyweight feature.
+Decision criteria for Einstein Scoring, Sales Engagement, and Einstein Copilot — including data-volume prerequisites and when *not* to recommend heavyweight AI features: [references/ai-sales-features.md](references/ai-sales-features.md) — load when evaluating or recommending AI add-ons for a Sales Cloud implementation.
+
+Core rule to hold inline: **Einstein Lead/Opportunity Scoring needs history** — minimum volume of closed/converted records (hundreds+) `[volatile — verify live]`. Do not recommend for low-volume orgs.
 
 ---
 
@@ -423,10 +375,36 @@ should → data leak.
 
 ## 13. Consulting Practices & Discovery
 
-- Gather requirements as **business outcomes**, not features. Use a **fit/gap matrix**: standard (no build) → configuration → custom (Apex/integration). Tilt toward standard to reduce maintenance burden.
-- Distinguish **current-state pain** from **future-state requirements** to prevent scope creep.
-- **Phase 1 = core + adoption.** A lean launch with high adoption beats a full launch with low adoption. Training and enablement are deliverables, not afterthoughts.
-- **Define success metrics up front** (pipeline coverage ratio, lead conversion rate, forecast accuracy) — no agreed metrics means no objective project completion criterion.
+Fit/gap matrix, requirements-gathering discipline, Phase 1 scoping rules, and success-metrics definition: [references/consulting-practices.md](references/consulting-practices.md) — load when running discovery or scoping a Sales Cloud implementation.
+
+---
+
+## Executable Workflows
+
+### 1. Design lead routing + conversion field mapping
+
+1. Identify the lead sources and routing criteria (region, product, score threshold) with the business owner. → **gate: criteria signed off before building any rule entries.**
+2. In Setup → Lead Assignment Rules, create one active rule; add entries ordered most-specific → most-general (first match wins). → **gate: run a test lead through each entry and confirm OwnerId in SOQL.**
+3. Map custom Lead fields to Contact/Account/Opportunity fields: Setup → Lead Fields → Map Lead Fields. → **gate: convert a test lead and confirm custom field values appear on the resulting Contact and Opportunity.**
+4. Add a validation rule on Opportunity to enforce required fields at the target Stage (e.g. "Closed Won requires Amount"). → **gate: attempt to close-won an Opportunity with the field blank — confirm the error appears.**
+5. Verify assignment rule fires on API-created leads: set `AssignmentRuleHeader` in the API call, insert a test lead, query `Lead.OwnerId`. → **gate: OwnerId = expected queue/user, not the running user.**
+
+### 2. Stand up Collaborative Forecasting + territories
+
+1. Enable Collaborative Forecasting: Setup → Forecasts Settings → enable, choose forecast types (Revenue, Quantity) and hierarchy (role or territory). `[volatile — verify live]` → **gate: at least one forecast type shows in Setup.**
+2. Review and correct Stage-to-ForecastCategory mappings: Setup → Opportunities → Fields → Stage picklist. → **gate: every Stage value maps to an intentional Forecast Category.**
+3. Enable Enterprise Territory Management: Setup → Territories → enable ETM, create a Territory Model. Set model to Draft. → **gate: model appears in Setup in Draft state.**
+4. Define Territory Types, then Territories within the model. Add assignment rules (field-criteria based). Run Rules (→ Preview Assignments). → **gate: preview shows expected Accounts per territory before activating.**
+5. Activate the Territory Model. → **gate: log in as a rep and confirm Account visibility matches their territory; no cross-region records visible.**
+6. Load quotas via Data Loader into the Forecasting Quotas data model. → **gate: quota appears on the forecast page for the rep.**
+
+### 3. Configure a price book / product / opportunity stage model
+
+1. Create Products: Setup → Products → New. Ensure each Product has a Standard Price Book entry (`IsActive = true`). → **gate: query `SELECT Id, Name FROM Product2 WHERE IsActive = true` — product appears.**
+2. For multi-currency orgs, add the currency-specific Standard Price entry for each currency in use. `[volatile — verify live]` → **gate: Standard Price Book entry exists for each active currency.**
+3. Create a Custom Price Book; add Products with custom prices. → **gate: query `SELECT PricebookEntryId FROM OpportunityLineItem` on a test Opportunity — confirms the entry resolves.**
+4. Customize Opportunity Stages: Setup → Opportunities → Fields → Stage. Set Stage, Probability, and Forecast Category for each stage. → **gate: no stage has an accidental Forecast Category mismatch.**
+5. Assign the custom Price Book to a test Opportunity; add Products. → **gate: line-item amounts roll up to the Opportunity Amount field correctly.**
 
 ---
 
@@ -468,33 +446,27 @@ should → data leak.
 
 ---
 
-**Scenario 4 — Forecast Category vs. Stage drift**
-
-> **Situation:** Sales leadership complains that the Collaborative Forecast shows much higher revenue in "Commit" than deals actually close. A review of Opportunity Stages shows several Stage values (e.g., "Legal Review") map to the "Commit" Forecast Category despite being early-stage deals.
->
-> **Competent move:** Audit and realign the Stage-to-ForecastCategory mapping in Setup → Opportunities → Fields → Stage → Stage Picklist Values. Remap "Legal Review" to "Best Case" or "Pipeline." Re-train reps that Forecast Category represents their confidence in closing, not just process position.
->
-> **Tempting-but-wrong:** Adding more stages or building a complex Flow to auto-adjust Forecast Category at close. The root cause is misconfigured Stage metadata, not missing automation. Over-engineering the fix introduces new drift opportunities.
->
-> **Verify:** Open a representative Opportunity in each Stage, hover the Forecast Category, and confirm it matches the intent. Pull a forecast report before and after the fix and compare "Commit" totals to actual prior-period close rates.
-
----
-
-**Scenario 5 — Territory model activation**
-
-> **Situation:** An administrator creates a new Enterprise Territory Management model with updated assignment rules, configures territories, and tests by manually checking Account assignments in the Draft model. She activates the model. Sales reps now report they can see Accounts that belong to other regions.
->
-> **Competent move:** Review the territory assignment rules — specifically, look for overly broad criteria (e.g., a rule matching all Accounts with a non-null BillingCountry) that assign more records than intended. Correct the rules, run "Run Rules" on the model in Draft state, verify the assignment preview, then re-activate.
->
-> **Tempting-but-wrong:** Changing the OWD to Private in a panic. OWD affects the sharing baseline for all access mechanisms; changing it to fix a territory rule misconfiguration can break other access paths (sharing rules, team access). Fix the territory rules, not the OWD.
->
-> **Verify:** In ETM Setup, use the "Preview" feature before activating to see which Accounts each territory will claim. After fix, log in as a rep and confirm Account visibility matches their assigned territory only.
+Scenarios 4–5 (Forecast Category vs. Stage drift; Territory model activation over-broad rules): [references/scenarios.md](references/scenarios.md) — load for the forecasting/territory gotchas.
 
 ---
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+Study resources (official Salesforce + community) are kept in [references/study-resources.md](references/study-resources.md). For nonprofit/NPSP-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-sales-cloud-consultant.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09. Section 2 (Apex governor limits) condensed to a stub with full detail moved to references/apex-limits.md to keep body within word budget.
 
 ---
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their respective owners. "Salesforce," "Sales Cloud," "Einstein," "Flow," "Apex," and related marks are property of Salesforce, Inc., used here solely to identify subject matter. Guidance only — verify against official Salesforce documentation and live orgs before acting. No certification outcome is implied or guaranteed.*

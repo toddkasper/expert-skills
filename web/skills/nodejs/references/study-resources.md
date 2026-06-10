@@ -2,6 +2,46 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the OpenJS Node.js certifications or deepening Node.js operational knowledge.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+**Both JSNAD and JSNSD were retired September 30, 2025.** As of June 2026, no official successor has been announced. The facts below describe the exams as they existed — useful for understanding the competence bar, not for registration.
+
+| Field | JSNAD | JSNSD |
+|---|---|---|
+| Full name | OpenJS Node.js Application Developer | OpenJS Node.js Services Developer |
+| Status | **Retired Sep 30, 2025** | **Retired Sep 30, 2025** |
+| Format | Remote-proctored, performance-based (live coding in browser VM) | Same format |
+| Duration | 2 hours | 2 hours |
+| Passing score | 68% | 68% |
+| Cost (at retirement) | $300 USD (free retake included) | $300 USD (free retake included) |
+| Allowed resources | nodejs.org and npm docs only; StackOverflow blocked | Same |
+| Prerequisites | None formal; 2+ years Node.js recommended | None formal |
+| Task count (approx.) | ~25 coding tasks, 5–10 min each | ~4–5 longer tasks, 15–30 min each |
+
+> Passing score (68%) is confirmed from multiple first-hand candidate reports and the archived Linux Foundation FAQ. Cost ($300) is confirmed from multiple sources at or near retirement; earlier it was $200. Task counts are best estimates from candidate reports, not official figures.
+
+**JSNAD domain weights** (from the official curriculum PDF, confirmed by multiple sources):
+
+| Domain | Weight |
+|---|---|
+| Control flow | 12% |
+| Buffers & Streams | 11% |
+| Events | 11% |
+| Child processes | 8% |
+| Error handling | 8% |
+| File system | 8% |
+| JavaScript prerequisites | 7% |
+| Module system | 7% |
+| Debugging / Diagnostics | 6% |
+| Process / OS | 6% |
+| package.json | 6% |
+| Unit testing | 6% |
+| Node.js CLI | 4% |
+
+**JSNSD domain weights:** Servers & Services 70%, Security 30%.
+
 ## Certification Status (as of June 2026)
 
 **Both JSNAD and JSNSD were retired September 30, 2025** by the Linux Foundation / OpenJS Foundation. As of June 2026, no official successor certification has been announced. The Linux Foundation's OpenJS candidate resources page still lists the two exams but links to inactive pages. Check https://training.linuxfoundation.org/openjs/ for any new programs.

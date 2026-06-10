@@ -1,12 +1,12 @@
 ---
 name: react
-description: Operational playbook for building and reviewing React applications — components and JSX, hooks, state and data flow, rendering and performance, accessibility, and testing — anchored on official React guidance (react.dev). Use when writing or reviewing React UIs. Excludes Next.js (see the nextjs skill) and React Native/Expo (see the react-native skill).
+description: Building and reviewing React applications — components and JSX, hooks (useState/useReducer/useEffect/useRef/useContext, custom hooks), the rules of hooks, state and data flow, rendering and memoization, concurrent features, accessibility, and testing with React Testing Library. Use when writing, reviewing, or debugging React UIs, re-renders/effects, or state architecture. Excludes Next.js (see nextjs) and React Native/Expo (see react-native). Competence skill anchored on react.dev — no first-party certification.
 metadata:
   credential: None — competence skill (no first-party React certification exists)
   domain: web
   type: competence-playbook
   status: operational
-  last-reviewed: 2026-06-07
+  last-reviewed: 2026-06-09
 ---
 
 # React — Skills Reference
@@ -17,7 +17,21 @@ No vendor certification exists for React. This playbook encodes the working comp
 
 **Scope of this skill:** React itself — components, hooks, state, rendering, data-fetching patterns, accessibility, and testing. Framework concerns (Next.js App Router, Server Components, Expo) are deferred to the `nextjs` and `react-native` sibling skills.
 
+> **Load this skill when…** writing or reviewing React components, hooks, or state architecture; debugging re-renders, stale closures, or effect dependencies; auditing accessibility (ARIA, focus management); writing or fixing React Testing Library tests.
+> **Not this skill:** Next.js App Router, Server/Client Components, Server Actions → see `nextjs`; React Native / Expo mobile apps → see `react-native`.
+
 > Study resources and data-fetching library links live in [references/study-resources.md](references/study-resources.md).
+
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
+---
+
+## Uncertainty & Escalation
+
+- **Always re-verify live:** React evolves rapidly — hooks, concurrent features, and the React Compiler change behavior across minor versions. `[volatile — verify live]` marks apply to: React Compiler availability and defaults (production-ready late 2025 — check the project's `babel-plugin-react-compiler` or `eslint-plugin-react-compiler` version before assuming it is active); `useActionState` and `useOptimistic` (React 19+ only — `[volatile — verify live]`); React 18 batching behavior in non-React-managed event handlers (verify with React 18+); TanStack Query and SWR API surface (major-version breaking changes — always check installed version). Check `react` in `package.json` — React 18 and 19 differ on form actions, optimistic updates, and compiler support.
+- **Live wins:** the installed React version's actual behavior and [react.dev](https://react.dev) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** upgrading from React 17→18 or 18→19 in a production app (concurrent mode and batching changes can surface latent bugs); removing `StrictMode` from a production app; major data-fetching library upgrades (TanStack Query v4→v5 API changes); production deploys.
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
 ---
 
@@ -56,9 +70,7 @@ When a child holds internal state that should reset when a controlling prop chan
 - Adding a guard (`if (localState !== prop) setLocalState(prop)`) inside the effect — same double-render problem; the component still renders once with stale state before the effect runs.
 - Using `useEffect` to "sync" prop-derived state is almost always avoidable; the `key` prop or full controlled pattern removes the need entirely.
 
-### `useReducer` — when to prefer over `useState`
-
-Use `useReducer` when: (a) next state depends on previous in complex ways, (b) several state fields change together as a unit, or (c) you want to move update logic out of the component for testability. Reducer functions are pure — they receive state + action and return the next state; no side effects inside.
+**`useReducer`** — prefer over `useState` when next state depends on previous in complex ways, multiple fields change together as a unit, or you want pure update logic outside the component for testability. Reducer functions are pure: state + action → next state, no side effects.
 
 ### `useEffect` — the discipline
 
@@ -81,17 +93,11 @@ Use `useReducer` when: (a) next state depends on previous in complex ways, (b) s
 | `useEffect` notifies parent via callback | Call the parent callback directly in the event handler |
 | `useEffect` transforms data for render | Calculate during render (or `useMemo` if expensive) |
 
-### `useRef` — mutable, non-reactive
+**`useRef`** — holds a mutable value that doesn't trigger re-renders. Use for: DOM node references, timer IDs, tracking mount state, previous prop values. Never read or write refs during rendering.
 
-Refs hold a value that doesn't trigger re-renders when changed. Use for: DOM node references, storing the previous value of a prop, holding a timer ID, tracking whether a component has mounted. Do **not** read or write a ref during rendering — refs are outside the React data flow.
+**`useContext`** — eliminates prop-drilling for cross-cutting values (theme, locale, current user). Not a replacement for server-state caching — use TanStack Query or Zustand for that. Every subscriber re-renders on context value changes: split contexts by change frequency and memoize the provider value object.
 
-### `useContext` — boundaries matter
-
-Context eliminates prop-drilling for genuinely cross-cutting values (theme, locale, current user). It is not a replacement for server-state caching or complex shared state — for those, use TanStack Query or an external store (Zustand, Redux Toolkit). Every subscriber re-renders when context value changes, so split contexts by change frequency to avoid over-renders; memoize the provider value object.
-
-### Custom hooks
-
-A custom hook is a JavaScript function whose name starts with `use` that calls other hooks. Extract into a custom hook when the same stateful logic appears in two or more components. A custom hook does not share *state* between callers — each call gets independent state. Shared behavior, not shared state.
+**Custom hooks:** a function whose name starts with `use` that calls other hooks. Extract shared stateful logic into custom hooks; each call gets its own independent state instance. Extended guidance: [references/advanced-patterns.md](references/advanced-patterns.md) → "Custom Hooks."
 
 ---
 
@@ -103,34 +109,13 @@ Rendering = calling your component function to produce a new JSX tree. React com
 
 **State updates are batched** in React 18+. Multiple `setState` calls in a single event handler are batched into a single re-render.
 
-### When to memoize — and when not to
-
-Default: don't. Re-renders are cheap unless profiling shows otherwise. The React Compiler (stable as of late 2025, production-ready) automatically inserts the equivalent of `React.memo`, `useMemo`, and `useCallback` where they're beneficial — in compiler-enabled projects, manual memoization is usually redundant.
-
-Without the compiler, apply the trio only after measuring:
-
-| Tool | Memoizes | Correct use |
-|---|---|---|
-| `React.memo(Component)` | The component's render output | A child that re-renders frequently with the same props and has expensive render logic |
-| `useMemo(fn, deps)` | The return value of `fn` | An expensive pure calculation whose deps change infrequently |
-| `useCallback(fn, deps)` | The function reference | A callback passed as prop to a `memo`-wrapped child, to prevent spurious re-renders |
-
-`useMemo` and `useCallback` only help when the wrapped value is passed to a component or hook that checks referential equality. Wrapping everything is not free — there is overhead, and it clutters the code.
-
-**Structural patterns that avoid re-renders without memoization:**
-- Accept JSX children as `children` prop so the parent, not the consumer, controls when children re-render.
-- Keep state local — don't lift it higher than necessary.
-- Split contexts by update frequency.
+**Memoization:** don't memoize without measuring. In React Compiler projects `[volatile — verify live]`, the compiler inserts `React.memo`/`useMemo`/`useCallback` automatically — manual memoization is usually redundant. Without the compiler, apply after profiling: `React.memo` memoizes render output, `useMemo` memoizes a computed value, `useCallback` memoizes a function reference (only useful when passed to a `memo`-wrapped child). Prefer structural patterns first: accept `children` as a prop, keep state local, split contexts by change frequency. Full comparison table and when-to-apply criteria: [references/advanced-patterns.md](references/advanced-patterns.md) → "Memoization."
 
 ### Key prop — the reset lever
 
 Giving a component a different `key` tells React to unmount the old instance and mount a new one, resetting all its state. This is the correct fix for "reset form when user changes" — `<Form key={userId} />` — not an effect that clears state fields.
 
-### Concurrent features (React 18+)
-
-- `useTransition` / `startTransition` — mark a state update as non-urgent; React can interrupt it to stay responsive. Use for expensive renders triggered by user input (e.g., filtering a large list while keeping the input responsive).
-- `useDeferredValue` — defer re-rendering a slow child with a stale value until the browser is idle. Similar to debounce but integrated with React's scheduler.
-- `Suspense` — declaratively show a fallback while async content (lazy-loaded components, data-fetching with frameworks) is loading. Wrap slow subtrees; place boundaries close to where the loading state should appear.
+**Concurrent features (React 18+) — load [references/advanced-patterns.md](references/advanced-patterns.md) → "Concurrent Features" for `useTransition`, `useDeferredValue`, and `Suspense` usage patterns.**
 
 ### Profiling
 
@@ -155,25 +140,14 @@ React itself has no built-in data-fetching — use a library that handles cachin
 | Need | Tool |
 |---|---|
 | Server state (remote data, REST/GraphQL) | TanStack Query (React Query) or SWR |
-| Optimistic updates before server confirmation | `useOptimistic` (React 19) or TanStack Query's `optimisticUpdate` |
-| Form submission with loading/error state | `useActionState` (React 19) replaces the `useState` + `onSubmit` + loading flag pattern |
+| Optimistic updates before server confirmation | `useOptimistic` (React 19) `[volatile — verify live]` or TanStack Query's `optimisticUpdate` |
+| Form submission with loading/error state | `useActionState` (React 19) `[volatile — verify live]` replaces the `useState` + `onSubmit` + loading flag pattern |
 | Client/global UI state | `useState` / `useReducer` + context, or Zustand |
 | Complex cross-component state | Redux Toolkit or Zustand |
 
 Avoid writing `useEffect` + `fetch` + `useState` for server data — you get no caching, no deduplication, and race conditions. Use TanStack Query or SWR instead.
 
-**Race condition:** when a component fetches data on a changing prop (e.g. userId), a slow response from the old request can overwrite the new response. Fix: use the effect cleanup function to set an `ignore` flag, or use a library that handles this automatically.
-
-```js
-// Correct pattern if you must use useEffect + fetch
-useEffect(() => {
-  let ignore = false;
-  fetchUser(userId).then(data => {
-    if (!ignore) setUser(data);
-  });
-  return () => { ignore = true; };
-}, [userId]);
-```
+**Race condition:** when a component fetches data on a changing prop, a slow response from an old request can overwrite the new response. Fix: use the effect cleanup to set an `ignore` flag, or use a library that handles this automatically. Example pattern: [references/advanced-patterns.md](references/advanced-patterns.md) → "Race Condition."
 
 ### State architecture decisions
 
@@ -185,15 +159,7 @@ useEffect(() => {
 | Is it shared UI state across many unrelated components? | Context (if low-frequency updates) or Zustand |
 | Is the update logic complex or shared? | `useReducer` with context, or Redux Toolkit |
 
-### Folder / feature structure
-
-No single correct structure exists, but prefer **feature-based co-location** over type-based grouping. Co-locate tests, styles, and subcomponents with the feature they belong to. Avoid deep nesting. Keep shared UI primitives in a `components/ui` or `components/common` layer; keep business logic in hooks or service modules, not inside JSX.
-
-### Framework scope boundary
-
-**Next.js concerns (App Router, Server Components, Server Actions, layouts, `generateStaticParams`):** see the `nextjs` skill. This skill covers React client components only. The React 19 `use()` hook, `useActionState`, `useOptimistic`, and `useFormStatus` are React-layer primitives usable across frameworks — they are in scope here.
-
-**React Native / Expo concerns** (StyleSheet, navigation, native modules, Metro bundler): see the `react-native` skill.
+**Folder / feature structure and framework scope boundary** (Next.js/RN handoff rules, feature-based co-location guidance): [references/advanced-patterns.md](references/advanced-patterns.md) → "Folder Structure and Framework Scope."
 
 ---
 
@@ -261,6 +227,84 @@ React renders to the DOM — all standard HTML accessibility rules apply. React-
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Place state correctly (compute-during-render vs lift vs key-reset — avoid effect-sync)
+
+1. Ask: "Can this value be derived from existing state or props?" If yes, compute it during render — no `useState`, no `useEffect`. → gate: removing the derived state and computing inline produces identical UI with no console warnings.
+2. Ask: "Does only one component need this value?" If yes, keep it local with `useState` in that component. Move on.
+3. Ask: "Do two sibling components need the same value?" Lift state to their closest common ancestor. Pass as props. → gate: both siblings render the same value; changing it in one sibling updates the other.
+4. Ask: "Should a child reset all its state when a controlling prop changes?" Give the child a `key` equal to the controlling prop: `<Form key={userId} />`. Do not write `useEffect(() => { setState(prop) }, [prop])`. → gate: change the controlling prop; confirm the child's internal state resets cleanly (React DevTools Components tab shows the instance unmounted and remounted).
+5. Ask: "Is this server/remote data?" Use TanStack Query or SWR — not `useEffect + fetch + useState`. → gate: remove the `useEffect` + `fetch`; queries deduplicate, cache, and handle loading/error states automatically.
+
+### Workflow 2 — Diagnose an extra/infinite re-render (profiler → identity/deps → memo decision)
+
+1. Open React DevTools Profiler. Record a session covering the unexpected re-render. Click the component that re-renders unexpectedly — the "Why did this render?" panel lists the prop or state that changed. → gate: you can name the specific prop/state/context value that triggered the render.
+2. If the triggering value is an object or function, check whether its reference is stable. Inline `{}` and `() => {}` in render produce a new reference every render. → gate: `console.log(Object.is(prev, next))` (or React DevTools) confirms the reference is changing.
+3. If the reference instability is in a context value, wrap with `useMemo(() => ({ … }), [deps])` at the provider. If it is a callback prop, wrap with `useCallback(fn, deps)` at the parent. → gate: re-record in Profiler; the component should no longer appear in the flame chart for unrelated parent renders.
+4. For infinite render loops: check whether a `useEffect` sets state unconditionally (no condition before `setState`) or whether its deps array contains an unstable object that it also updates. → gate: enable `eslint-plugin-react-hooks` — `exhaustive-deps` warns on missing/extra deps; fix the root cause, not the warning.
+5. Only add `React.memo` after confirming the re-render is measurably slow (Profiler "render duration" > 2ms under real load). In React Compiler projects, skip manual memo entirely. → gate: Profiler shows reduced render count without introducing stale prop bugs.
+
+### Workflow 3 — Test a component's behavior with React Testing Library
+
+1. Render the component with `render(<MyComponent …/>)`. Import from `@testing-library/react`.
+2. Query for elements with the highest-confidence query first: `getByRole('button', { name: /submit/i })`, then `getByLabelText`, then `getByText`, never `getByClassName`. → gate: the query finds exactly one element; if it throws "Unable to find…", run `screen.debug()` to inspect the rendered tree.
+3. Interact using `@testing-library/user-event`: `await userEvent.click(button)`, `await userEvent.type(input, 'hello')`. Do not use `fireEvent` unless you need low-level synthetic events. → gate: `userEvent.setup()` is called once per test (v14+ API); all interactions are awaited.
+4. For async outcomes (data loaded, UI updated after an API call), use `await screen.findByText('Expected text')` or `await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())`. Never query synchronously for async results. → gate: the test passes consistently without artificial `setTimeout` or `sleep` calls.
+5. Assert on what the user sees, not on internal state. `expect(screen.getByRole('status')).toHaveTextContent('Saved')` — not `expect(component.state.saved).toBe(true)`. → gate: refactoring the component's state shape without changing visible behavior does not break the test.
+
+---
+
+## Decision Scenarios
+
+**Scenario 1 — Context provider value object recreated every render causes all consumers to re-render**
+
+> **Situation:** A `ThemeProvider` component holds `{ theme, setTheme }` as a context value created inline: `<ThemeContext.Provider value={{ theme, setTheme }}>`. Profiling reveals that every component consuming the context re-renders whenever *any* state anywhere in the app changes — even unrelated state that re-renders the `ThemeProvider` parent.
+
+> **Competent move:** Memoize the context value: `const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme])`. The inline `{}` creates a new object reference on every render, and React's context compares values by reference — all subscribers see a "changed" value and re-render. Memoizing the object ensures consumers only re-render when `theme` or `setTheme` actually changes.
+
+> **Tempting-but-wrong:** Wrapping each consumer component in `React.memo`. `React.memo` skips re-renders due to unchanged props, but context changes are not props — `React.memo` does not prevent context-triggered re-renders. The fix must be at the provider, not the consumer.
+
+> **Verify:** Use React DevTools Profiler before and after the fix. Before: every context consumer shows a re-render reason of "context changed" on every unrelated state update. After memoization: consumers only re-render when `theme` itself changes.
+
+---
+
+**Scenario 2 — `useEffect` cleanup missing from a `setInterval` in a polling component**
+
+> **Situation:** A `LivePriceTicker` component starts a `setInterval` that fetches a price every 3 seconds inside a `useEffect` with an empty dependency array `[]`. In development (Strict Mode), multiple fetch calls fire simultaneously on mount, creating duplicate network requests. In production the component unmounts and remounts during navigation, and after navigating away the polling continues in the background.
+
+> **Competent move:** Return a cleanup function from the effect: `return () => clearInterval(intervalId)`. React Strict Mode double-invokes effects in development to surface missing cleanup — the duplicate requests are the diagnostic signal, not a bug to suppress. The cleanup function runs on unmount and on every re-run in Strict Mode, stopping the interval correctly in both environments.
+
+> **Tempting-but-wrong:** Disabling Strict Mode to stop the duplicate requests in development. Strict Mode is revealing a real production bug (the leaked interval after unmount). Removing it hides the signal without fixing the problem.
+
+> **Verify:** Wrap the component in a toggle button so it can be mounted and unmounted. Without cleanup, open the browser Network tab and confirm requests continue after the component is hidden. With cleanup, requests stop immediately on unmount.
+
+---
+
+**Scenario 3 — `useActionState` for form submission vs manual `useState` + `onSubmit` loading flag**
+
+> **Situation:** A React 19 project has a comment-submission form implemented with three `useState` variables (`value`, `isLoading`, `error`) and a `handleSubmit` function that sets them manually. A reviewer suggests replacing the whole pattern with `useActionState`.
+
+> **Competent move:** Replace the three-variable pattern with `const [state, submitAction, isPending] = useActionState(postCommentAction, initialState)`. `useActionState` (React 19) encapsulates the loading/error/result lifecycle for an async action, provides a stable `isPending` boolean, and supports progressive enhancement when used with `<form action={submitAction}>`. The manual pattern is error-prone (forgetting to reset `isLoading` on error is a common bug) and requires more code.
+
+> **Tempting-but-wrong:** Using `useReducer` to consolidate the three state fields. `useReducer` removes the multi-setState problem but still requires manual `isLoading` management and does not integrate with `<form action>` for progressive enhancement. `useActionState` is the purpose-built React 19 primitive for this exact pattern.
+
+> **Verify:** Confirm the project is on React 19+ (`package.json`). Implement `useActionState` and verify `isPending` becomes `true` during the async call and `false` after — test with a slow mock action using `setTimeout` inside a wrapper.
+
+---
+
+**Scenario 4 — Testing a custom hook with `renderHook` and `act` — asserting synchronous state**
+
+> **Situation:** A developer tests a custom `useCounter` hook by calling `renderHook(() => useCounter(0))` and immediately asserting `result.current.count === 0`. The test passes. They then call the `increment` function and assert `result.current.count === 1` — but the assertion fails because the value is still `0`.
+
+> **Competent move:** Wrap the state-mutating call in `act()`: `act(() => { result.current.increment(); })`. React batches and flushes state updates asynchronously. `act()` tells React Testing Library to flush all pending state updates and effects before the assertion runs, so `result.current.count` reflects the post-update value.
+
+> **Tempting-but-wrong:** Using `waitFor(() => expect(result.current.count).toBe(1))`. `waitFor` is for asynchronous operations (network calls, timers). A synchronous state update triggered by calling a hook function should be wrapped in `act()`, not awaited — using `waitFor` here works but signals a misunderstanding of what is synchronous vs asynchronous.
+
+> **Verify:** Run the test with `act()` wrapping the `increment` call. The assertion should pass without any timeout. Also verify that omitting `act()` produces a React testing warning about "not wrapped in act" in the console — that warning is the diagnostic signal for this pattern.
+
+---
+
 ## Operational Rules Quick Reference
 
 Read this before writing or reviewing any React code.
@@ -286,6 +330,21 @@ Read this before writing or reviewing any React code.
 - **DO** use `findBy*` or `waitFor` for anything that renders after an async operation.
 - **DO** use `userEvent` (not `fireEvent`) for interaction in tests.
 - **DO** verify against official react.dev documentation before treating any of the above as ground truth — React evolves.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/react.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
+- **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: useEffect cleanup/Strict Mode, useActionState vs useState, renderHook/act) to meet the teaching-scenario standard (≥4 inline). references/scenarios.md deleted (all scenarios now inline). Custom hooks, Concurrent features, race-condition code block, and Folder/framework scope subsections moved to references/advanced-patterns.md to offset body length.
 
 ---
 

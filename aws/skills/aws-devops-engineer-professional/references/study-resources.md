@@ -2,6 +2,31 @@
 
 Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the DOP-C02 exam.
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Field | Value |
+|---|---|
+| Questions | 65 scored + 10 unscored = 75 total (unscored questions are not identified) |
+| Time Limit | 180 minutes |
+| Passing Score | 750 / 1000 (scaled; compensatory — no per-domain minimum) |
+| Cost | $300 USD |
+| Retake discount | Active AWS Certified holders receive 50% off subsequent exams |
+| Format | Multiple choice (1 of 4) and multiple response (2+ of 5+); Pearson VUE online proctored or test center |
+| Languages | English, Japanese, Korean, Simplified Chinese |
+| Validity | 3 years |
+
+Source: [official exam page](https://aws.amazon.com/certification/certified-devops-engineer-professional/) and [official exam guide](https://docs.aws.amazon.com/aws-certification/latest/devops-engineer-professional-02/devops-engineer-professional-02.html) (verify before publishing; AWS updates exam facts without versioning the URL).
+
+Blueprint domains and weights (DOP-C02):
+- Domain 1 — SDLC Automation — **22%**
+- Domain 2 — Configuration Management and IaC — **17%**
+- Domain 3 — Resilient Cloud Solutions — **15%**
+- Domain 4 — Monitoring and Logging — **15%**
+- Domain 5 — Incident and Event Response — **14%**
+- Domain 6 — Security and Compliance — **17%**
+
 ## Official AWS Resources
 
 - [AWS Certified DevOps Engineer – Professional](https://aws.amazon.com/certification/certified-devops-engineer-professional/) — official exam landing page with registration, eligibility, and overview

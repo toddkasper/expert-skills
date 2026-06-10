@@ -1,12 +1,14 @@
 ---
 name: aws-devops-engineer-professional
-description: Operational playbook for AWS DevOps engineering at the Professional level — CI/CD pipelines, infrastructure as code, resilient cloud design, monitoring/logging, incident response, and security/compliance automation. Use when building or reviewing AWS delivery pipelines, IaC templates, observability stacks, and automated remediation. The AWS Certified DevOps Engineer – Professional (DOP-C02) certification scopes and benchmarks this skill.
+description: AWS DevOps engineering — CI/CD pipelines (CodePipeline, CodeBuild, CodeDeploy), infrastructure as code (CloudFormation, CDK, Systems Manager), deployment strategies (blue/green, canary), resilient multi-AZ/multi-region design, CloudWatch monitoring and logging, event-driven incident response and automated remediation, and security/compliance automation. Use when building, reviewing, or debugging AWS delivery pipelines, IaC templates, observability stacks, or auto-remediation. Not security-first design (see aws-security-specialty) or enterprise architecture trade-offs (see aws-solutions-architect-professional). Scoped and benchmarked by the AWS DevOps Engineer – Professional (DOP-C02) blueprint.
 metadata:
   credential: AWS Certified DevOps Engineer – Professional
   exam-code: DOP-C02
   domain: aws
   type: certification-playbook
   status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
   blueprint: DOP-C02 (launched March 2023; verify at official exam guide link below)
 ---
 
@@ -14,50 +16,35 @@ metadata:
 
 ## Overview
 
-The AWS Certified DevOps Engineer – Professional credential validates that a practitioner can provision, operate, and manage distributed systems and services on AWS with a high degree of automation. It targets engineers with 2+ years of hands-on AWS experience who own the delivery pipeline end-to-end: building and securing CI/CD systems, expressing infrastructure as code, designing for resilience, instrumenting observability, and enforcing security and compliance programmatically.
+Operational playbook for AWS DevOps work. Each section states the rule to apply: decision criteria for deployment strategy, failure modes to catch in review, and verify steps. **Query the AWS APIs — never assume from IaC source or console screenshots** (state diverges from templates the moment a manual change is made).
 
-**This file is an operational playbook, not an exam outline.** Each section states the actual rules an agent must apply when doing DevOps work on AWS — the decision criteria for picking a deployment strategy, the failure modes to catch in review, and the "verify against the live account" steps. A recurring principle: when in doubt about account state, **query the AWS APIs — never assume from IaC source or console screenshots**, because infrastructure state diverges from templates the moment manual changes are made.
+> **Load this skill when…** building or reviewing a CI/CD pipeline (CodePipeline, CodeBuild, CodeDeploy); authoring or debugging CloudFormation/CDK/SAM templates; designing deployment strategies (blue/green, canary, rolling); configuring observability stacks, automated remediation, or compliance-as-code on AWS.
+> **Not this skill:** threat-detection, IAM policy depth, or encryption → see `aws-security-specialty`; enterprise architecture trade-offs → see `aws-solutions-architect-professional`.
 
-> **Study resources** live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
+> **Study resources and credential logistics:** [references/study-resources.md](references/study-resources.md).
+
+> **Verify steps** — use your project's MCP/automation, the AWS CLI (`aws`) or CloudShell, or the Console, in that order.
 
 ---
 
-## Exam Details
+## Uncertainty & Escalation
 
-| Field | Value |
-|---|---|
-| Questions | 65 scored + 10 unscored = 75 total (unscored questions are not identified) |
-| Time Limit | 180 minutes |
-| Passing Score | 750 / 1000 (scaled; compensatory — no per-domain minimum) |
-| Cost | $300 USD |
-| Retake discount | Active AWS Certified holders receive 50% off subsequent exams |
-| Format | Multiple choice (1 of 4) and multiple response (2+ of 5+); Pearson VUE online proctored or test center |
-| Languages | English, Japanese, Korean, Simplified Chinese |
-| Validity | 3 years |
-
-Source: [official exam page](https://aws.amazon.com/certification/certified-devops-engineer-professional/) and [official exam guide](https://docs.aws.amazon.com/aws-certification/latest/devops-engineer-professional-02/devops-engineer-professional-02.html) (verify before publishing; AWS updates exam facts without versioning the URL).
-
-Blueprint domains and weights (DOP-C02):
-- Domain 1 — SDLC Automation — **22%**
-- Domain 2 — Configuration Management and IaC — **17%**
-- Domain 3 — Resilient Cloud Solutions — **15%**
-- Domain 4 — Monitoring and Logging — **15%**
-- Domain 5 — Incident and Event Response — **14%**
-- Domain 6 — Security and Compliance — **17%**
+- **Always re-verify live — volatile facts:** service quotas (e.g., default CodePipeline pipelines per region `[volatile — verify live]`, CodeBuild concurrent builds per account `[volatile — verify live]`), EC2 instance type availability by region `[volatile — verify live]`, CloudWatch high-resolution metric pricing `[volatile — verify live]`, CodeDeploy deployment config names and timeout defaults `[volatile — verify live]`, and any feature announced after the `last-reviewed` date in this file's frontmatter.
+- **Live wins:** when the live AWS account, CLI output, or official AWS docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
+- **Escalate to a human — do not silently execute:** deleting CloudFormation stacks or stack sets; IAM role/SCP/permission-boundary changes; KMS key policy modifications; enabling or disabling GuardDuty or CloudTrail; any action that incurs significant cost (large Snowball order, Reserved Instance purchase, EC2 fleet scaling); opening security-group or network-boundary rules; force-merging or runner policy changes in enterprise settings.
+- **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with AWS service updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
 
 ---
 
 ## 1. SDLC Automation (22%)
 
-The heaviest domain. Master the pipeline services, deployment strategies, and how they compose differently for EC2, ECS/EKS, Lambda, and multi-account environments.
-
 ### Pipeline Architecture
 
-**The core AWS pipeline stack:** CodeCommit/CodeConnections (source) → CodeBuild (build/test) → CodeDeploy or ECS/EKS deploy action (deploy) → CodePipeline (orchestrator). CodeArtifact sits alongside for private artifact repositories (npm, Maven, PyPI, etc.).
+**Core stack:** CodeCommit/CodeConnections (source) → CodeBuild (build/test) → CodeDeploy or ECS/EKS deploy action → CodePipeline (orchestrator). CodeArtifact for private artifact repositories (npm, Maven, PyPI).
 
-**Pipeline role boundaries:** CodePipeline has a service role; each action can assume a different action role. Least-privilege means the build role should have no deploy permissions, and the deploy role should have no build permissions. Cross-account pipelines require a CMK in KMS (not SSE-S3) for the artifact bucket, plus trust policies in both accounts.
+**Role boundaries:** build role has no deploy permissions; deploy role has no build permissions. Cross-account pipelines require a KMS CMK (not SSE-S3) on the artifact bucket, plus trust policies in both accounts.
 
-**Secrets in builds:** never embed credentials in buildspec.yml or environment variables passed as plaintext. Reference Secrets Manager ARNs or Parameter Store SecureString paths in the environment block — CodeBuild injects them at runtime. Rotation of those secrets does not require pipeline changes.
+**Secrets in builds:** reference Secrets Manager ARNs or Parameter Store SecureString paths in the CodeBuild environment block — never plaintext in buildspec.yml or environment variables. Rotation does not require pipeline changes.
 
 ### Deployment Strategies — Pick by Risk and Target
 
@@ -69,15 +56,15 @@ The heaviest domain. Master the pipeline services, deployment strategies, and ho
 | **Linear** | Incrementally shift traffic in equal steps | Lambda, ECS when you want gradual exposure | Automatic rollback on alarm |
 | **All-at-once** | Replace all instances simultaneously | Dev/test environments; fastest but riskiest | Re-deploy; no gradual fallback |
 
-**ECS blue/green with CodeDeploy** replaces task definitions, not instances — the controller registers new tasks in the target group, waits for health checks, then shifts the listener rule. The deployment lifecycle hooks (`BeforeInstallHook`, `AfterInstallHook`, `AfterAllowTestTraffic`, `BeforeAllowTraffic`, `AfterAllowTraffic`) invoke Lambda functions for validation; failures trigger automatic rollback.
+**ECS blue/green with CodeDeploy** registers new tasks, waits for health checks, then shifts the ALB listener. Lifecycle hooks (`BeforeInstallHook`, `AfterInstallHook`, `AfterAllowTestTraffic`, `BeforeAllowTraffic`, `AfterAllowTraffic`) invoke Lambda; failures trigger automatic rollback.
 
-**Lambda deployment strategies** use Lambda aliases pointing to weighted versions. `CodeDeployDefault.LambdaCanary10Percent5Minutes` means 10% traffic to the new version for 5 minutes, then 100% — or rollback if the configured alarm fires.
+**Lambda strategies** use aliases with weighted versions (`CodeDeployDefault.LambdaCanary10Percent5Minutes` = 10% for 5 min then 100%, or rollback on alarm).
 
-**EC2 Image Builder** automates golden-AMI baking — define a recipe (base OS + components), schedule builds, distribute to regions, and tag outputs. Couple with an Auto Scaling group launch template update to roll new images into the fleet.
+**EC2 Image Builder** bakes golden AMIs; couple with ASG launch template updates to roll new images into the fleet.
 
 ### Automated Testing Gates
 
-Put tests in CodeBuild buildspec phases: `pre_build` for dependency setup, `build` for unit tests/linting/SAST, `post_build` for packaging. A non-zero exit code from any phase fails the build and blocks the pipeline. Use a separate test stage in CodePipeline with a different CodeBuild project for integration/acceptance tests that run against a deployed staging environment.
+CodeBuild buildspec phases: `pre_build` (setup), `build` (unit tests/SAST), `post_build` (packaging). Non-zero exit from any phase fails the build and blocks the pipeline. Use a separate CodePipeline Test stage + CodeBuild project for integration/acceptance tests against a deployed staging environment.
 
 **Red flags in review:**
 - Plaintext secrets in buildspec or pipeline environment variables.
@@ -92,21 +79,19 @@ Put tests in CodeBuild buildspec phases: `pre_build` for dependency setup, `buil
 
 ## 2. Configuration Management and Infrastructure as Code (17%)
 
-IaC is not optional — it is the mechanism that makes environments reproducible, auditable, and driftless.
-
 ### CloudFormation Fundamentals
 
-**Stack lifecycle discipline:** Create → Update → Delete. Never modify a resource that CloudFormation owns outside of CloudFormation — the resulting drift causes the next update to fail or produce unintended replacements. Run `aws cloudformation detect-stack-drift --stack-name <stack>` regularly; treat non-zero drift as a defect.
+**Stack lifecycle:** Create → Update → Delete. Never modify CloudFormation-owned resources outside of CloudFormation — drift causes the next update to fail. Run `aws cloudformation detect-stack-drift` regularly; treat non-zero drift as a defect.
 
-**Update behaviors:** `No interruption` (safe), `Some interruption` (brief stop), `Replacement` (new resource, old deleted). Know which resource properties cause replacement — changing an RDS `DBInstanceClass` is an interruption; changing its `Engine` is a replacement. Preview with `aws cloudformation create-change-set` before applying any update to production.
+**Update behaviors:** `No interruption` (safe) | `Some interruption` (brief stop) | `Replacement` (new resource, old deleted). Preview with `aws cloudformation create-change-set` before any production update — watch for `Replacement` actions.
 
-**StackSets** deploy a single template across multiple accounts and regions. Requires a delegated-admin account or CloudFormation's managed execution. Use `SELF_MANAGED` for manual trust setup; `SERVICE_MANAGED` for Organizations-integrated automated deployment to OUs.
+**StackSets:** `SELF_MANAGED` = manual trust setup per account; `SERVICE_MANAGED` = Organizations-integrated, auto-deploys to OUs and new accounts.
 
-**Nested stacks** decompose large templates; the root stack owns the lifecycle. The anti-pattern is deeply nested chains that make change sets unreadable — prefer flat stacks connected by SSM Parameter Store exports over deep nesting.
+**Nested stacks:** root stack owns the lifecycle. Anti-pattern: deep nesting that makes change sets unreadable — prefer flat stacks with SSM Parameter Store exports.
 
-**Custom Resources (Lambda-backed)** extend CloudFormation to manage resources it doesn't natively support. The Lambda function must always respond to CloudFormation's pre-signed S3 URL with `Status: SUCCESS` or `Status: FAILED` — failure to respond leaves the stack in `UPDATE_IN_PROGRESS` forever. Always set a function timeout shorter than CloudFormation's default 1-hour wait.
+**Custom Resources (Lambda-backed):** the Lambda must respond to CloudFormation's pre-signed S3 URL with `SUCCESS` or `FAILED` — no response leaves the stack in `UPDATE_IN_PROGRESS` forever. Set Lambda timeout < CloudFormation's 1-hour wait.
 
-**AWS CDK** synthesizes CloudFormation from code. `cdk diff` is the equivalent of a change set — run it before every `cdk deploy` in production. Bootstrapping (`cdk bootstrap`) is account/region-specific and creates the CDK toolkit stack; it must be re-run when upgrading CDK major versions.
+**CDK:** `cdk diff` = change set equivalent; run before every `cdk deploy` in production. `cdk bootstrap` is account/region-specific; re-run on major CDK version upgrades.
 
 ### Systems Manager as Configuration Backbone
 
@@ -148,31 +133,15 @@ Design for failure: every layer should degrade gracefully, and recovery should b
 - Aurora: storage is replicated across 3 AZs by default; read replicas in the same region promote to writer in <30s typically.
 - DynamoDB: built-in multi-AZ; enable Global Tables for cross-region active-active.
 
-**Auto Scaling groups:** separate the scale-out policy (CPU/request-count metric → add capacity) from the scale-in protection rules (termination policies, instance protection, cooldown periods). The key failure mode is "scale-in deletes instances with active sessions" — use connection draining (ALB deregistration delay) and lifecycle hooks (`autoscaling:EC2_INSTANCE_TERMINATING`) to drain gracefully before termination.
+**Auto Scaling groups:** separate scale-out policy from scale-in protection (termination policies, instance protection, cooldown periods). Key failure mode: scale-in kills instances with active sessions — use connection draining (ALB deregistration delay) and lifecycle hooks (`autoscaling:EC2_INSTANCE_TERMINATING`) to drain first.
 
-**Route 53 health checks and routing policies:**
-
-| Policy | Use |
-|---|---|
-| Simple | Single endpoint; no health checks supported |
-| Failover | Active-passive; health check on primary, Route 53 routes to secondary on failure |
-| Weighted | Split traffic by weight; use for blue/green DNS-level cutover |
-| Latency | Route to the region with lowest latency for the user |
-| Geolocation | Route by user's geographic location |
-| Multivalue answer | Returns up to 8 healthy records; basic client-side load balancing |
-
-Health checks can monitor an endpoint, another Route 53 health check (calculated health check), or a CloudWatch alarm — use the alarm form to tie DNS failover to application-level signals, not just TCP reachability.
+**Route 53 health checks:** Failover (active-passive) or Weighted routing (DNS blue/green). Health checks can monitor an endpoint, another check (calculated), or a CloudWatch alarm — alarm form ties DNS failover to application signals. Simple routing has no health check support.
 
 ### DR Strategy Selection
 
-| Strategy | RTO | RPO | Cost |
-|---|---|---|---|
-| Backup & Restore | Hours | Hours | Lowest |
-| Pilot Light | Tens of minutes | Minutes | Low |
-| Warm Standby | Minutes | Seconds–minutes | Medium |
-| Multi-site Active-Active | Near-zero | Near-zero | Highest |
+Match the DR pattern to the stated RTO/RPO: Backup & Restore (hours/hours, lowest cost) → Pilot Light (tens of minutes/minutes) → Warm Standby (minutes/near-zero) → Multi-site Active-Active (near-zero/near-zero, highest cost). Do not default to multi-region active/active when warm standby meets the requirement.
 
-**AWS Backup** centralizes backup policies across RDS, DynamoDB, EFS, EC2 (EBS snapshots), FSx, and S3. Use Backup Plans with lifecycle rules (move to cold storage after N days, expire after M days). Cross-region copies require a Backup Vault in the destination region. Test restores — an untested backup is not a backup.
+**AWS Backup** centralizes backup policies across RDS, DynamoDB, EFS, EC2 (EBS snapshots), FSx, and S3. Use Backup Plans with lifecycle rules. Cross-region copies require a Backup Vault in the destination region. Test restores — an untested backup is not a backup.
 
 **Red flags in review:**
 - RDS Multi-AZ presented as a DR solution for regional failures (it isn't).
@@ -187,29 +156,23 @@ Health checks can monitor an endpoint, another Route 53 health check (calculated
 
 ## 4. Monitoring and Logging (15%)
 
-An observable system is one where any failure can be diagnosed without a code change. Build observability in from the start.
-
 ### Metrics and Alarms
 
-**CloudWatch metric hierarchy:** Namespace → Metric Name → Dimensions → Statistics → Period. Custom metrics require `PutMetricData` calls (from the CloudWatch agent or application code). High-resolution metrics (1-second granularity) cost more but enable sub-minute alarming.
+**CloudWatch metric hierarchy:** Namespace → Metric Name → Dimensions → Statistics → Period. Custom metrics require `PutMetricData`. High-resolution metrics (1-second) cost more but enable sub-minute alarming.
 
-**Alarm states:** `OK`, `ALARM`, `INSUFFICIENT_DATA`. `INSUFFICIENT_DATA` is not the same as OK — it means the metric hasn't received data points in the evaluation period. This commonly fires on new resources before the first data point arrives; suppress with `treat_missing_data: notBreaching` only when that is genuinely correct.
+**Alarm states:** `OK`, `ALARM`, `INSUFFICIENT_DATA`. `INSUFFICIENT_DATA` ≠ OK — metric has no data points; suppress with `treat_missing_data: notBreaching` only when genuinely correct.
 
-**Composite alarms** evaluate the alarm state of other alarms using Boolean logic — use them to reduce alert noise (e.g. alert only when BOTH high CPU AND high latency are simultaneously in ALARM, not either alone).
+**Composite alarms** combine alarms with Boolean logic — alert only when BOTH high CPU AND high latency are ALARM (reduces noise).
 
-**Anomaly detection** trains a model on historical metric data and creates an expected-value band; alarm when the metric falls outside the band. More useful than static thresholds for metrics with time-of-day patterns (web traffic, batch job durations).
+**Anomaly detection** trains on historical data and alarms outside the expected band — useful for time-of-day patterns.
 
 ### Log Management
 
-**CloudWatch Logs key concepts:** log group → log stream → log event. Retention is `Never expire` by default — set a retention policy on every log group to control cost. Export to S3 for long-term archival (use `create-export-task`); subscribe to Kinesis Data Firehose for near-real-time delivery to S3, OpenSearch, or Splunk.
+**CloudWatch Logs:** log group → log stream → log event. Retention defaults to `Never expire` — set a retention policy on every log group. Export to S3; subscribe to Kinesis Data Firehose for near-real-time delivery to S3/OpenSearch/Splunk.
 
-**Metric filters** extract a numeric value from log events and publish it as a CloudWatch custom metric — the primary way to alarm on application errors in logs without changing application code.
+**Metric filters** publish log-derived values as custom metrics — primary way to alarm on application errors without code changes. Logs Insights for ad-hoc queries; Athena for recurring analysis.
 
-**CloudWatch Logs Insights** queries across log groups with a SQL-like syntax (`fields`, `filter`, `stats`, `sort`, `limit`). Use for ad-hoc diagnosis; for recurring analysis, export to S3 and query with Athena.
-
-**Centralized logging across accounts:** use a log archive account. CloudWatch Logs subscription filters push to Kinesis Data Streams or Firehose in a central account; IAM resource-based policies on the destination allow cross-account delivery. Alternatively, collect via CloudWatch cross-account observability (native since 2022) which shares metrics, logs, and traces from source accounts to a monitoring account.
-
-**AWS X-Ray** traces requests across service boundaries. Enable active tracing on Lambda, API Gateway, and ECS tasks. The service map shows node-to-node latency and error rates. Sampling rules control cost — default is 5% + first request of each second; tune per service.
+> Centralized logging patterns (cross-account subscription filters, CloudWatch cross-account observability) and X-Ray distributed tracing setup: [references/observability-patterns.md](references/observability-patterns.md).
 
 **Red flags in review:**
 - Log groups with `Never expire` retention (cost and compliance risk).
@@ -224,35 +187,33 @@ An observable system is one where any failure can be diagnosed without a code ch
 
 ## 5. Incident and Event Response (14%)
 
-Automation is the only way to achieve consistent, repeatable incident response at cloud scale.
-
 ### Event-Driven Architecture
 
-**EventBridge** is the routing backbone for operational events. Rules match on event patterns (JSON path filters against the event envelope) and route to targets (Lambda, SQS, SNS, Step Functions, CodePipeline, SSM Automation, etc.). Event buses: default (AWS service events), custom (your application events), and partner event buses (SaaS integrations). Cross-account delivery requires a resource-based policy on the target bus.
+**EventBridge:** rules match JSON path filters on the event envelope and route to targets (Lambda, SQS, SNS, Step Functions, CodePipeline, SSM Automation). Buses: default (AWS service events), custom (app events), partner (SaaS). Cross-account delivery requires a resource-based policy on the target bus.
 
-**AWS Health events** (`aws.health` service in EventBridge) notify about AWS service issues and scheduled maintenance affecting your account. Subscribe to `AWS_EC2_INSTANCE_STOP_SCHEDULED` and `AWS_EC2_INSTANCE_RETIREMENT_SCHEDULED` to automate graceful replacement of retiring instances before AWS terminates them.
+**AWS Health events** (`aws.health`): subscribe to `AWS_EC2_INSTANCE_STOP_SCHEDULED` and `AWS_EC2_INSTANCE_RETIREMENT_SCHEDULED` to automate graceful replacement before AWS terminates instances.
 
-**SQS vs SNS vs EventBridge — choose deliberately:**
-- **SNS** — fan-out (one message to many subscribers), push-based, no replay.
-- **SQS** — decouple and buffer, pull-based, message retention up to 14 days, DLQ for failures.
-- **EventBridge** — content-based routing with rich filtering, cross-account, archive and replay, schema registry.
+**SQS vs SNS vs EventBridge:**
+- **SNS** — fan-out, push-based, no replay.
+- **SQS** — buffer/decouple, pull-based, 14-day retention, DLQ for failures.
+- **EventBridge** — content-based routing, archive + replay, schema registry, cross-account.
 
 ### Automated Remediation
 
-**AWS Config + remediation actions** is the primary policy-enforcement loop: a Config Rule evaluates resource configuration → marks non-compliant → a remediation action (SSM Automation document) automatically corrects it. Config managed rules (`restricted-ssh`, `s3-bucket-public-read-prohibited`, `iam-root-access-key-check`, etc.) cover the most common compliance checks without custom code.
+**Config rule → remediation loop:** Config Rule evaluates → marks non-compliant → SSM Automation document corrects. Managed rules (`restricted-ssh`, `s3-bucket-public-read-prohibited`, `iam-root-access-key-check`) cover common checks without custom code.
 
-**SSM Automation for incident response:** Pre-author runbooks for common incidents (restart a service, rotate credentials, isolate an EC2 instance from the network, restore from backup). Trigger from EventBridge rules or manually from OpsCenter. Approval steps in Automation documents gate on human sign-off for destructive actions while keeping all other steps automated.
+**SSM Automation runbooks:** pre-author for common incidents (restart, credential rotation, EC2 isolation, restore from backup). Trigger from EventBridge or manually from OpsCenter. Add Approval steps to gate destructive actions on human sign-off.
 
-**OpsCenter** aggregates operational issues (OpsItems) from CloudWatch alarms, Config non-compliance, Security Hub findings, and AWS Health events into a single pane. Associate runbooks with OpsItem types so responders have a one-click remediation path.
+**OpsCenter:** aggregates OpsItems from CloudWatch alarms, Config, Security Hub, and Health events. Associate runbooks with OpsItem types for one-click remediation.
 
 ### Failure Diagnosis Flow
 
-1. **Identify scope** — CloudWatch alarms, AWS Health dashboard, service-specific consoles.
-2. **Trace the request** — X-Ray service map + trace timeline for latency/error root cause.
-3. **Inspect logs** — CloudWatch Logs Insights query across relevant log groups.
-4. **Check for recent changes** — CloudTrail `LookupEvents` for API calls in the window before the incident; CodePipeline/CodeDeploy history for recent deployments.
-5. **Check deployment health** — `aws codedeploy list-deployments` + `get-deployment` for failure reason; `aws ecs describe-services` for task placement failures; `aws lambda list-event-source-mappings` for trigger state.
-6. **Remediate and verify** — apply fix, confirm via metric/alarm recovery, write post-mortem.
+1. Identify scope — CloudWatch alarms, Health dashboard.
+2. Trace — X-Ray service map + trace timeline.
+3. Logs — Logs Insights across relevant log groups.
+4. Recent changes — CloudTrail `LookupEvents`; CodePipeline/CodeDeploy history.
+5. Deployment health — `aws codedeploy get-deployment`; `aws ecs describe-services`; `aws lambda list-event-source-mappings`.
+6. Remediate and verify — confirm metric/alarm recovery; write post-mortem.
 
 **Red flags in review:**
 - Config Rules with remediation disabled — compliance violations pile up with no automated fix.
@@ -267,51 +228,131 @@ Automation is the only way to achieve consistent, repeatable incident response a
 
 ## 6. Security and Compliance (17%)
 
-Security is automated or it is not done consistently. Every security control that requires a human to remember is a control that will eventually fail.
-
 ### IAM at Scale
 
-**Least privilege means explicit allow, implicit deny.** Start with no permissions; grant only what is required for the specific task. IAM policy evaluation order: Organization SCPs → Resource-based policies → IAM identity policies → Permission boundaries → Session policies. All applicable policies must allow an action; any explicit Deny wins.
+Explicit Deny wins at any layer (SCPs → resource-based → identity → boundary → session).
 
-**Permission boundaries** cap the maximum permissions an IAM entity can have — useful for delegating IAM management to teams without allowing privilege escalation. A developer can create roles, but only roles whose permissions are a subset of the boundary you set.
-
-**Service Control Policies (SCPs)** apply to every principal in an OU or account. They do not grant permissions; they restrict what IAM policies can grant. Common patterns: deny leaving the organization, deny disabling CloudTrail, require MFA for console actions, restrict which regions are usable.
-
-**IAM roles for machine identities:** EC2 instance profiles, ECS task roles, Lambda execution roles — never store long-lived credentials in compute. Rotate Secrets Manager secrets on a schedule using built-in Lambda rotation functions; reference the secret ARN (not the value) in application configuration.
-
-**IAM Identity Center (SSO)** for human access to multiple accounts: permission sets define what a user can do in an account; assignments attach users/groups to accounts + permission sets. Prefer Identity Center over per-account IAM users for any organization with more than a single account.
+- **Permission boundaries** cap without granting — effective permission = intersection of identity policy and boundary.
+- **SCPs** restrict every principal in an OU/account; do not grant. Patterns: deny disabling CloudTrail, deny leaving the org, restrict regions.
+- **Machine identities:** EC2 instance profiles, ECS task roles, Lambda execution roles — never long-lived credentials; reference Secrets Manager ARNs in config.
+- **IAM Identity Center (SSO):** prefer over per-account IAM users for multi-account orgs.
 
 ### Automated Compliance and Threat Detection
 
-**AWS Config** records configuration changes to supported resources (configuration items). Use it for:
-- Detecting drift from desired state (Config Rules).
-- Auditing who changed what and when (configuration history).
-- Delivering findings to Security Hub.
-- Triggering remediation (managed or custom SSM Automation).
-
-**Security Hub** aggregates findings from GuardDuty, Inspector, Macie, Config, IAM Access Analyzer, and third-party integrations into a single findings dashboard. Use AWS Foundational Security Best Practices (FSBP) or CIS Benchmarks as the standard. Route HIGH/CRITICAL findings to EventBridge → SNS → on-call system.
-
-**GuardDuty** is threat detection, not configuration compliance — it analyzes VPC Flow Logs, DNS logs, CloudTrail, and S3 data events to detect active threats (credential exfiltration, cryptomining, unusual API calls from TOR exit nodes, etc.). Enable in every account via Organizations delegated-admin; never disable, even briefly.
-
-**Amazon Macie** discovers sensitive data (PII, credentials) in S3 buckets using ML classifiers. Run a discovery job on new buckets before they are tagged as "compliant."
-
-**CloudTrail:** must be enabled in all regions (multi-region trail) with log file validation and delivered to a central S3 bucket in a log archive account where the source accounts have no delete permissions. CloudTrail Lake provides SQL-based querying directly on event data without exporting to S3/Athena first.
+- **Config:** records changes; evaluates rules; triggers SSM Automation remediation. Use FSBP or CIS standards via Security Hub.
+- **Security Hub:** aggregates GuardDuty, Inspector, Macie, Config, Access Analyzer. Route HIGH/CRITICAL to EventBridge → SNS → on-call.
+- **GuardDuty:** threat detection — enable org-wide via delegated admin; never disable.
+- **Macie:** PII/credential discovery in S3. Run a discovery job on new buckets before marking compliant.
+- **CloudTrail:** multi-region trail, log file validation, cross-account log archive (source accounts: no delete permissions). CloudTrail Lake for SQL querying.
 
 ### Encryption Discipline
 
-- **KMS CMKs vs AWS managed keys:** use CMKs when you need to control key policy, rotate on a custom schedule, or share access cross-account. AWS managed keys are free but you cannot grant cross-account access or audit individual decrypt calls separately.
-- **Envelope encryption pattern:** data encrypted with a data key; data key encrypted with a CMK. The data key never leaves KMS in plaintext.
-- **Secrets Manager vs Parameter Store SecureString:** Secrets Manager adds automatic rotation, cross-account access, and resource-based policies; Parameter Store SecureString is simpler and free for Standard tier. Use Secrets Manager for anything that rotates (DB passwords, API keys); Parameter Store for static configuration values.
+- **KMS CMKs** for key policy control, custom rotation, or cross-account access; AWS managed keys for lower overhead.
+- **Secrets Manager** for rotating credentials; **Parameter Store SecureString** for static config.
 
-**Red flags in review:**
-- IAM user with long-lived access keys used for application authentication (use roles).
-- S3 bucket with public ACL or no bucket policy blocking public access.
-- GuardDuty disabled in any account or region.
-- CloudTrail without log file validation or without delivery to a cross-account archive bucket.
-- KMS CMK with `"Principal": "*"` in the key policy (anyone can encrypt/decrypt).
-- Secrets Manager secret with rotation disabled but referenced as "rotated" in a runbook.
+**Red flags:** long-lived IAM access keys for application auth; S3 public ACL or no Block Public Access; GuardDuty disabled; CloudTrail without log file validation or cross-account archive; KMS CMK with `"Principal": "*"`; Secrets Manager rotation disabled.
 
-**Verify:** `aws securityhub get-findings --filters '{"SeverityLabel":[{"Value":"CRITICAL","Comparison":"EQUALS"}]}'` to surface active high-severity findings; `aws guardduty list-detectors` to confirm GuardDuty is enabled in the current region; `aws cloudtrail get-trail-status --name <trail>` to confirm logging is active and `IsLogging` is `true`.
+**Verify:** `aws securityhub get-findings --filters '{"SeverityLabel":[{"Value":"CRITICAL","Comparison":"EQUALS"}]}'`; `aws guardduty list-detectors`; `aws cloudtrail get-trail-status --name <trail>` confirms `IsLogging: true`.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Ship a Blue/Green Deploy with Automated CloudWatch-Alarm Rollback
+
+1. Create a CodeDeploy application (`ECS` or `Lambda`) and deployment group with `BlueGreenDeploymentConfiguration` pointing to the ALB listener and target groups.
+   → gate: `aws codedeploy get-deployment-group --application-name <app> --deployment-group-name <dg> --query 'deploymentGroupInfo.blueGreenDeploymentConfiguration'` confirms hook timeouts and termination settings.
+2. Create or update a CloudWatch alarm on the error-rate or latency metric (e.g., `HTTPCode_Target_5XX_Count > 10 for 1 datapoint`).
+   → gate: `aws cloudwatch describe-alarms --alarm-names <alarm>` — state must be `OK` before deploying; deploying into `ALARM` state causes immediate rollback.
+3. Wire the alarm ARN into the deployment group: `aws codedeploy update-deployment-group ... --alarm-configuration alarms=[{name=<alarm-name>}],enabled=true,ignorePollAlarmFailure=false`.
+   → gate: `get-deployment-group` confirms `alarmConfiguration.enabled: true`.
+4. Trigger the deployment. Monitor lifecycle events: `BeforeInstallHook` → `AfterInstallHook` → `AfterAllowTestTraffic` → `BeforeAllowTraffic` → `AfterAllowTraffic`.
+   → gate: new task set / Lambda version is receiving test traffic at the ALB test port before `AfterAllowTestTraffic` hook completes.
+5. After traffic shifts to 100%, the alarm must stay `OK` through the evaluation period.
+   → gate: `aws codedeploy get-deployment --deployment-id <id> --query 'deploymentInfo.status'` — `Succeeded` = done; `Stopped` with `autoRollbackConfiguration` = alarm-triggered rollback.
+6. Confirm old (blue) instances/task sets are terminated per `terminateBlueInstancesOnDeploymentSuccess` — stale blue capacity is a cost leak.
+
+---
+
+### Workflow 2 — Stand Up a CodePipeline with Test/Approval Gates
+
+1. Create an S3 artifact bucket (SSE-KMS for cross-account) and a pipeline service role with separate source-read, build, and deploy permissions (no role gets all three).
+   → gate: `aws s3api get-bucket-encryption --bucket <bucket>` confirms KMS; `aws iam simulate-principal-policy` confirms build role cannot invoke CodeDeploy.
+2. Define stages: Source → Build → Test (separate CodeBuild targeting staging) → ManualApproval → Deploy.
+   → gate: `aws codepipeline get-pipeline --name <pipeline>` shows all stages; `actionTypeId.category: Approval` appears between Test and Deploy.
+3. Configure the Test stage buildspec to exit non-zero on failure.
+   → gate: deliberately fail a test; pipeline stops at Test with `Failed` status and does not reach Approval.
+4. Configure SNS notification on ManualApproval so approvers receive the approval URL.
+   → gate: `aws codepipeline get-pipeline-state` shows `InProgress` with approval token when awaiting review.
+5. Approve (`aws codepipeline put-approval-result`) and confirm Deploy executes.
+   → gate: `aws codedeploy get-deployment` for the triggered deployment shows `Succeeded`.
+
+---
+
+### Workflow 3 — Wire Automated Remediation (Config Rule → EventBridge → SSM Automation)
+
+1. Enable the Config managed rule (e.g., `s3-bucket-public-read-prohibited`).
+   → gate: `aws configservice get-compliance-details-by-config-rule` shows `COMPLIANT` or `NON_COMPLIANT` resources; `NO_RESULTS` means Config is not recording that resource type.
+2. Test the SSM Automation document (or managed `AWS-DisableS3BucketPublicReadWrite`) against a non-production bucket first.
+   → gate: `aws ssm start-automation-execution --document-name <doc> --parameters BucketName=<test-bucket>` completes with `Success` and the bucket policy is updated.
+3. Create an EventBridge rule matching `{"source":["aws.config"],"detail-type":["Config Rules Compliance Change"],"detail":{"configRuleName":["s3-bucket-public-read-prohibited"],"newEvaluationResult":{"complianceType":["NON_COMPLIANT"]}}}` targeting the SSM Automation ARN, with an IAM role allowing `ssm:StartAutomationExecution`.
+   → gate: `aws events describe-rule` shows `ENABLED`; `aws events list-targets-by-rule` confirms the SSM Automation ARN.
+4. Trigger non-compliance (make a test bucket public); confirm EventBridge fires and SSM Automation starts.
+   → gate: `aws ssm list-automation-executions` — latest execution references the test bucket and shows `InProgress` → `Success`.
+5. Confirm the Config rule marks the bucket `COMPLIANT` within the next evaluation cycle.
+   → gate: `aws configservice get-compliance-details-by-config-rule` shows test bucket as `COMPLIANT`.
+
+---
+
+## Decision Scenarios
+
+**Scenario 1 — ECS blue/green stuck: traffic never cuts over**
+
+> **Situation:** A team deploys an ECS service update via CodeDeploy using `ECSAllAtOnce` blue/green. The new task set registers with the target group and passes ALB health checks. CodeDeploy shows `IN_PROGRESS: AfterAllowTestTraffic` and stays there indefinitely. No CloudWatch alarm has fired. The on-call engineer re-deploys the same image thinking it is a transient glitch.
+
+> **Competent move:** The `AfterAllowTestTraffic` lifecycle hook has invoked a Lambda validation function and is waiting for that function to call back `codedeploy:PutLifecycleEventHookExecutionStatus` with `status: Succeeded`. If the Lambda times out, errors, or never calls back, CodeDeploy waits until the deployment timeout (default 1 hour) before marking it failed. Check the Lambda function logs for the hook — it almost certainly errored silently. Fix the Lambda, and either wait for the deployment to time out and retry, or call `aws codedeploy put-lifecycle-event-hook-execution-status` manually with the execution ID from the deployment events to unblock it.
+
+> **Tempting-but-wrong:** Re-deploying or rolling back without inspecting the hook Lambda logs. Re-deploying creates another deployment that will hit the same stuck hook. The underlying cause (Lambda error or missing callback) must be resolved first or the new deployment stalls identically.
+
+> **Verify:** `aws codedeploy get-deployment --deployment-id <id> --query 'deploymentInfo.deploymentStatusMessages'` for the lifecycle event execution ID; then `aws lambda get-function --function-name <hook-fn>` and CloudWatch Logs for the function; `aws codedeploy list-deployment-targets --deployment-id <id>` to see per-target hook status.
+
+---
+
+**Scenario 2 — StackSet SERVICE_MANAGED vs SELF_MANAGED for a new OU**
+
+> **Situation:** A platform team needs to deploy a CloudFormation StackSet to every account in the `Production` OU (12 accounts today, growing). They have Organizations enabled and the management account is the CloudFormation delegated admin. A junior engineer sets `--permission-model SELF_MANAGED` and creates `AWSCloudFormationStackSetAdministrationRole` in the management account plus `AWSCloudFormationStackSetExecutionRole` in each of the 12 target accounts manually. The StackSet deploys successfully to all 12. Three months later a new account joins the OU and the stack instance is never created there.
+
+> **Competent move:** Switch to `--permission-model SERVICE_MANAGED` with `--auto-deployment Enabled=true,RetainStacksOnAccountRemoval=false`. With SERVICE_MANAGED, CloudFormation uses the Organizations service-linked role and automatically creates stack instances in accounts as they join the target OU — no per-account role setup required. The manual role approach works for SELF_MANAGED only when you explicitly add each target account ID; it does not respond to OU membership changes.
+
+> **Tempting-but-wrong:** Keeping SELF_MANAGED and writing a Lambda or EventBridge rule to detect `CreateAccount` events and call `create-stack-instances`. This is operational toil that SERVICE_MANAGED eliminates natively, and it is error-prone (the Lambda needs its own IAM permissions and error handling, and if the event is missed the account stays uncovered).
+
+> **Verify:** `aws cloudformation describe-stack-set --stack-set-name <name> --query 'StackSet.PermissionModel'` confirms the model; `aws cloudformation list-stack-instances --stack-set-name <name>` shows whether the new account has an instance; `aws cloudformation describe-stack-set --query 'StackSet.AutoDeployment'` confirms auto-deployment is enabled.
+
+---
+
+**Scenario 3 — CDK bootstrap version mismatch on upgrade**
+
+> **Situation:** A team upgrades their CDK CLI from v2.80 to v2.150 across all developer laptops and the CI/CD pipeline. The first `cdk deploy` after the upgrade fails in production with `This CDK CLI is not compatible with the CDK library used by your application`. A senior engineer says the fix is to run `cdk bootstrap` again in the target account and region.
+
+> **Competent move:** Run `cdk bootstrap aws://<account-id>/<region>` in every target account and region. CDK bootstrap creates the `CDKToolkit` CloudFormation stack that contains the S3 staging bucket, ECR repository, and IAM execution roles the CDK needs at deploy time. The bootstrap stack has a `BootstrapVersion` number; major CDK upgrades require a higher bootstrap version. Because bootstrap is account/region-scoped, every account–region pair must be re-bootstrapped. After bootstrapping, verify the `CDKToolkit` stack version matches the CLI requirement.
+
+> **Tempting-but-wrong:** Pinning the CDK CLI back to the previous version to avoid the error. This avoids the symptom but blocks all new CDK features and security fixes, and eventually the mismatch will recur. The correct resolution is always to re-bootstrap so the CDKToolkit stack version satisfies the CLI.
+
+> **Verify:** `aws cloudformation describe-stacks --stack-name CDKToolkit --query 'Stacks[0].Parameters[?ParameterKey==\`BootstrapVersion\`].ParameterValue'` — the value must be ≥ the version required by the CDK CLI version in use (check `cdk --version` and the CDK changelog for the minimum bootstrap version).
+
+---
+
+**Scenario 4 — CodeBuild cross-account ECR pull fails with "no basic auth credentials"**
+
+> **Situation:** A CodeBuild project in the `tools` account builds a Docker image and pushes it to an ECR repository in the same `tools` account — this works. A second CodeBuild project in the `app` account needs to pull that same base image from the `tools` account ECR repository at build time. The `app` account CodeBuild service role has `ecr:GetAuthorizationToken`, `ecr:BatchGetImage`, and `ecr:GetDownloadUrlForLayer` on the `tools` account ECR ARN. The build still fails with "no basic auth credentials" or "access denied."
+
+> **Competent move:** Add a resource-based policy to the ECR repository in the `tools` account that allows the `app` account's CodeBuild service role (or the entire `app` account) to call `ecr:GetDownloadUrlForLayer`, `ecr:BatchGetImage`, and `ecr:BatchCheckLayerAvailability`. ECR is a cross-account resource, and like S3, cross-account access requires both an identity policy in the calling account AND a resource policy on the ECR repository in the owning account. Note that `ecr:GetAuthorizationToken` is not resource-specific — it must be allowed against `*` in the identity policy, and it is account-level, not cross-account; the registry login step must target the `tools` account registry URL explicitly (`aws ecr get-login-password --region … | docker login --username AWS --password-stdin <tools-account-id>.dkr.ecr.<region>.amazonaws.com`).
+
+> **Tempting-but-wrong:** Adding `ecr:*` to the `app` account CodeBuild service role and assuming that is sufficient. Without the resource-based policy on the `tools` account ECR repository, the cross-account grant is incomplete — same-account ECR grants work with identity policy alone, but cross-account requires both sides.
+
+> **Verify:** `aws ecr get-repository-policy --repository-name <name> --region <region>` (run in the `tools` account) confirms the resource policy includes the `app` account principal; attempt `aws ecr get-login-password | docker login` from a test role in the `app` account targeting the `tools` account registry URL.
+
+Further scenarios (Config remediation throttling, EC2 Image Builder + ASG launch template): [references/scenarios.md](references/scenarios.md).
 
 ---
 
@@ -338,6 +379,23 @@ Each rule is concrete and imperative.
 ---
 
 > **Study resources** — official exam guide, Skill Builder, whitepapers, and community guides are in [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/aws-devops-engineer-professional.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
+- **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: StackSet permission models, CDK bootstrap versioning, cross-account ECR pull) to meet the teaching-scenario standard (body now has 4 scenarios total).
 
 ---
 

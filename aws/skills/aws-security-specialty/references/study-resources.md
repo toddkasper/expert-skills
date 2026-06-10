@@ -4,6 +4,32 @@
 > All links point to free official sources unless noted. Verify links are current against
 > https://aws.amazon.com/certification/certified-security-specialty/
 
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Field | Value |
+|---|---|
+| Exam code | SCS-C03 |
+| Questions | 65 total (mix of scored and unscored pretest items — AWS does not publish the scored/unscored split for this exam) |
+| Question formats | Multiple choice, multiple response, ordering, matching |
+| Time limit | 170 minutes |
+| Passing score | 750 / 1000 (scaled) |
+| Cost | $300 USD |
+| Prerequisites | None required; AWS recommends 5+ years IT security experience and 2+ years securing AWS workloads |
+| Format | Pearson VUE — online proctored or test center |
+| Recertification | Valid 3 years; recertify via current exam or an approved higher-level exam |
+
+Blueprint domains and weights (SCS-C03, source: official exam guide):
+- Domain 1 — Detection — **16%**
+- Domain 2 — Incident Response — **14%**
+- Domain 3 — Infrastructure Security — **18%**
+- Domain 4 — Identity and Access Management — **20%** ← heaviest domain
+- Domain 5 — Data Protection — **18%**
+- Domain 6 — Security Foundations and Governance — **14%**
+
+> Blueprint weights are subject to change. Verify against the official exam guide PDF linked below.
+
 ## Official AWS Resources
 
 - **Exam landing page:** https://aws.amazon.com/certification/certified-security-specialty/

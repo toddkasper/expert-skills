@@ -1,8 +1,27 @@
 # Marketing Cloud Email Specialist — Study Resources & Relevance
 
-Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the
-Marketing Cloud Email Specialist exam (MC-202) or mapping the operational rules to a nonprofit
-(NPSP) org.
+Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a study path for the Marketing Cloud Email Specialist exam (MC-202).
+
+## Credential logistics
+
+*Logistics are volatile — verify against the official exam guide before relying on any number.*
+
+| Detail | Value |
+|---|---|
+| Exam Code | MC-202 |
+| Questions | 60 scored multiple-choice/multiple-select (+ up to 5 unscored pilot questions) |
+| Time Limit | 90 minutes |
+| Passing Score | 67% (approximately 40 of 60 scored questions correct) |
+| Cost | $200 USD (retake: $100 USD), plus applicable taxes |
+| Prerequisites | None formally required; MKT 101 course and 6+ months SFMC experience strongly recommended |
+| Retake Policy | Up to two retakes; first retake at the discounted retake fee. Maintained via annual Trailhead maintenance modules |
+
+Delivery is proctored — onsite testing center or online remote proctoring (no open-book).
+Recommended prep is ~28 hours via the official Trailmix.
+
+Domain weights (official guide): Email Marketing Best Practices **10%**, Content Creation &
+Delivery **24%**, Marketing Automation **26%**, Subscriber & Data Management **26%**, Insights &
+Analytics **14%**.
 
 ## Study Resources
 
@@ -58,57 +77,6 @@ Complete in domain order:
 - Einstein → ESTO (best send time) vs. Engagement Scoring (who'll engage) vs. Copy Insights (subject copy).
 - Automation step execution → same step = parallel, steps = sequential.
 
-## Relevance to NPSP & Nonprofit Cloud
+## Relevance to other verticals
 
-### Integration Path
-
-**Marketing Cloud for Nonprofits** is a dedicated SFMC edition for organizations running NPSP on Sales
-Cloud / Service Cloud. It provides two-way integration via **Marketing Cloud Connect** plus predefined
-nonprofit email and donor-journey templates.
-
-### Key NPSP / Nonprofit Use Cases (with the correct tool)
-
-| Use Case | Correct SFMC Feature |
-|---|---|
-| Donor welcome series (new gift → 3-email nurture) | Journey Builder — Salesforce Data entry source, **No Re-entry** |
-| Annual appeal segmented by giving history | SQL Query against Synchronized NPSP Opportunity data → Send |
-| Event reminder sequence (program reunion) | Journey Builder — scheduled DE entry, Re-entry Only After Exiting |
-| Lapsed-donor re-engagement | Automation Studio — SQL filter (`_Click` 90d) → Send |
-| Volunteer communication opt-in | Subscription Center + Preference Attributes per volunteer area |
-| Application acknowledgment / transactional mail | Transactional email service (e.g. SES) is often cheaper; Triggered Send is the MC equivalent if MC is already adopted |
-
-### Marketing Cloud Connect + NPSP Data Model
-
-When MCC synchronizes NPSP objects, these become queryable Synchronized Data Extensions in Contact Builder:
-
-- **Contact** — primary person record → maps to MC subscriber (Subscriber Key = Contact ID)
-- **Account** (Household) — giving household grouping
-- **Opportunity** (Donation/Gift) — donation history for segment-based sends
-- **Campaign / CampaignMember** — program enrollment; cohort targeting
-- Custom objects — exposable via the connected/external client app (mind the permission-assignment and
-  consumer-key retrieval friction noted in the MCC section of SKILL.md)
-
-### Nonprofit Considerations
-
-- **Marketing send vs. transactional send:** reserve Marketing Cloud for *bulk marketing* (donor
-  appeals, program updates, recruitment) where engagement tracking, unsubscribe management, and
-  journeys add value. Don't move transactional confirmation/notification mail to MC just because MC
-  exists — a dedicated transactional service is usually cheaper.
-- **Volume / cost threshold:** Marketing Cloud for Nonprofits starts ~10,000+ engaged contacts and
-  several hundred USD/month. Below that, free Flow Email Alerts or **Account Engagement (Pardot)** may
-  fit better. At low (hundreds-per-year) volume, evaluate this carefully before recommending MC.
-- **Segmentation power:** custom Contact fields mirrored from CRM become segmentation dimensions once
-  synced — e.g. a program-comms journey segmented by region, or accessibility-aware messaging keyed on
-  a mobility/accommodation flag. Confirm FLS for the integration user first.
-- **Nonprofit Cloud direction:** Salesforce is investing in **Nonprofit Cloud** (NPSP's successor).
-  MCES skills are fully portable — Email Studio, Content Builder, and Journey Builder are identical
-  regardless of the CRM package on the other side of Marketing Cloud Connect.
-
-### Certification Relevance for Nonprofit Staff/Volunteers
-
-A certified volunteer/staff member could:
-- Build and manage donor email campaigns without outside consultants
-- Create a welcome journey for newly approved contacts (entry on a CRM status-field change via MCC)
-- Segment by program year, region, or record type for targeted communications
-- Track deliverability and engagement, reducing unsubscribes through preference management
-- Self-manage CAN-SPAM/CASL compliance for the nonprofit's email program
+The journey design, segmentation, deliverability, and automation patterns in this skill apply to any SFMC deployment. For NPSP/Nonprofit Cloud-specific guidance — Marketing Cloud for Nonprofits edition, donor-journey templates, NPSP Opportunity sync via MCC, and lapsed-donor segmentation — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).

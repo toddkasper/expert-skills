@@ -1,45 +1,43 @@
 ---
 name: salesforce-business-analyst
-description: Operational playbook for Salesforce business-analysis work — eliciting and documenting requirements, writing and sizing user stories (INVEST, Given/When/Then, MoSCoW), facilitating stakeholder workshops, mapping current and future-state processes (swimlanes, RACI, RAID), and running user acceptance testing to a go/no-go decision. Use when doing any of these on a Salesforce project; includes defect triage and Salesforce-specific BA rules (NPSP side effects, automation audit, field traceability). The Business Analyst certification (BA-201) is the scaffold and benchmark used to scope and measure this skill, not its subject.
+description: Salesforce business-analysis work — eliciting and documenting requirements, writing and sizing user stories (INVEST, Given/When/Then, MoSCoW), facilitating stakeholder workshops and discovery, mapping current/future-state processes (swimlanes, RACI, RAID), defect triage, and running user acceptance testing to a go/no-go decision. Use when gathering requirements, mapping process, or driving UAT on a Salesforce project. This is the requirements/process discipline — not building the config or code (see salesforce-administrator and the platform-developer skills). Scoped and benchmarked by the Business Analyst (BA-201) blueprint.
 metadata:
   credential: Salesforce Certified Business Analyst
   exam-code: BA-201
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Business Analyst — Skills Reference
 
 ## Overview
 
-The Salesforce Certified Business Analyst credential (exam code BA-201) validates that a practitioner can act as the liaison between business stakeholders and the technical team implementing a Salesforce solution. Certified BAs elicit and document business needs, translate them into well-formed requirements and user stories, map current and future-state processes, facilitate collaboration across stakeholder groups, and guide user acceptance testing through to a go-live decision.
+Operational playbook for the Salesforce BA discipline. Credential background, study path, and skill orientation: [references/study-resources.md](references/study-resources.md).
 
-This file is an **operational playbook**, not an exam outline. Each section below states the rules a BA actually applies at decision time — when to write a requirement vs. a user story, how to size a story, what makes acceptance criteria testable, how to run UAT to a defensible go/no-go — plus the anti-patterns to catch in review and the way to verify against the live org before trusting any assumption. The recurring discipline throughout is to confirm org reality (objects, fields, picklists, active automations) before committing to a requirement or estimate.
+> **Load this skill when…** eliciting or documenting requirements for a Salesforce project; writing or reviewing user stories and acceptance criteria; facilitating a discovery or UAT session; mapping as-is/to-be processes including automation implications.
+> **Not this skill:** building the declarative config (fields, flows, layouts) → see `salesforce-administrator`; writing Apex, LWC, or integration code → see `salesforce-platform-developer-1` / `salesforce-platform-developer-2`.
 
-> **Deeper context:** Study resources and the NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
 ---
 
-## Exam Details
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
-| Field | Value |
-|---|---|
-| Exam Name | Salesforce Certified Business Analyst |
-| Exam Code | BA-201 |
-| Questions | 60 scored + up to 5 unscored pretest = up to 65 total |
-| Time Limit | 105 minutes |
-| Passing Score | 72% |
-| Cost | US$200 registration + applicable tax; $100 retake fee |
-| Prerequisites | None (the formerly required Administrator certification was dropped as a hard prerequisite on May 2, 2023) |
-| Retake Policy | Half-price ($100) retakes; up to three attempts per release cycle |
+---
 
-**Recommended experience:** 2+ years hands-on Salesforce platform experience and 2+ years functioning as a business analyst on real implementations.
+## Uncertainty & Escalation
 
-**Delivery:** Proctored online or in-person at a Kryterion test center. No reference materials permitted.
+- **Always re-verify live:** `[volatile — verify live]` items include: BA-201 blueprint topic weights and question counts, Salesforce automation tooling retirement dates (Workflow Rules / Process Builder deprecation timeline), specific org edition/license feature availability, and managed-package automation behavior (NPSP, Nonprofit Cloud) across package versions.
+- **Live wins:** when this file and the live org, current exam guide, or official Salesforce release notes disagree — for example, a new Salesforce automation tool introduced in a recent release — trust the live system and flag this skill as stale via the Feedback protocol below.
+- **Escalate to a human:** surface — never silently decide — any action that constitutes a sign-off or go-live decision (go/no-go for production deployment, sponsor approval to defer a Must requirement, acceptance of a residual defect risk). These decisions belong to the named human Accountable in the RACI; the BA facilitates and documents, not decides.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
-**Maintenance:** Annual release-specific Trailhead maintenance module (one per year, free).
-
-**Domain weights (60 scored questions; each point ≈ 0.6 questions):** Collaboration with Stakeholders 24% · User Stories 18% · Customer Discovery 17% · Requirements 17% · Business Process Mapping 16% · User Acceptance Testing 8%.
+> **Volatile tag index:** The specific items tagged `[volatile — verify live]` in this skill (blueprint weights, automation deprecation timeline, NPSP package behavior) are annotated in [references/study-resources.md](references/study-resources.md) — load that file when verifying exam logistics or planning a study pass.
 
 ---
 
@@ -102,28 +100,17 @@ This file is an **operational playbook**, not an exam outline. Each section belo
 
 **Translate vague goals into measurable success criteria before design.** "We want less data entry" → "reduce volunteer keying time per record from ~15 min to 0; eliminate transcription errors; give applicants self-service status." If you can't attach a number or a yes/no outcome, keep digging.
 
-**Do a real current-state assessment of the actual org — don't assume.** Inventory: installed managed packages (e.g. NPSP `npe01`/`npe5`/`npo02` namespaces), the live data model, active automations (workflow rules, flows, triggers, process builders), integrations, and data quality. **Rule:** enumerate active automations on any object you plan to write to, because side effects are invisible until they bite — a managed-package workflow rule can silently corrupt data on insert, and only a current-state automation audit catches it.
+**Do a real current-state assessment of the actual org — don't assume.** Inventory: installed managed packages (note their namespaces), the live data model, active automations (workflow rules, flows, triggers, process builders), integrations, and data quality. **Rule:** enumerate active automations on any object you plan to write to, because side effects are invisible until they bite — a managed-package workflow rule can silently corrupt data on insert, and only a current-state automation audit catches it.
 
-**Categorize every gap so the build path is obvious:**
-
-| Gap type | Resolution | Cost/risk |
-|---|---|---|
-| Config | Point-and-click (field, layout, validation rule, flow) | Low |
-| Customization | Apex / LWC / integration | High; needs dev + tests |
-| Third-party | AppExchange package | License cost + package side effects |
-| Process change | Train people, change behavior | No code; hardest to adopt |
-
-**Decision rule:** prefer config over code over package over custom integration, ascending cost/risk — but only if the lower-cost option meets the *non-functional* requirements too (volume, security, audit). Choose Apex over a flow when record creation has managed-package side effects a flow can't safely orchestrate.
-
-**Know the implementation lifecycle and the BA's job in each phase:** Discovery → Design → Build → Test → Train → Deploy → Operate. The BA owns Discovery and Requirements, co-owns Design (translates), drives UAT in Test, leads Train, advises the go/no-go in Deploy.
+**Categorize every gap** (Config / Customization / Third-party / Process change) and prefer config over code over package over custom integration, ascending cost/risk — only escalate when the lower-cost option fails non-functional requirements (volume, security, audit). Choose Apex over Flow when managed-package side effects require it. Full gap-type table and implementation lifecycle phase map (Discovery → Design → Build → Test → Train → Deploy → Operate) with BA ownership per phase: [references/change-management.md](references/change-management.md) — load when sizing a discovery or scoping build paths.
 
 **Scope discipline:** write down what is explicitly *out*. A scope statement without an out-of-scope list invites scope creep.
 
 **Anti-patterns / red flags:**
-- Assuming the org is a clean slate. NPSP is opinionated: Contact-centric, auto Household Accounts, Relationships, Affiliations. A requirement that says "just create a Contact" hides Household auto-creation and managed workflow side effects.
+- Assuming the org is a clean slate. Managed-package orgs are opinionated: a package like NPSP adds auto Household Accounts, Relationships, Affiliations, and hidden workflow rules so that a requirement like "just create a Contact" hides significant side effects. Always audit managed-package automation before scoping. See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP specifics.
 - Promising a cloud/feature you haven't verified is licensed/enabled in the org.
 
-**Verification step:** List the real object inventory; describe core objects (e.g. `Contact`) to see real fields and record types; review the NPSP data shape (Households, Opportunities) before scoping anything that touches them.
+**Verification step:** List the real object inventory; describe core objects (e.g. `Contact`) to see real fields and record types before scoping anything that touches them.
 
 ---
 
@@ -162,7 +149,7 @@ A solution can pass verification and fail validation — a feature built exactly
 
 ## 5. Business Process Mapping (16%)
 
-**Map as-is before to-be, with SMEs, in a swimlane.** Lanes = actors (end user, intake volunteer, data-entry volunteer, Salesforce, staff reviewer). Capture handoffs, bottlenecks, manual workarounds, and the **exception paths SOPs never mention** (incomplete submission, illegible document, applicant with no email). A backend pipeline (form POST → storage snapshot → sweep job → SF upsert → approval → Contact create → downstream assignment) is a swimlane expressed in code; a BA should be able to draw it both ways.
+**Map as-is before to-be, with SMEs, in a swimlane.** Lanes = actors (end user, intake volunteer, data-entry volunteer, Salesforce, staff reviewer). Capture handoffs, bottlenecks, manual workarounds, and the **exception paths SOPs never mention** (incomplete submission, illegible document, applicant with no email).
 
 **Keep the to-be map at the business level.** It shows *what changes and who benefits*, not a click-by-click Salesforce walkthrough — otherwise stakeholders can't read it and it rots the moment a button moves.
 
@@ -197,17 +184,17 @@ A solution can pass verification and fail validation — a feature built exactly
 
 **UAT is not QA.** QA/system testing (verification) is technical: does it match spec? UAT (validation) is the *business* confirming it solves the real need, performed by real users on real scenarios. The BA facilitates; the business signs.
 
-**Derive test cases straight from stories' acceptance criteria.** One scenario per story, each covering happy path, sad path, and edge cases. Structure: precondition → steps → expected result → actual result → pass/fail. An automated e2e harness with one fixture per scenario is this layer automated.
+**Derive test cases straight from stories' acceptance criteria.** One scenario per story, each covering happy path, sad path, and edge cases. Structure: precondition → steps → expected result → actual result → pass/fail.
 
 **Classify defects on two axes and don't conflate them:** **Severity** (technical impact: blocker/critical/major/minor/cosmetic) vs. **Priority** (business urgency to fix). A cosmetic typo on a consent page can be high priority; a rare edge-case crash can be low. Triage on both.
 
-**Prepare test data that exercises business rules without exposing production PII.** Use a sandbox (Developer/Developer Pro/Partial/Full), never prod. Include boundary data: a date that looks valid but isn't (e.g. 2026-02-31), max-length strings, and picklist values the form offers vs. the values a *restricted* picklist actually accepts (a classic source of silent UAT failures).
+**Prepare test data that exercises business rules without exposing production PII.** Use a sandbox (Developer/Developer Pro/Partial/Full), never prod. Include boundary data: a date that looks valid but isn't (e.g. 2026-02-31), max-length strings, and picklist values the form offers vs. the values a *restricted* picklist actually accepts.
 
 **Manage scope during UAT.** When a tester says "it should also do Y," decide: is Y a **defect** (fails an existing acceptance criterion) or a **new requirement** (change request, separate backlog item)? Logging new requirements as defects is the #1 way UAT slips.
 
 **Issue a risk-based go/no-go, not a binary gut call.** Aggregate: count open defects by severity, map each known issue to a documented workaround, weigh against launch deadline. **Go** = no open blockers/criticals, Musts pass, workarounds agreed. **No-go** = any open blocker, or a Must scenario failing. Record the decision, the residual risks, and who accepted them.
 
-**Plan regression awareness:** a fix can break a previously passing scenario. After any fix, rerun the impacted scenarios — in a mature setup that means re-running the automated test harness.
+**Plan regression awareness:** a fix can break a previously passing scenario. After any fix, rerun the impacted scenarios.
 
 **Anti-patterns / red flags:**
 - Running UAT in production.
@@ -216,6 +203,80 @@ A solution can pass verification and fail validation — a feature built exactly
 - Treating "all tests pass" as "validated" when the tests only cover the happy path.
 
 **Verification step:** After a UAT cycle that created/changed SF records in sandbox, confirm the actual outcome by querying the records — verify they landed with the right field values, role flags, and status, rather than trusting the UI screen the tester saw.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Elicit → write → size a user story to UAT-ready (INVEST + Given/When/Then)
+
+1. Conduct the elicitation session (interview or workshop). Capture the raw need — do not propose a solution during elicitation.
+   → gate: a documented need statement with a named stakeholder source, not a solution description.
+2. Draft the story in canonical form: "As a [persona], I want [capability] so that [business value]." Confirm the "so that" is a real business outcome, not a restatement of the want.
+   → gate: story passes the INVEST gate (Independent, Negotiable, Valuable, Estimable, Small, Testable).
+3. Describe the target Salesforce object(s) in the live org to confirm field types, lengths, and whether required fields already exist. Adjust the story scope to reflect reality (don't write a story to "add" a field that already exists).
+   → gate: story references actual field API names and confirmed data types; no mismatched type assumptions.
+4. Write acceptance criteria in Given/When/Then form — one criterion per testable outcome, covering happy path, sad path, and at least one edge case (boundary value, missing data, restricted picklist value).
+   → gate: every criterion can be answered pass/fail with no ambiguity; team confirms criteria are testable.
+5. Size the story with the delivery team. If the team can't estimate, the story is too vague or too large — split by workflow step, data variation, or user role.
+   → gate: story has a point estimate; no "too big to estimate" verdict remains unresolved.
+6. Confirm the story has a traceability link: requirement ID → story → at least one acceptance criterion that becomes a UAT test case.
+   → gate: traceability row exists in the tracking artifact before the story enters a sprint.
+
+---
+
+### Workflow 2 — Run UAT to a go/no-go decision
+
+1. Before UAT begins, confirm entry criteria are met: build is feature-complete in the sandbox, test data loaded (boundary data included, no production PII), testers trained, exit criteria written and agreed.
+   → gate: all entry criteria checked off and signed by the BA and project lead.
+2. Derive test cases directly from stories' acceptance criteria (Given/When/Then → precondition/steps/expected result/actual result/pass-fail). Assign each test case to a named tester.
+   → gate: one test case per acceptance criterion; happy path, sad path, and edge cases all have cases.
+3. Execute UAT. For every failed case, log a defect with: repro steps, severity (blocker/critical/major/minor/cosmetic), and priority (business urgency). Classify tester "also do Y" requests as change requests — not defects.
+   → gate: every open item is classified as defect or change request; no unclassified findings remain open.
+4. After each fix, rerun impacted test cases (regression check). Do not close a defect until the retest passes.
+   → gate: retest result recorded for every defect marked resolved.
+5. At exit gate: aggregate open defects by severity. Apply the go/no-go rule: no open blockers or criticals; all Must-have scenarios pass; any remaining known issues have agreed workarounds documented and accepted in writing by the business Accountable.
+   → gate: go/no-go decision recorded with named decision-maker, residual risks list, and date.
+6. After go-live, query the sandbox or production records to confirm data actually landed with correct field values — don't rely solely on the UI screen testers saw.
+   → gate: SOQL confirms records have correct status, role flags, and field values as expected.
+
+---
+
+### Workflow 3 — Map current → future-state process (swimlane + RACI)
+
+> **Full step-by-step workflow in [references/change-management.md](references/change-management.md)** — load that file when running a process-mapping session. Key gates: observation over SOP, two exception paths on the as-is map, automation audit before any to-be design, exactly one Accountable per RACI row, to-be map version-controlled alongside requirements.
+
+---
+
+## Decision Scenarios
+
+Five original scenarios. Scenarios 3–5 are in [references/scenarios.md](references/scenarios.md) — load them for UAT defect-vs.-new-requirement classification, requirement phrased-as-solution rewrites, or to-be process verification examples.
+
+---
+
+**Scenario 1 — Automation audit before writing a requirement (Customer Discovery)**
+
+> *This scenario illustrates the general "automation audit before requirements" rule (§3 / Quick Reference 11) using NPSP as a concrete example. The same principle applies to any managed-package org; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP details.*
+
+> **Situation:** A stakeholder asks the BA to write a requirement: "When a volunteer applicant is approved, create a Contact in Salesforce." The BA has assessed the org and confirmed it runs NPSP. The developer says "a flow that calls `Contact.insert` is straightforward."
+
+> **Competent move:** Before writing or sizing any story, the BA runs an automation audit on the Contact object in the org — listing active workflow rules, flows, process builders, and triggers. In an NPSP org this will surface at minimum the `npe01__PreferredPhone__c` workflow rule and Household Account auto-creation logic. The requirement is then written to include these side effects as constraints: "Creating a Contact triggers Household Account creation and managed-package phone-copy logic; the implementing solution must account for these and must not disable managed-package rules to work around them."
+
+> **Tempting-but-wrong:** Accepting the developer's estimate and writing the requirement as "insert a Contact" — treating NPSP as if it were a clean org. The managed-package workflow rule fires on every Contact insert, silently copying `Phone` to `MobilePhone`, and Household Account creation adds unintended records.
+
+> **Verify:** In the target org, open Setup → Process Automation → Workflow Rules, filter by Contact, confirm which rules are Active. Also open Flow Builder, filter trigger type = Record-Triggered, object = Contact. List what fires before writing the requirement.
+
+---
+
+**Scenario 2 — MoSCoW prioritization is fake (User Stories)**
+
+> **Situation:** The BA has facilitated a backlog grooming session. The team has labeled 38 of 45 stories as "Must." The project sponsor confirms: "They all need to be in the first release."
+
+> **Competent move:** Flag the prioritization as non-functional. When >60% of the backlog is Must, the MoSCoW exercise has produced a wish list, not a priority order. The BA facilitates a forced-ranking re-prioritization: present the sprint capacity (e.g. 40 story points per sprint, 3 sprints before launch), show the 38 "Must" stories' point totals, and ask the sponsor to choose which 38-minus-N to defer if the team hits the wall. This converts abstract "Must" labels into a real launch scope decision that the sponsor owns.
+
+> **Tempting-but-wrong:** Accepting the sponsor's word that everything is Must and carrying 38 Must stories into the sprint plan. When the team can't complete them all, the BA has no agreed deferral list — leading to a chaotic last-week triage where the team (not the business) decides what ships.
+
+> **Verify:** Count Must stories, sum their estimates, divide by sprint velocity. If Must stories exceed capacity before go-live, the prioritization is arithmetically impossible — document that calculation and present it to the sponsor before sprint planning begins.
 
 ---
 
@@ -235,7 +296,7 @@ Read this first. Each rule is imperative and concrete.
 10. **DO** translate vague goals into measured success criteria before any design.
 11. **DO** audit all active automations on an object before writing to it — managed-package workflow rules can cause silent data corruption.
 12. **DO** categorize each gap as config / customization / package / process; prefer the lowest-cost option that still meets non-functional requirements.
-13. **DON'T** assume NPSP is a clean slate — Contact creation triggers Household Accounts, Relationships, and managed-package side effects.
+13. **DON'T** assume a managed-package org is a clean slate — Contact creation can trigger managed-package side effects (e.g. NPSP auto-creates Household Accounts and fires workflow rules; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 14. **DO** classify requirements (business / functional / non-functional / technical) and capture non-functionals explicitly (PII handling, accessibility, audit, throttling).
 15. **DON'T** phrase a requirement as a solution ("add a trigger"); phrase the need ("on approval the person must exist as a Contact").
 16. **DO** maintain traceability: requirement → story → test → defect; never break the chain (e.g., hand-editing a generated schema file).
@@ -247,114 +308,36 @@ Read this first. Each rule is imperative and concrete.
 22. **DO** triage defects on severity AND priority separately; classify tester asks as defect vs. new requirement (change request).
 23. **DO** issue a risk-based go/no-go: no open blockers/criticals, Musts pass, workarounds agreed and accepted in writing.
 24. **DO** verify every claim against the live org (describe objects, list objects, run queries/reports, fetch records) before trusting it — confirm field types, lengths, picklists, and that records actually landed.
+25. **DO** identify change-impact by role before go-live; schedule training within 2 weeks of launch; define adoption metrics upfront (login rate, record creation rate, field fill-rate).
+26. **DON'T** resolve conflicting stakeholder requirements unilaterally — surface the conflict, bring both parties to a decision meeting, record who made the call.
+27. **DON'T** accept verbal scope-change approval — any requirement that changes the agreed scope boundary requires a written change request.
 
 ---
 
-## 7. Change Management & Training (BA's role in the Deploy and Operate phases)
+## References
 
-The BA's job does not end at UAT sign-off. The credential and real implementations expect a BA to:
+- [references/study-resources.md](references/study-resources.md) — credential logistics, study path, and volatile tag index.
+- [references/scenarios.md](references/scenarios.md) — Decision Scenarios 3–5: UAT defect vs. new requirement, requirement phrased as solution, to-be verification.
+- [references/change-management.md](references/change-management.md) — extended change management and scope escalation operational guidance, plus the full Workflow 3 (map current → future-state process); load when advising on go-live change planning, training design, conflicting-stakeholder escalation paths, or running a process-mapping session.
 
-**Identify who changes and how much.** Before go-live, map each affected role to the process steps that change. End users who need to learn a new screen have lower change impact than staff whose entire data-entry workflow is eliminated. Score each group on impact and readiness — high impact / low readiness = intensive training; low impact / high readiness = job aid.
-
-**Author training artifacts at the right level.** Write quick-reference guides (job aids) for frequent tasks; leave system administration topics to the admin. A job aid for an intake volunteer should describe their new Salesforce screen workflow, not how approval processes work internally.
-
-**Define adoption metrics upfront, before launch.** "Adoption" is measurable: login rate, record creation rate, picklist fill-rate on required fields. Without a baseline and a target, you can't tell whether training succeeded or the change failed.
-
-**Anti-patterns / red flags:**
-- Scheduling training more than two weeks before go-live — users forget.
-- One-size-fits-all training when roles have very different workflows.
-- No feedback loop after go-live — the BA should collect post-launch friction and convert it to change-request stories.
+For NPSP/nonprofit-specific operational guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 
-## 8. Conflicting Stakeholder Requirements & Scope Escalation
+## Feedback protocol
 
-When two stakeholders give incompatible requirements, the BA's job is to surface the conflict explicitly — not to resolve it unilaterally.
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-business-analyst.md` at the project root (create it if absent):
 
-**Resolution path:**
-1. Document both positions neutrally in the RAID log (as an Issue).
-2. Bring both stakeholders into a decision meeting; use the power/interest grid to identify who holds Accountability.
-3. Present the tradeoffs (not a recommendation disguised as information).
-4. Record the decision, rationale, and who made it in the decision log — even if a senior stakeholder overrules a process expert.
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
 
-**Scope escalation trigger:** any requirement that changes the agreed-upon scope boundary — new objects, new integrations, new record types, expanded user base — must go through a formal change-request. A verbal "can we also add X?" from a stakeholder in a UAT session is not scope approval.
-
-**Anti-patterns / red flags:**
-- The BA picks the "better" requirement without escalating — transfers risk silently.
-- The change request is approved verbally but not in writing — leads to "I never agreed to that" at go-live.
-- Scope changes that are logged as defects to avoid a change-request process — they look like bugs but are net-new features.
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
 
 ---
 
-## Decision Scenarios
+## Changelog
 
-Five original scenarios covering the skill's highest-value operational gotchas. Each is concrete and independently authored.
-
----
-
-**Scenario 1 — Automation audit before writing a requirement (Customer Discovery)**
-
-> **Situation:** A stakeholder asks the BA to write a requirement: "When a volunteer applicant is approved, create a Contact in Salesforce." The BA has assessed the org and confirmed it runs NPSP. The developer says "a flow that calls `Contact.insert` is straightforward."
-
-> **Competent move:** Before writing or sizing any story, the BA runs an automation audit on the Contact object in the org — listing active workflow rules, flows, process builders, and triggers. In an NPSP org this will surface at minimum the `npe01__PreferredPhone__c` workflow rule and Household Account auto-creation logic. The requirement is then written to include these side effects as constraints: "Creating a Contact triggers Household Account creation and managed-package phone-copy logic; the implementing solution must account for these and must not disable managed-package rules to work around them." That sentence prevents a silent data-corruption bug.
-
-> **Tempting-but-wrong:** Accepting the developer's estimate and writing the requirement as "insert a Contact" — treating NPSP as if it were a clean org. The managed-package workflow rule fires on every Contact insert, silently copying `Phone` to `MobilePhone`, and Household Account creation adds unintended records. The UAT tester sees the Contact but misses the side effects; they surface post-go-live as data quality complaints.
-
-> **Verify:** In the target org, open Setup → Process Automation → Workflow Rules, filter by Contact, confirm which rules are Active. Also open Flow Builder, filter trigger type = Record-Triggered, object = Contact. List what fires before writing the requirement.
-
----
-
-**Scenario 2 — MoSCoW prioritization is fake (User Stories)**
-
-> **Situation:** The BA has facilitated a backlog grooming session. The team has labeled 38 of 45 stories as "Must." The project sponsor confirms: "They all need to be in the first release."
-
-> **Competent move:** Flag the prioritization as non-functional. When >60% of the backlog is Must, the MoSCoW exercise has produced a wish list, not a priority order. The BA facilitates a forced-ranking re-prioritization: present the sprint capacity (e.g. 40 story points per sprint, 3 sprints before launch), show the 38 "Must" stories' point totals, and ask the sponsor to choose which 38-minus-N to defer if the team hits the wall. This conversation converts abstract "Must" labels into a real launch scope decision that the sponsor owns.
-
-> **Tempting-but-wrong:** Accepting the sponsor's word that everything is Must and carrying 38 Must stories into the sprint plan. When the team can't complete them all, the BA has no agreed deferral list — leading to a chaotic last-week triage where the team (not the business) decides what ships.
-
-> **Verify:** Count Must stories, sum their estimates, divide by sprint velocity. If Must stories exceed capacity before go-live, the prioritization is arithmetically impossible — document that calculation and present it to the sponsor before sprint planning begins.
-
----
-
-**Scenario 3 — UAT defect vs. new requirement (User Acceptance Testing)**
-
-> **Situation:** During UAT, a tester reports: "When I save an application, it should also send an email confirmation to the applicant." No acceptance criterion in the story mentions email confirmation. The tester logs it as a blocker defect.
-
-> **Competent move:** The BA classifies this as a new requirement, not a defect. A defect is a failure against an existing, agreed acceptance criterion. Email confirmation was never in the story's Given/When/Then criteria, so there is no criterion to fail. The BA closes the defect ticket, opens a change-request story ("As an applicant, I want an email confirmation on submission so that I know my application was received"), adds it to the backlog, and re-prioritizes it with the sponsor. It does not block go/no-go unless the sponsor escalates it to Must and there is sprint capacity to build it.
-
-> **Tempting-but-wrong:** Logging it as a defect and putting it on the blocker list. This artificially holds the go/no-go for a net-new feature that was never scoped, inflating the defect severity count and giving stakeholders a misleading picture of the build's quality.
-
-> **Verify:** Pull up the original user story and its acceptance criteria. If the expected behavior appears nowhere in Given/When/Then, it cannot be a defect — it is scope expansion.
-
----
-
-**Scenario 4 — Requirement phrased as a solution (Requirements)**
-
-> **Situation:** A stakeholder submits this requirement: "Add an Apex trigger on Opportunity that fires on before-insert and before-update to validate that Account is not null and set Stage to 'Prospecting' if blank."
-
-> **Competent move:** Rewrite to the business need: "An Opportunity must always be associated with an Account (cannot be saved without one). Opportunities saved without a Stage value must default to 'Prospecting'." Then categorize: the Account constraint is likely a validation rule (config); the Stage default is a field default or a flow (config). No Apex is required. The BA documents the business rule, not the implementation, so the admin can choose the lowest-cost config option that meets it.
-
-> **Tempting-but-wrong:** Accepting the Apex trigger requirement verbatim and sizing it as a development story. This locks in a high-cost solution (Apex = governor limits, bulkification, test coverage, deployment) for a problem solvable by validation rule + field default — a config-level solution with a fraction of the risk and cost.
-
-> **Verify:** In the org, check whether the Account field on Opportunity is already required at the field or page-layout level. Check whether a field default is already set on Stage. The "problem" may not require any new config at all.
-
----
-
-**Scenario 5 — Verification before to-be mapping (Business Process Mapping)**
-
-> **Situation:** The BA is designing a future-state process that includes an automated approval routing step: when an application record reaches "Under Review" status, the flow should assign it to the next available reviewer. The sponsor confirms the org has "a flow for approvals" already.
-
-> **Competent move:** Before drawing the to-be swimlane, the BA opens Flow Builder and the Approval Process setup in the actual org to enumerate what exists. "A flow for approvals" could mean a Screen Flow, a Record-Triggered Flow, or an Approval Process — they behave very differently. The BA documents what the existing automation actually does (object, trigger, actions, entry criteria) and then designs the to-be process around the real as-is state, not the sponsor's informal description.
-
-> **Tempting-but-wrong:** Designing the to-be process from the sponsor's description and handing it to the developer. The developer discovers an existing Record-Triggered Flow on the same object with overlapping entry criteria — two flows in the same transaction fighting over the same record, causing duplicate assignments or governor limit errors.
-
-> **Verify:** In the org, open Flow Builder → filter by object and trigger type; open Approval Processes → filter by object. List every active automation on the record type in scope before the to-be design session.
-
----
-
-## Study resources & relevance
-
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
+- **2026-06-09** — Curation pass (inbox: D10 audit finding): moved niche detail to references to meet the context-economy budget.
 
 ---
 

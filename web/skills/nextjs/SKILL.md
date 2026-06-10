@@ -1,11 +1,12 @@
 ---
 name: nextjs
-description: Operational playbook for building and reviewing Next.js applications — the App Router, Server and Client Components, rendering and caching (use cache / PPR / streaming), data fetching, Route Handlers, Server Actions, and the Proxy layer. Use when building or reviewing Next.js apps. No first-party certification exists; this is a competence skill anchored on the official Next.js documentation (v16.x, May 2026). Sibling skills handle React fundamentals (react) and Node.js (nodejs).
+description: Building and reviewing Next.js applications — the App Router, Server and Client Components, rendering and caching (use cache, PPR, streaming), data fetching, Route Handlers, Server Actions and their security rules, and the Proxy (formerly Middleware) layer. Use when building, reviewing, or debugging Next.js apps, routing, caching, or server actions. Excludes React fundamentals (see react) and the Node.js runtime (see nodejs). Competence skill anchored on official Next.js docs (v16.x) — no first-party certification.
 metadata:
   credential: None — competence skill (no first-party Next.js certification)
   domain: web
   type: competence-playbook
   status: operational
+  last-reviewed: 2026-06-09
   docs-version: "16.2.7"
   docs-retrieved: "2026-06-07"
 ---
@@ -28,6 +29,20 @@ a cache was not invalidated after a mutation.
 
 This playbook covers the App Router model (the `app/` directory). The Pages Router (`pages/`) is
 a legacy path — do not build new features there.
+
+> **Load this skill when…** building or reviewing a Next.js App Router application; debugging caching, PPR, or streaming behaviour; auditing Server Actions for auth/authz or CSRF exposure; reviewing Proxy (middleware) configuration.
+> **Not this skill:** React fundamentals (hooks, state, RTL testing) → see `react`; Node.js runtime and event-loop concerns → see `nodejs`; TypeScript compiler configuration → see `typescript`.
+
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
+---
+
+## Uncertainty & Escalation
+
+- **Always re-verify live:** Next.js caching semantics, middleware conventions, and PPR defaults changed materially between v14, v15, and v16. Always check the project's installed version (`package.json`) before applying any caching, rendering, or middleware guidance from this file. `[volatile — verify live]` marks apply to: `cacheLife` built-in profile values (stale/revalidate/expire times — `[volatile — verify live]`); PPR default enablement (`cacheComponents: true` default in v15+ — `[volatile — verify live]`, confirm in `next.config.ts`); `middleware.ts` → `proxy.ts` rename (v16 — `[volatile — verify live]`, check your installed version before renaming); `updateTag` vs `revalidateTag` callable contexts (Server Actions only vs Route Handlers — confirm in the installed version's docs); App Store SDK requirements for iOS (advances annually — `[volatile — verify live]` for the nextjs skill's mobile references).
+- **Live wins:** the installed Next.js version's actual behavior and [nextjs.org/docs](https://nextjs.org/docs) for that version are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** Next.js major version upgrades in production (breaking caching, middleware, and Server Action semantics); production deploys of cache invalidation changes (`revalidateTag` on a high-traffic route); `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` rotation; store submissions (iOS/Android).
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
 ---
 
@@ -110,7 +125,7 @@ server; they just cannot be *imported* inside the client module graph.
 
 ### Rendering Model (PPR + Cache Components, v15+)
 
-With `cacheComponents: true` in `next.config.ts` (the recommended default in v15+), Next.js
+With `cacheComponents: true` in `next.config.ts` (the recommended default in v15+) `[volatile — verify live]`, Next.js
 uses **Partial Prerendering (PPR)** as the default:
 
 - Components marked `"use cache"` → rendered at build time and included in the static shell.
@@ -132,7 +147,7 @@ cacheLife(profile)    — sets stale/revalidate/expire (call inside "use cache" 
 cacheTag('name')      — tags the cache entry for on-demand invalidation
 ```
 
-**Built-in `cacheLife` profiles:**
+**Built-in `cacheLife` profiles:** `[volatile — verify live]`
 
 | Profile | Stale | Revalidate | Expire |
 |---|---|---|---|
@@ -257,7 +272,7 @@ These are non-negotiable. Every Server Action is a reachable POST endpoint:
 
 ### Proxy (formerly Middleware)
 
-> `middleware.ts` was renamed to `proxy.ts` in Next.js v16. The `npx @next/codemod@canary
+> `middleware.ts` was renamed to `proxy.ts` in Next.js v16 `[volatile — verify live]`. The `npx @next/codemod@canary
 > middleware-to-proxy .` codemod migrates the file and the export name. Proxy now defaults to
 > the **Node.js runtime** (previously required Edge).
 
@@ -284,6 +299,108 @@ this. Proxy is a UX layer (redirect to login), not the security enforcement laye
 - Auth enforcement only in `proxy.ts` with no check inside the Server Action or Route Handler.
 - Missing matcher exclusions causing Proxy to run on static file requests.
 - Importing a full ORM or database client in proxy.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Add a cached data route (use cache → cacheTag → revalidate on mutation → verify)
+
+1. Create (or identify) the async helper function that fetches the data. Do not place `'use cache'` inside a Route Handler body — extract to a standalone async function. → gate: the function is not defined inline inside `export async function GET(…)`.
+2. Add `'use cache'` as the first line of the helper. Immediately below it, add `cacheTag('my-tag')` and `cacheLife('hours')` (or the appropriate profile). → gate: `NEXT_PRIVATE_DEBUG_CACHE=1 next dev` — first request logs a cache miss; subsequent requests within the revalidate window log cache hits.
+3. In the Server Action (not a Route Handler) that mutates the related data, call `updateTag('my-tag')` after the mutation succeeds. Use `revalidateTag` instead only if a slight delay to other users is acceptable. → gate: submit the mutation; confirm the next request to the cached helper shows a cache miss in the debug log, not a hit.
+4. In the Route Handler or Server Component, call the helper normally: `const data = await fetchMyData()`. Wrap the consuming component in `<Suspense fallback={<Skeleton />}>` if it accesses runtime data alongside cached data. → gate: `next build` exits without "Uncached data was accessed outside of Suspense" errors.
+5. Verify end-to-end in a production build (`next start`): measure TTFB before and after caching; confirm the mutation + `updateTag` produces a fresh response on the next request.
+
+### Workflow 2 — Ship a secure Server Action (auth check → validate input → mutate → revalidatePath/Tag)
+
+1. At the very top of the Server Action body, call your auth helper (e.g., `const session = await auth(); if (!session) throw new Error('Unauthenticated')`). This must be inside the action itself — a page-level auth check does not protect the action from direct POST requests. → gate: call the action's endpoint directly with `curl -X POST …` without a session cookie; confirm it returns an error, not a success.
+2. Check authorization — confirm the caller owns the resource: `if (post.authorId !== session.user.id) throw new Error('Forbidden')`. → gate: log in as a different user and attempt to mutate another user's record via the action; confirm it throws.
+3. Parse and validate all inputs using Zod (or equivalent): `const parsed = InputSchema.safeParse(formData); if (!parsed.success) return { error: parsed.error.flatten() }`. Never trust raw `formData` values. → gate: submit a form with a missing required field; confirm the action returns a validation error, not a DB error.
+4. Execute the mutation. Return only the fields the UI needs — not the raw DB record. → gate: inspect the return value; it must not include password hashes, tokens, or full user rows.
+5. Call `revalidatePath('/affected-path')` or `revalidateTag('related-tag')` after a successful mutation, then return a success indicator. → gate: after mutation, reload the page; confirm the UI reflects the change without a manual refresh.
+
+### Workflow 3 — Split server/client correctly (push 'use client' to leaves, keep secrets server-only)
+
+1. Audit every `"use client"` directive in the codebase: it should appear on leaf components that need interactivity (event handlers, `useState`, browser APIs), not on pages, layouts, or data-fetching wrapper components. → gate: no `page.tsx` or `layout.tsx` begins with `"use client"` unless the entire route is a pure client-rendered island.
+2. For any module that accesses secrets, DB queries, or auth/authz logic, add `import 'server-only'` as the first line. → gate: `next build` — deliberately import that module from a `"use client"` component; confirm the build fails with "You're importing a component that needs 'server-only'."
+3. Check env var names: any variable read in the client bundle must be prefixed `NEXT_PUBLIC_`. Any variable without that prefix is stripped to `""` in the client build. → gate: add `console.log(process.env.MY_SECRET)` inside a `"use client"` component; run `next build` and inspect the client bundle — the value must not appear.
+4. Verify props passed from Server to Client Components are serializable: no `Date` objects (use ISO strings), no functions, no class instances, no `undefined` (use `null`). → gate: `next build` emits no "Only plain objects, and a few built-ins, can be passed to Client Components from Server Components" errors.
+5. For third-party components that use client-only APIs but lack `"use client"`, wrap them in a thin client boundary file that adds the directive — do not modify `node_modules`. → gate: the wrapper file is the only file with `"use client"`; the third-party import resolves without "window is not defined" during SSR.
+
+---
+
+## Decision Scenarios
+
+**Scenario 1 — `use cache` placed directly in a Route Handler body**
+
+> **Situation:** A developer adds `'use cache'` at the top of a `GET` handler in `app/api/products/route.ts` to cache the product list response. The build succeeds but caching has no effect in production.
+
+> **Competent move:** Extract the data-fetching logic into a separate async helper function, place `'use cache'` (and `cacheLife`/`cacheTag` calls) inside that helper, and call the helper from the Route Handler. The `use cache` directive is not valid directly inside a Route Handler body — it must be on a standalone async function or async Server Component.
+
+> **Tempting-but-wrong:** Assuming the build error would surface if the placement were wrong and shipping as-is. The compiler does not error on this misuse; the directive is silently ignored, leaving the endpoint uncached.
+
+> **Verify:** Run `next build` and inspect the `.next/server` output or add `console.log('cache miss')` inside the helper. With a correctly placed `'use cache'` the log fires only once per `cacheLife` window, not on every request.
+
+---
+
+**Scenario 2 — `cacheLife` called outside a `use cache` scope**
+
+> **Situation:** A Server Component function calls `cacheLife('hours')` at the top of its body but does not have `'use cache'` declared. Logs show the function runs on every request with no caching.
+
+> **Competent move:** Add `'use cache'` as the first statement of the function (or as a file-level directive if the whole file should be cached). `cacheLife` is only meaningful inside a `'use cache'` scope; called elsewhere it is silently ignored.
+
+> **Tempting-but-wrong:** Checking the `cacheLife` profile name first, assuming the cache is broken because an unknown profile was used. The profile name is irrelevant when there is no `'use cache'` boundary at all.
+
+> **Verify:** Add `'use cache'` and re-run `next dev`. Use the Next.js debug output (`NEXT_PRIVATE_DEBUG_CACHE=1 next dev`) to confirm the cache entry is created and reused across requests.
+
+---
+
+**Scenario 3 — Sequential `await` chains on independent Server Component fetches**
+
+> **Situation:** A `ProductPage` Server Component `await`s a `fetchProduct(id)` call, then `await`s a `fetchReviews(id)` call, then `await`s a `fetchRelated(id)` call — all three are sequential. Users report the page renders slowly even though each individual fetch is fast (< 50ms).
+
+> **Competent move:** Replace sequential `await` chains with `Promise.all([fetchProduct(id), fetchReviews(id), fetchRelated(id)])` so all three requests fire in parallel. Total wait time drops from sum-of-latencies to max-of-latencies.
+
+> **Tempting-but-wrong:** Wrapping each fetch in a `<Suspense>` boundary and hoping streaming hides the latency. Streaming improves perceived performance by showing partial UI, but the total time to full content is unchanged if the fetches remain serial. The parallel fix actually reduces time; streaming just masks it.
+
+> **Verify:** Add timestamps around the fetch calls in dev mode and compare total elapsed time. Or use the Network tab in Chrome DevTools to confirm the three requests fire simultaneously rather than waterfall.
+
+---
+
+**Scenario 4 — Opting the entire app out of the static shell with a root Suspense wrapping the body**
+
+> **Situation:** A developer wraps the `<body>` contents of the root `layout.tsx` in `<Suspense fallback={null}>` "just to be safe" so async work doesn't block hydration. After deploying, Time to First Byte (TTFB) spikes from ~50ms to ~800ms on every page.
+
+> **Competent move:** Remove the `<Suspense fallback={null}>` wrapper from the root layout body. Wrapping `<body>` in a top-level Suspense with a null fallback collapses the static shell — every request becomes fully dynamic with no prerendered content, serializing the full render on each request. Suspense boundaries should be placed close to the individual components that access runtime data, not at the root.
+
+> **Tempting-but-wrong:** Suspecting a CDN misconfiguration or cache invalidation issue and spending time debugging infrastructure. The root cause is purely structural — the Suspense placement is the problem.
+
+> **Verify:** Remove the wrapping `<Suspense>`, redeploy, and observe TTFB in the browser Network tab. The HTML response should be near-instant and contain the full static shell with streaming holes only around components that actually need runtime data.
+
+---
+
+**Scenario 5 — Captured secret in an inline Server Action closure**
+
+> **Situation:** A developer writes an inline Server Action inside a Server Component that closes over `process.env.STRIPE_SECRET_KEY` to call the Stripe API. A security reviewer flags this even though `STRIPE_SECRET_KEY` is not prefixed `NEXT_PUBLIC_`.
+
+> **Competent move:** Move the Stripe call into a `server-only` Data Access Layer (DAL) function and have the Server Action call that function instead. Closed-over variables in inline Server Actions are encrypted and round-trip through the client. The encryption is best-effort — secrets captured in closures are unnecessarily exposed to the serialization/encryption pathway. DAL isolation with `import 'server-only'` is the correct boundary.
+
+> **Tempting-but-wrong:** Trusting the encryption (set via `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`) as sufficient security and leaving the secret in the closure. Encryption protects the value in transit, but it widens the attack surface compared to never serializing it at all.
+
+> **Verify:** Move the secret access to a `server-only` module. Confirm with `next build` that importing that module from a Client Component produces a build-time error — that's the `'server-only'` guard working correctly.
+
+---
+
+**Scenario 6 — `import 'server-only'` missing from a DAL module — the build doesn't catch it**
+
+> **Situation:** A team adds all DB queries to a `lib/dal.ts` module but omits `import 'server-only'`. A junior developer later imports `dal.ts` directly inside a `"use client"` component. The import silently succeeds — no build error — but the page starts leaking database connection strings in the client bundle.
+
+> **Competent move:** Add `import 'server-only'` as the first line of every module that contains DB access, secret environment variables, or auth/authz logic. This import causes Next.js to throw a **build-time** error if any Client Component (or anything in its module graph) imports the file — a zero-runtime-cost enforcement of the server boundary.
+
+> **Tempting-but-wrong:** Relying on code review alone to catch accidental client imports of server modules. Human review misses this under deadline pressure; `'server-only'` makes the check automated and permanent.
+
+> **Verify:** With `import 'server-only'` in place, add a test import of the DAL from any `"use client"` component and run `next build`. The build should fail with a "You're importing a component that needs 'server-only'" error — that confirms the guard is active.
 
 ---
 
@@ -317,6 +434,20 @@ this. Proxy is a UX layer (redirect to login), not the security enforcement laye
 ---
 
 > Study resources live in [references/study-resources.md](references/study-resources.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/nextjs.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 

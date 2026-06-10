@@ -1,10 +1,13 @@
 ---
 name: salesforce-platform-developer-1
-description: Operational playbook for writing, reviewing, and deploying Apex, SOQL, triggers, and Lightning Web Components on the Salesforce platform. Use when designing trigger handlers (before/after semantics, one-trigger-per-object, TDTM), bulkifying SOQL/DML to stay within governor limits (100 SOQL / 150 DML / 10s CPU sync), choosing between synchronous and async Apex (@future, Queueable, Batch, Schedulable), building or reviewing LWC decorators and lifecycle hooks, enforcing FLS/sharing in Apex, or authoring test classes that hit the 75% coverage gate. Also covers deployment tooling (Salesforce CLI / SFDX), the 14-step order of execution, SOQL injection guards, and coexistence with NPSP's Table-Driven Trigger Management framework.
+description: Writing, reviewing, and deploying Apex, SOQL/SOSL, triggers, and Lightning Web Components on the Salesforce platform — trigger handlers (before/after, one-trigger-per-object), bulkification against governor limits (100 SOQL / 150 DML / 10s CPU), synchronous vs async Apex (@future, Queueable, Batch, Schedulable), LWC decorators and lifecycle, FLS/sharing enforcement in code, test classes to the 75% gate, and SFDX deployment. Use when building or reviewing Apex/trigger/SOQL/LWC code. Not declarative-only config (see salesforce-administrator) or advanced integration/async/LDV patterns (see salesforce-platform-developer-2). Scoped and benchmarked by the Platform Developer I blueprint.
 metadata:
   credential: Salesforce Certified Platform Developer I
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Platform Developer I — Skills Reference
@@ -13,26 +16,25 @@ metadata:
 
 The Salesforce Certified Platform Developer I (PD1) credential validates that a developer understands how to build, deploy, and maintain custom business logic and user interfaces on the Lightning Platform using programmatic tools. It covers the full Apex development lifecycle — data modeling, SOQL/SOSL queries, trigger design, asynchronous processing, Lightning Web Components, Visualforce, unit testing, and deployment tooling — alongside an understanding of when declarative tools (Flow, validation rules, formula fields) are preferable to code.
 
-**This file is an operational playbook, not an exam outline.** Each section below states the actual rule as an actionable instruction, gives the concrete limit/number, provides decision criteria for choosing one tool over another, flags the anti-patterns to catch in review, and names the live-org verification step. Always verify a structural assumption against the live org before trusting it — SFDX metadata in source control can lag the org, and FLS/required/picklist state is *not* fully captured in the metadata XML.
+**This file is an operational playbook, not an exam outline.** Each section states the rule as an actionable instruction with concrete limits, decision criteria, anti-patterns to catch in review, and live-org verification steps. Always verify structural assumptions against the live org — SFDX metadata can lag, and FLS/picklist state is not captured in XML.
 
-The target audience is developers with object-oriented background building on or customizing Salesforce orgs. PD1 is Salesforce's entry-level developer credential and the practical prerequisite for Platform Developer II, Application Architect, and most advanced developer credentials. On an NPSP org, PD1 underpins writing safe Apex that coexists with NPSP's Table-Driven Trigger Management (TDTM) without blowing governor limits or causing trigger recursion.
+> **Load this skill when…** writing or reviewing Apex triggers, SOQL/SOSL queries, or LWC components; debugging governor-limit errors or FLS/sharing issues in code; designing trigger handlers or async Apex patterns; deploying SFDX metadata and hitting field-permission or deployment errors.
+> **Not this skill:** declarative-only config (profiles, flows, sharing rules) → see `salesforce-administrator`; advanced async/integration/LDV patterns or design patterns → see `salesforce-platform-developer-2`; LWC front-end JavaScript deep dives → see `salesforce-javascript-developer-1`.
+
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
 ---
 
-## Exam Details
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
-| Field | Value |
-|---|---|
-| Questions | 60 multiple-choice / multiple-select (plus up to 5 unscored pilot questions) |
-| Time Limit | 105 minutes (~1.75 minutes per question) |
-| Passing Score | 68% (approximately 41 of 60 scored questions) |
-| Cost | $200 USD registration + applicable taxes; $100 USD retake fee |
-| Prerequisites | None formally required; hands-on Apex experience and Admin/App Builder background strongly recommended |
-| Retake Policy | 14-day waiting period between attempts |
+---
 
-**Delivery:** Proctored at Pearson VUE testing centers or online proctored. An annual release maintenance module is required to keep the credential active.
+## Uncertainty & Escalation
 
-> **Note on score discrepancies across sources:** Official Salesforce materials and the majority of current study guides cite 68% as the passing threshold. Older PDF exam guides (pre-2023) listed 65%. Use 68% as your target.
+- **Always re-verify live:** governor limit numbers (SOQL/DML/CPU/heap) `[volatile — verify live]`; sandbox storage sizes `[volatile — verify live]`; LWC lifecycle API changes and decorator behavior across API versions `[volatile — verify live]`; any coverage threshold or deployment requirement.
+- **Live wins:** if this skill's numbers or rules conflict with what the Apex runtime, deploy output, or official Salesforce docs show, treat the live system as authoritative. Log the discrepancy immediately using the Feedback protocol below.
+- **Escalate to a human before proceeding:** production deployments touching managed-package Apex or triggers without sandbox validation; any code path that hard-deletes or mass-updates production records; adding `without sharing` to a class that processes PII or financial data; disabling or bypassing a package trigger framework in production.
+- **Confidence taxonomy:** facts in this skill are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. When in doubt, describe the object or run a SOQL query rather than trusting repo XML.
 
 ---
 
@@ -42,20 +44,20 @@ These are the hard ceilings the runtime enforces per transaction. Internalize th
 
 | Limit | Synchronous | Asynchronous (batch/future/queueable) |
 |---|---|---|
-| SOQL queries | **100** | **200** |
+| SOQL queries | **100** `[volatile — verify live]` | **200** |
 | Rows retrieved by SOQL | **50,000** | 50,000 |
-| DML statements | **150** | 150 |
+| DML statements | **150** `[volatile — verify live]` | 150 |
 | Rows per DML / processed | **10,000** | 10,000 |
-| Heap size | **6 MB** | **12 MB** |
-| CPU time | **10,000 ms** | **60,000 ms** |
+| Heap size | **6 MB** `[volatile — verify live]` | **12 MB** |
+| CPU time | **10,000 ms** `[volatile — verify live]` | **60,000 ms** |
 | SOSL queries | 20 | 20 |
 | Callouts (HTTP/Web service) | 100 | 100 |
 | `@future` calls per transaction | 50 | n/a |
 | Queueable jobs enqueued (sync) | 50 | 1 (chaining) |
 
-**Apply it:** when a managed package (e.g. NPSP) has its own triggers firing inside the same transaction, they consume part of the SOQL/DML budget *before* your code runs, so you have far less than the full 100/150 in practice. Treat the budget as shared.
+**Apply it:** managed-package triggers consume part of the SOQL/DML budget before your code runs. Treat the budget as shared.
 
-**Verify:** when reasoning about a real batch size, query the actual record count first — `SELECT COUNT() FROM Object__c WHERE ...` — rather than assuming.
+**Verify:** query the actual record count first (`SELECT COUNT() FROM Object__c WHERE ...`) rather than assuming.
 
 ---
 
@@ -76,7 +78,7 @@ PD1 heavily tests whether a requirement can be met with clicks before code. Defa
 
 **Anti-pattern:** writing a trigger to do what a validation rule or roll-up summary already does. **Red flag in review:** an Apex trigger whose entire job is "if field A is blank, throw an error" — that's a validation rule.
 
-**Watch for legacy automation.** Workflow Rules and Process Builder are retired for new build — use Flow or Apex. But an org may still *contain* live legacy automation (e.g. a managed-package workflow rule) — see Order of Execution. Legacy automation that already exists can still bite you.
+**Watch for legacy automation.** Workflow Rules and Process Builder are retired for new build — use Flow or Apex. But an org may still *contain* live legacy automation — see Order of Execution.
 
 ### Relationship types — pick the right one
 
@@ -87,21 +89,21 @@ PD1 heavily tests whether a requirement can be met with clicks before code. Defa
 | **Many-to-many** | via junction | — | — | — | Two-sided association → junction object with two M-D |
 | **Hierarchical** | — | — | — | — | Self-reference, **User object only** |
 
-**Lookup `relationshipName` must be unique per parent object.** Two Lookups on the same child object both pointing at the same parent object cannot share a `relationshipName` — deploy fails with *"Duplicate relationship name."* Use role-specific suffixes (e.g. `..._Primary`, `..._Secondary`). SOQL parent traversal is keyed on the field API name (`Parent_Object__r.Name`), not relationshipName, so renaming the relationship is safe.
+**Lookup `relationshipName` must be unique per parent object.** Two Lookups on the same child pointing at the same parent cannot share a `relationshipName` — deploy fails with *"Duplicate relationship name."* Use role-specific suffixes (`..._Primary`, `..._Secondary`).
 
-**Verify:** describe the object to see actual relationship names and reference targets before adding a new lookup.
+**Verify:** describe the object to see actual relationship names before adding a new lookup.
 
 ### External IDs & upsert
 
-An External ID field is unique + indexed and is the key for `upsert` and integration dedup. Keying late re-linking on a stable external ID (e.g. a submission identifier) is what lets a record processed *after* the initial write re-link to the right parent with no new write logic.
+An External ID field is unique + indexed and is the key for `upsert` and integration dedup — re-running the same payload updates rather than duplicates.
 
 ### Field-level security is NOT object access — and SFDX does not carry it
 
-Deploying a custom field via SFDX `field-meta.xml` creates the field but grants FLS to **no one — not even System Administrator.** Without explicit `<fieldPermissions>` in a profile or permission set, SOQL on that field returns *"Invalid field"* even with full object access. A permission set must explicitly grant FLS on each custom field that needs to be queried/edited.
+Deploying a custom field via SFDX `field-meta.xml` creates the field but grants FLS to **no one — not even System Administrator.** Without explicit `<fieldPermissions>` in a profile or permission set, SOQL on that field returns *"Invalid field"* even with full object access.
 
-**Required fields must be omitted from `<fieldPermissions>`.** Salesforce rejects field permissions on a `<required>true</required>` field with *"You cannot deploy to a required field"* (required fields are always visible/editable). So: a field is either required (no FLS entry needed) or you must add an explicit FLS entry — there is no third state where it "just works."
+**Required fields must be omitted from `<fieldPermissions>`.** Salesforce rejects field permissions on a `<required>true</required>` field with *"You cannot deploy to a required field"*. A field is either required (no FLS entry needed) or you must add an explicit FLS entry.
 
-**Verify before trusting a field is queryable:** describing the object shows whether your running user can see the field; a SOQL query selecting the field is the definitive check. If it errors "Invalid field," the field exists but FLS is missing.
+**Verify before trusting a field is queryable:** a SOQL query selecting the field is the definitive check. If it errors "Invalid field," the field exists but FLS is missing.
 
 ### Data import/export tooling — pick by volume
 
@@ -109,9 +111,14 @@ Deploying a custom field via SFDX `field-meta.xml` creates the field but grants 
 |---|---|---|---|
 | Import Wizard | < 50k | standard + custom | one-off, UI-driven, dedup needed |
 | Data Loader | 5M+ | all | bulk, CLI/scriptable, scheduled |
-| **NPSP Data Import** | any | NPSP objects | nonprofit recovery/load (purpose-built for nonprofits) |
 
-For nonprofit orgs, prefer NPSP Data Import over vanilla Data Loader for failed-write recovery and bulk loads that must respect NPSP's data model.
+### Apex OOP essentials
+
+**Collections:** `List` for DML (ordered); `Set<Id>` to dedup before SOQL (`WHERE Id IN :idSet`); `Map<Id, SObject>` keyed by parent Id for O(1) in-loop lookups.
+**Interfaces/inheritance:** `implements` for contract, `extends` for inheritance; `virtual`/`abstract`/`override` modifiers; access: `public`, `protected`, `global` (default is `private`).
+**Exceptions:** `try/catch(DmlException)/finally`; custom types via `extends Exception`; `Database.insert(records, false)` for partial-success with `SaveResult[]` inspection.
+
+Deep dive with worked examples: [references/apex-oop-essentials.md](references/apex-oop-essentials.md) — load when implementing collection algorithms, extending package frameworks, or handling DML partial-success.
 
 ---
 
@@ -127,10 +134,8 @@ For nonprofit orgs, prefer NPSP Data Import over vanilla Data Loader for failed-
 // WRONG — SOQL + DML in loop
 for (Contact c : Trigger.new) {
     Account a = [SELECT Id FROM Account WHERE Id = :c.AccountId]; // dies at scale
-    a.Number_Of_Contacts__c += 1;
-    update a; // dies at scale
+    update a;
 }
-
 // RIGHT — query once, DML once
 Set<Id> acctIds = new Set<Id>();
 for (Contact c : Trigger.new) acctIds.add(c.AccountId);
@@ -145,76 +150,71 @@ update accts.values();
 - `insert lst;` → all-or-nothing; one bad row rolls back the whole list and throws `DmlException`.
 - `Database.insert(lst, false);` → partial success; returns `Database.SaveResult[]`; inspect `.isSuccess()` / `.getErrors()` per row.
 
-**Decision:** use `Database.insert(records, false)` when partial success is acceptable (bulk loads where you log and continue); use bare `insert` when atomicity is required.
+**Decision:** use `Database.insert(records, false)` when partial success is acceptable; use bare `insert` when atomicity is required.
 
 ### Trigger design — one trigger per object, logic in a handler
 
 - **Exactly one trigger per object.** Multiple triggers on the same object have undefined firing order. Route all context to a handler class.
 - **before vs. after:**
-  - `before insert/update` → modify field values on the records being saved (no DML on Trigger.new needed; the save persists your changes for free). Lowest cost.
+  - `before insert/update` → modify field values on the records being saved (no DML on Trigger.new needed). Lowest cost.
   - `after insert/update` → access system-set fields (Id, CreatedDate, formula recalcs) and create/update *related* records.
 - **Recursion control:** guard with a static Boolean so a re-entrant save doesn't re-run the handler.
 - **Context variables:** `Trigger.new/old/newMap/oldMap`, `Trigger.isInsert/isUpdate/isDelete`, `Trigger.isBefore/isAfter`. `Trigger.old`/`oldMap` are null on insert.
 
-**NPSP note:** NPSP uses **TDTM (Table-Driven Trigger Management)** — one managed master trigger per object delegates to handler classes registered in `TDTM_Config__mdt`. Custom handlers implement `npsp.TDTM_Runnable` and register *without* touching managed code. PD1's "one trigger per object + handler" pattern *is* the TDTM pattern. Do not add a second raw trigger to an NPSP-managed object; register a TDTM handler instead.
+**Package coexistence:** some managed packages own a trigger framework — register custom logic into it, never add a second raw trigger (e.g. NPSP/TDTM). See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ### Order of Execution — the 14 steps that decide what fires when
 
-1. Load record; system validation (required fields, field format, max length)
+1. System validation (required, format, length)
 2. **Before triggers**
-3. System + **custom validation rules**, duplicate rules
-4. Record saved to DB (**not committed**)
+3. Custom **validation rules**, duplicate rules
+4. Record saved to DB (not committed)
 5. **After triggers**
-6. Assignment rules
-7. Auto-response rules
-8. **Workflow rules** (legacy) — *if a workflow does a field update, before+after triggers fire AGAIN on that object*
-9. Escalation rules
-10. Roll-up summary recalc on parent (re-triggers parent's automation)
-11. Criteria-based sharing recalc
-12. **Processes (legacy Process Builder) + record-triggered Flows**
-13. **Commit** to database
-14. Post-commit: email alerts, async (`@future`, Queueable, Batch enqueued), Platform Event publish
+6. Assignment / auto-response rules
+7. **Workflow rules** (legacy) — *if a workflow field-updates, before+after triggers fire AGAIN*
+8. Escalation rules
+9. Roll-up summary recalc on parent (re-triggers parent's automation)
+10. Criteria-based sharing recalc
+11. **Legacy Process Builder + record-triggered Flows**
+12. **Commit** to database
+13. Post-commit: email alerts, async (`@future`, Queueable, Batch enqueued), Platform Event publish
 
-**Why it matters:** a later step in the order of execution can silently overwrite a field your trigger just set. A classic case: a legacy managed-package workflow rule (order-of-execution step 8) copies one field onto another after insert, undoing what your `before` trigger wrote. When a field mysteriously changes after your trigger, suspect a later step (workflow/flow/rollup), not your own code — and confirm with an Apex debug-log probe, which reveals *which automation step* mutated the field.
+**Why it matters:** a later step can silently overwrite a field your trigger just set. When a field mysteriously changes after your trigger, suspect a later step (workflow/flow/rollup) — confirm with an Apex debug-log probe.
 
-### Validation rules vs. Apex truncation — fail early, don't silently lose data
+### Validation rules vs. Apex truncation — fail early
 
-A field write that exceeds the target field length will be truncated or rejected. **Rule:** enforce target-field length and picklist constraints at your *input-validation* boundary (e.g. a form/API schema), so a too-long value fails at validation rather than being silently truncated downstream. A defensive Apex truncation helper should exist only as a last-line fallback for legacy records and direct-API submissions that bypass the validated path — **not** as a substitute for keeping the input constraints current with the org's field metadata.
+Enforce target-field length and picklist constraints at your *input-validation* boundary, not via Apex truncation. Keep generated schema constants in sync with the org: regenerate whenever field metadata changes.
 
-**Keep the source of truth in sync.** When the length/picklist constraints are generated from the org, regenerate them whenever field metadata changes (field resized, picklist edited) rather than hand-editing the generated artifacts.
-
-**Verify field lengths/picklists against the live org:** describing an object returns each field's `length` and picklist `values` — that is the source of truth. If a validation max disagrees with the describe, regenerate/update it.
+**Verify:** describe an object to get each field's `length` and picklist `values` — that is the source of truth.
 
 ### SOQL & SOSL
 
 - **Child→parent:** dot notation, up to 5 levels — `SELECT Contact.Account.Owner.Name FROM Contact`.
-- **Parent→child:** subquery using the *child relationship name* — `SELECT Id, (SELECT Id FROM Children__r) FROM Parent__c`.
-- **SOQL vs. SOSL:** SOQL when you know the object(s) and filter structured fields; **SOSL** (`FIND 'term' IN ALL FIELDS RETURNING Contact(Id,Name)`) for full-text search across multiple objects. SOSL counts against its own 20/transaction limit.
-- **Selective queries / LDV:** filter on indexed fields (Id, Name, External ID, lookup fields, audit fields) to stay selective and avoid full-table scans on large objects.
+- **Parent→child:** subquery using the child relationship name — `SELECT Id, (SELECT Id FROM Children__r) FROM Parent__c`.
+- **SOQL vs. SOSL:** SOQL for structured-field filtering on known objects; **SOSL** (`FIND 'term' IN ALL FIELDS RETURNING Contact(Id,Name)`) for full-text search across multiple objects (20/transaction limit).
+- **Selective queries:** filter on indexed fields (Id, Name, External ID, lookup fields, audit fields) to avoid full-table scans.
 
-**Dynamic SOQL injection:** use bind variables (`:var`) — never string-concatenate user input. If you must concatenate, `String.escapeSingleQuotes()`.
+**Dynamic SOQL injection:** use bind variables (`:var`), never concatenate user input. If you must concatenate, `String.escapeSingleQuotes()`.
 
-**Verify a query before relying on it:** run it against the live org. This simultaneously confirms FLS (an "Invalid field" error means missing field permissions), relationship names, and that records actually match.
+**Verify a query against the live org** — simultaneously confirms FLS, relationship names, and record match.
 
 ### Asynchronous Apex — pick the right async tool
 
 | Need | Use | Key constraints |
 |---|---|---|
-| Fire-and-forget after txn; HTTP callout from trigger context | **@future** (`callout=true`) | `static void`, **primitive params only — no sObjects (pass Ids)**, no chaining, 50/txn |
+| Fire-and-forget after txn; HTTP callout from trigger context | **@future** (`callout=true`) | `static void`, **primitive params only — no sObjects**, no chaining, 50/txn |
 | Chainable jobs, hold sObject state, monitor via job Id | **Queueable** (`implements Queueable`) | 1 child chain depth in async; `Database.AllowsCallouts` for callouts |
-| >10k records, process in chunks | **Batch** (`Database.Batchable<SObject>`) | `start()`→QueryLocator, `execute()` per chunk, `finish()`; batch size default 200, max 2000; each chunk its own governor limits |
+| >10k records, process in chunks | **Batch** (`Database.Batchable<SObject>`) | QueryLocator, batch size default 200; each chunk its own governor limits |
 | Time-based / recurring | **Schedulable** (`implements Schedulable`) | cron via `System.schedule`; often just enqueues a Batch |
 
-**Decision shortcut:** callout from a trigger → @future or Queueable. Need to chain or keep object state → Queueable. Huge volume → Batch. Recurring clock → Schedulable.
-
-When integration writes happen via the REST API from an external runtime rather than Apex, async Apex isn't on that hot path — but any in-org post-processing (e.g. creating `ContentVersion` / `ContentDocumentLink` records on approval) should use Queueable/Batch to stay within limits.
+**Decision shortcut:** callout from trigger → @future or Queueable. Chain/object state → Queueable. Huge volume → Batch. Recurring clock → Schedulable.
 
 ### with/without/inherited sharing
 
-- `with sharing` → enforces the running user's record-level sharing.
-- `without sharing` → ignores sharing (system context). **Apex runs `without sharing` by default if unspecified in a top-level entry class.**
+- `with sharing` → enforces running user's record-level sharing.
+- `without sharing` → ignores sharing. **Apex runs `without sharing` by default if unspecified in the top-level entry class.**
 - `inherited sharing` → adopts the caller's sharing; safest default for reusable classes.
-- Note: sharing keywords govern *record access*, not FLS/CRUD — enforce those separately with `WITH SECURITY_ENFORCED` in SOQL or `Security.stripInaccessible()`.
+- Sharing keywords govern *record access*, not FLS/CRUD — enforce FLS separately with `WITH SECURITY_ENFORCED` or `Security.stripInaccessible()`.
 
 ---
 
@@ -231,25 +231,21 @@ When integration writes happen via the REST API from an external runtime rather 
 
 ### LWC essentials
 
-- **Three files:** `.html` (template), `.js` (controller), `.js-meta.xml` (targets/exposure); optional scoped `.css`.
-- **Decorators:** `@api` (public, reactive, parent→child), `@wire` (reactive data binding to Apex/wire adapter), `@track` (rarely needed now — fields are reactive by default; only for deep mutation of object/array).
-- **Lifecycle:** `constructor()` → `connectedCallback()` (DOM not ready; good for init/subscriptions) → `renderedCallback()` (after render; guard against loops) → `disconnectedCallback()` → `errorCallback()`.
-- **Events:** child→parent via `this.dispatchEvent(new CustomEvent('name', {detail}))`; parent→child via `@api` property/method; cross-tree via LMS (Lightning Message Service).
-- **Apex from LWC:** `@AuraEnabled(cacheable=true)` for read-only wired methods (cacheable methods **cannot do DML**); `@AuraEnabled` (no cacheable) for mutations, called imperatively. Import: `import m from '@salesforce/apex/Class.method'`.
+- **Three files:** `.html`, `.js`, `.js-meta.xml`; optional scoped `.css`.
+- **Decorators:** `@api` (public, reactive, parent→child), `@wire` (reactive data binding to Apex/wire adapter), `@track` (deep mutation only; fields are reactive by default).
+- **Lifecycle:** `constructor()` → `connectedCallback()` (DOM not ready) → `renderedCallback()` (after render; guard against loops) → `disconnectedCallback()` → `errorCallback()`.
+- **Events:** child→parent via `CustomEvent('name', {detail})`; parent→child via `@api`; cross-tree via LMS (Lightning Message Service).
+- **Apex from LWC:** `@AuraEnabled(cacheable=true)` for wired reads (**no DML**); `@AuraEnabled` (no cacheable) for mutations, called imperatively.
 
-**Anti-pattern:** DML inside a `cacheable=true` method (won't compile/run as wired). Unbounded work in `renderedCallback()` that re-renders and loops.
+**Anti-pattern:** DML in a `cacheable=true` method; unguarded state change in `renderedCallback()` causes infinite re-render.
 
 ### Quick Actions and the runtime cache
 
-Declarative Quick Actions drive per-record Lightning contextual tabs/panels without custom code; a richer custom UI would be an LWC with wired Apex.
+**Quick Action cache gotcha:** adding fields to an existing Quick Action's `quickActionLayoutItems` via SFDX updates the metadata but the **runtime QA cache does NOT invalidate** — even after full logout/login. New fields silently don't render, no error. **Fix:** edit any *non-field-list* metadata on the QA (`<description>`, `<label>`) and redeploy; Salesforce treats it as a structural change and flushes the cache.
 
-**Quick Action cache gotcha:** adding fields to an existing Quick Action's `quickActionLayoutItems` via SFDX updates the metadata but the **runtime QA cache does NOT invalidate** — even after full logout/login. New fields silently don't render, no error. **Fix:** edit any *non-field-list* metadata on the QA (`<description>`, `<label>`, `<layoutSectionStyle>`) and redeploy; Salesforce treats it as a structural change and flushes the org-level cache. Keep this as the go-to cache-bust pattern.
+### Visualforce (still tested on PD1)
 
-### Visualforce (still tested)
-
-- Controller types: **Standard** (`standardController="Account"`), **Custom** (Apex class, no extension), **Extension** (augments standard/custom).
-- View State limit **170 KB**; mark non-persistent fields `transient`.
-- Default output is HTML-encoded (XSS-safe); `escape="false"` needs explicit justification; `{!JSENCODE()}` for inline JS.
+Use for PDF generation (`renderAs="pdf"`), Classic UI, and legacy embeds only — prefer LWC for all new UI. Key constraints: View State ≤ 170 KB (mark non-persistent fields `transient`); `escape="false"` requires explicit justification; `{!JSENCODE()}` for inline JS. Deep dive with controller types, XSS safety, and testing: [references/visualforce.md](references/visualforce.md).
 
 ---
 
@@ -257,21 +253,20 @@ Declarative Quick Actions drive per-record Lightning contextual tabs/panels with
 
 ### Apex testing — coverage and structure
 
-- **75% org-wide Apex coverage required to deploy to production** (measured across all Apex, not just new code). Every trigger must have *some* coverage. Aim well above 75% for real confidence — coverage is a floor, not a goal.
+- **75% org-wide Apex coverage required to deploy to production** `[volatile — verify live]` (measured across all Apex, not just new code). Every trigger must have *some* coverage.
 - `@isTest` on class/methods; `@testSetup` runs once per class and rolls back after each test method.
-- **Tests see no org data by default** (`SeeAllData=false`). Create all test data in the test. Avoid `SeeAllData=true`.
-- **`Test.startTest()` / `Test.stopTest()`**: reset governor limits between setup and the code under test; `stopTest()` forces enqueued async (future/queueable/batch) to run synchronously so you can assert results.
-- **Callouts in tests are prohibited** without a mock: implement `HttpCalloutMock`, register via `Test.setMock(...)` before invoking.
-- Use real assertions: `Assert.areEqual(expected, actual, msg)` (or legacy `System.assertEquals`). Test single-record, **bulk (200+ records)**, and negative/exception paths. Never hardcode Ids.
+- **Tests see no org data by default** (`SeeAllData=false`). Create all test data in the test.
+- **`Test.startTest()` / `Test.stopTest()`**: reset governor limits; `stopTest()` forces enqueued async to run synchronously so you can assert results.
+- **Callouts are prohibited in tests** without a mock: `HttpCalloutMock` registered via `Test.setMock(...)`.
+- Use real assertions (`Assert.areEqual`). Test single-record, **bulk (200+ records)**, and negative paths. Never hardcode Ids.
 
-**NPSP caveat:** NPSP managed code does not auto-run in tests; rollups/household/relationship automation only fire if you explicitly enable NPSP features in the test setup. Don't assume NPSP side effects in assertions unless you've enabled them.
+**Managed-package caveat:** package-specific automation only fires in tests if you explicitly enable it in test setup.
 
 ### Debugging
 
 - `System.debug(LoggingLevel.ERROR, msg)` — structured output; **never log PII** (names, addresses, DOB, medical, file contents). Log record Ids and user/subject Ids only.
-- Debug logs: 20 MB per log, capped retention; set user trace flags / class log levels in Setup or via CLI.
-- CLI: `sf apex run` (anonymous Apex), `sf apex get log`, `sf apex tail log`.
-- A sandbox Apex debug-log probe is the fastest way to find *which automation step* mutated a field when a value changes unexpectedly after save.
+- Debug logs: 20 MB per log; set user trace flags in Setup or via CLI (`sf apex run`, `sf apex get log`, `sf apex tail log`).
+- A sandbox debug-log probe is the fastest way to identify *which automation step* mutated a field unexpectedly after save.
 
 ### Deployment tooling — pick by team/scale
 
@@ -282,16 +277,94 @@ Declarative Quick Actions drive per-record Lightning contextual tabs/panels with
 | Metadata API / package.xml | Scripted/enterprise, underlies all the above |
 
 **SFDX rules:**
-- The **SFDX project root is the directory containing `sfdx-project.json`, not necessarily the repo root.** All `sf project ...` commands must run from that directory or they fail with `InvalidProjectWorkspaceError`.
-- DX source format is decomposed (one XML per field) — Git-diffable. Custom fields/permsets/flows/Apex on top of a managed package are SFDX-managed; the managed package itself (e.g. NPSP) cannot be retrieved/modified via SFDX.
-- After any metadata change, cert rotation, or new sandbox, run a smoke test that exercises the full auth → describe → upsert idempotency → cleanup chain — it catches FLS/required/relationship gotchas at the layer they bite.
-- **Sandbox types:** Developer (200 MB), Developer Pro (1 GB), Partial Copy (5 GB, 10k records/object), Full Copy (exact prod copy, UAT/perf).
-- **Test levels in deploy:** `RunLocalTests` (excludes managed-package tests) is the right CI default; `RunAllTestsInOrg` includes managed. Production deploys run tests automatically.
+- **SFDX project root is the directory containing `sfdx-project.json`.** All `sf project ...` commands must run from that directory or fail with `InvalidProjectWorkspaceError`.
+- After any metadata change, cert rotation, or new sandbox, run a full auth → describe → upsert → cleanup smoke test.
+- **Sandbox types:** Developer (200 MB), Developer Pro (1 GB), Partial Copy (5 GB, 10k records/object), Full Copy (exact prod copy).
+- **Test levels in deploy:** `RunLocalTests` (excludes managed-package tests) is the right CI default.
 
-**Connected App / External Client App gotchas:**
-- Classic Connected App creation may be **gated** in modern org configs — deploying `connectedApp-meta.xml` returns *"You can't create a connected app… contact Salesforce Customer Support."* The pivot is to an **External Client App (ECA)**; stage the classic Connected App metadata for the day it's unblocked.
-- **ECA permission assignment is on the ECA itself, not the permission set.** The classic "Assigned Connected Apps" page does NOT authorize ECA usage. Working path: ECA detail → Policies tab → Edit → App Policies → **Select Permission Sets.** Verify via API (`PermissionSetAssignment` query / `SetupEntityAccess`) — browser-AI/UI tools often edit the wrong place and report false success.
-- **ECA Consumer Key is UI-only** — not exposed by Tooling API, REST, Connect API, or metadata retrieve; it's behind email verification in the SF UI. No scriptable path.
+**Connected App / External Client App (ECA) gotchas:**
+- Classic Connected App creation may be gated — deploying `connectedApp-meta.xml` returns *"You can't create a connected app."* Pivot to an **ECA**.
+- **ECA permission assignment is on the ECA itself** (ECA → Policies → App Policies → Select Permission Sets), not the classic "Assigned Connected Apps" page. Verify via `PermissionSetAssignment` SOQL.
+- **ECA Consumer Key is UI-only** — not exposed by Tooling API or metadata retrieve.
+
+---
+
+## Executable Workflows
+
+### 1. Add a field and surface it in Apex/LWC end-to-end (incl. FLS)
+
+1. Create the field in Object Manager or SFDX `field-meta.xml` with the correct type, length, and API name.
+   → **gate:** `sf sobject describe --sobject <object>` — confirm the field appears in the schema output.
+2. Add `<fieldPermissions>` (readable + editable) to the target permission set XML. Skip if the field is `<required>true</required>`.
+   → **gate:** confirm the permset XML contains the entry; confirm the field is not required (required fields cause deploy failure).
+3. Add the field to the relevant page layout. If surfacing in a Quick Action, also edit the QA's `<description>` or `<label>` to bust the runtime cache.
+   → **gate:** confirm field reference in layout XML.
+4. Deploy: `sf project deploy start` from the SFDX project root.
+   → **gate:** `Deploy Succeeded`; no missing-component errors.
+5. In Apex, reference the field in a SOQL query: `SELECT <Field__c> FROM <Object__c> LIMIT 1`.
+   → **gate:** no `"Invalid field"` error; query runs without exception.
+6. In the LWC, wire or imperatively call the Apex method that returns the field; confirm the value renders in the template.
+   → **gate:** field value appears in the browser UI for a non-admin user who has the permset assigned.
+
+---
+
+### 2. Write a bulk-safe trigger handler + test class to the 75% gate
+
+1. Create one trigger on the object (thin dispatcher) that calls a handler class method for each relevant context (`before insert`, `after insert`, etc.).
+   → **gate:** trigger compiles; no second raw trigger exists on the same object.
+2. In the handler, collect all record Ids/field values outside any loop. Query into a `Map<Id, SObject>` once. Compute results in memory. DML once after the loop.
+   → **gate:** code review confirms zero SOQL/DML inside loop bodies.
+3. Add a recursion guard (static Boolean) if the handler can re-enter on the same transaction.
+   → **gate:** unit test with an update that re-fires the trigger confirms the guard fires only once.
+4. Write a test class: `@testSetup` creates data; one method tests single-record, one tests bulk (200+ records), one tests negative/error path. Wrap async paths in `Test.startTest()/stopTest()`. Assert concrete field values.
+   → **gate:** `sf apex run test` shows all test methods passing; no hardcoded Ids.
+5. Run `sf project deploy start --test-level RunLocalTests` to the target org.
+   → **gate:** deploy output shows coverage ≥ 75% org-wide; every trigger has > 0% coverage.
+
+---
+
+### 3. Deploy via SFDX carrying `<fieldPermissions>`
+
+1. Confirm the SFDX project root (directory containing `sfdx-project.json`) is the working directory.
+   → **gate:** `sf project retrieve start --manifest package.xml` succeeds; no `InvalidProjectWorkspaceError`.
+2. For every new or changed custom field that is not required, add a `<fieldPermissions>` entry to the permset XML (readable + editable). Confirm no required fields are listed.
+   → **gate:** `grep -r 'fieldPermissions' force-app/` shows entries only for non-required fields.
+3. Validate with a dry-run deploy: `sf project deploy start --dry-run`.
+   → **gate:** validation succeeds; no missing-component or coverage failures.
+4. Deploy: `sf project deploy start`.
+   → **gate:** `Deploy Succeeded`; component count matches validation.
+5. Verify FLS landed: `SELECT Field, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='<permset>') AND SobjectType='<object>'` (MCP / `sf data query` / Developer Console).
+   → **gate:** each deployed field appears with `PermissionsRead = true`.
+
+---
+
+## Decision Scenarios
+
+The two scenarios below cover the highest-value PD1 operational gotchas. Additional scenarios: [references/scenarios.md](references/scenarios.md) — load for package trigger coexistence, bulkification failure patterns, and Quick Action cache issues.
+
+---
+
+**Scenario 1 — FLS after SFDX deploy: field exists but SOQL fails**
+
+> **Situation:** A developer deploys a new custom field `Revenue_Tier__c` (Text, 50) on `Account` via `sf project deploy start`. The field appears in Setup → Object Manager. A SOQL query `SELECT Revenue_Tier__c FROM Account LIMIT 1` run as System Administrator in Execute Anonymous immediately throws `"System.QueryException: Invalid field: Revenue_Tier__c"`.
+>
+> **Competent move:** The field was created but FLS was granted to nobody — not even System Administrator. SFDX `field-meta.xml` creates the field schema; it does **not** grant field permissions. Add an explicit `<fieldPermissions>` entry to a permission set or profile covering the System Administrator, redeploy, then re-run the SOQL.
+>
+> **Tempting-but-wrong:** Assuming "View All Data" / "Modify All Data" bypasses FLS on custom fields. It does not. Object-level access and FLS are independent.
+>
+> **Verify:** Run `SELECT Revenue_Tier__c FROM Account LIMIT 1` as the target user. If it still errors after adding the `<fieldPermissions>` entry, confirm the permission set is assigned to the user.
+
+---
+
+**Scenario 2 — Async tool choice: outbound callout needed from a trigger**
+
+> **Situation:** A business rule requires that when an `Opportunity` is closed-won, the org must POST the opportunity data to an external REST endpoint. A developer proposes doing this in an `after update` trigger directly, using `Http.send()`.
+>
+> **Competent move:** Callouts are **prohibited in trigger context** — Apex throws `"System.CalloutException: You have uncommitted work pending"` whenever DML has already run in the transaction (which a trigger guarantees). Offload to `@future(callout=true)` passing the Opportunity Id (primitive), or a `Queueable` implementing `Database.AllowsCallouts`. Choose Queueable if you need to chain further jobs or track the job Id.
+>
+> **Tempting-but-wrong:** Wrapping `Http.send()` in a `try/catch` inside the trigger. The `CalloutException` is a runtime enforcement — it fires regardless of catch blocks.
+>
+> **Verify:** In a sandbox, call `Http.send()` directly in the trigger — you'll see the exception immediately. Then replace with `System.enqueueJob(new MyCalloutQueueable(oppId))` and confirm the callout fires via debug log after the transaction commits.
 
 ---
 
@@ -300,9 +373,9 @@ Declarative Quick Actions drive per-record Lightning contextual tabs/panels with
 Read this first. Each rule is imperative and concrete.
 
 - **DON'T** put any SOQL/DML inside a loop. Query into a Map once, DML a List once. (100 SOQL sync / 150 DML / 50k rows / 10s CPU.)
-- **DO** assume managed-package triggers (e.g. NPSP) already ate part of your SOQL/DML budget — leave headroom.
+- **DO** assume managed-package triggers already ate part of your SOQL/DML budget — leave headroom.
 - **DON'T** write a trigger for what a validation rule, formula field, or roll-up summary does declaratively.
-- **DO** keep exactly one trigger per object; all logic in a handler class. On NPSP objects, register a TDTM handler — never add a second raw trigger.
+- **DO** keep exactly one trigger per object; all logic in a handler class. On objects managed by a package trigger framework (e.g. NPSP/TDTM), register through that framework — never add a second raw trigger.
 - **DO** use `before` triggers to set fields on the saving record (free persistence); `after` triggers to touch related records / system fields.
 - **DON'T** assume a field is queryable after an SFDX deploy — `field-meta.xml` grants FLS to nobody. Add explicit `<fieldPermissions>`, or confirm with a live SOQL query.
 - **DON'T** put a `<fieldPermissions>` entry on a `required` field — deploy fails. Required fields need no FLS entry.
@@ -326,105 +399,25 @@ Read this first. Each rule is imperative and concrete.
 
 ---
 
-## Developer Fundamentals — Apex OOP Essentials
+## References
 
-PD1 tests object-oriented foundations in the Developer Fundamentals domain (23–27%). These are actionable rules, not theory.
-
-### Collections
-
-- **List** — ordered, allows duplicates; indexed access; the default for DML (pass a `List<SObject>` to `insert`/`update`).
-- **Set** — unordered, no duplicates; use to deduplicate Ids before a SOQL `WHERE Id IN :idSet`.
-- **Map** — key→value; the bulkify workhorse: `Map<Id, SObject>` keyed on the parent Id so you can look up related records in O(1) during the loop.
-
-**Anti-pattern:** iterating a `List` with `contains()` in an inner loop → O(n²). Move the lookup values into a `Set` first.
-
-### Interfaces and inheritance
-
-- `implements InterfaceName` — class must provide all methods declared in the interface with matching signatures.
-- `extends` — inherits concrete methods; child can `override` virtual/abstract methods.
-- `virtual` → can be overridden. `abstract` → must be overridden (class is also abstract). `override` keyword is required on the child method.
-- Access modifiers: `public`, `private`, `protected` (visible in subclasses), `global` (visible to managed-package consumers and external code). Default is `private`.
-
-**NPSP application:** `implements npsp.TDTM_Runnable` is a PD1 interface pattern. The interface declares `run(List<SObject>, List<SObject>, npsp.TDTM_Runnable.Action, Schema.DescribeSObjectResult)`; your handler provides the body.
-
-### Exception handling
-
-- `try { } catch (DmlException e) { } catch (Exception e) { } finally { }` — `finally` always runs.
-- Rethrowing: `throw e;` or wrap in a custom exception type (`public class MyException extends Exception {}`).
-- `Database.insert(records, false)` returns `SaveResult[]` — inspect `.isSuccess()` per row to avoid losing partial successes in a silent catch block.
+- [references/study-resources.md](references/study-resources.md) — credential logistics, study path, official links.
+- [references/apex-oop-essentials.md](references/apex-oop-essentials.md) — collections, interfaces, inheritance, exception handling with worked examples.
+- [references/visualforce.md](references/visualforce.md) — Visualforce controller types, View State, XSS safety, and testing.
+- [references/scenarios.md](references/scenarios.md) — additional decision scenarios (package trigger coexistence, bulkification failure, Quick Action cache).
 
 ---
 
-## Decision Scenarios
+## Feedback protocol
 
-The five scenarios below cover the highest-value operational gotchas for PD1 work. Each follows the format from the authoring policy: Situation → Competent move → Tempting-but-wrong → Verify.
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-platform-developer-1.md` at the project root (create it if absent):
 
----
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
 
-**Scenario 1 — FLS after SFDX deploy: field exists but SOQL fails**
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
 
-> **Situation:** A developer deploys a new custom field `Revenue_Tier__c` (Text, 50) on `Account` via `sf project deploy start`. The field appears in Setup → Object Manager. A SOQL query `SELECT Revenue_Tier__c FROM Account LIMIT 1` run as System Administrator in Execute Anonymous immediately throws `"System.QueryException: Invalid field: Revenue_Tier__c"`.
->
-> **Competent move:** The field was created but FLS was granted to nobody — not even System Administrator. SFDX `field-meta.xml` creates the field schema; it does **not** grant field permissions. Add an explicit `<fieldPermissions>` entry for the field to a permission set or profile that covers the System Administrator, redeploy, then re-run the SOQL. Confirm with `Schema.SObjectType.Account.fields.Revenue_Tier__c.getDescribe().isAccessible()` in Anonymous Apex before relying on the field in production code.
->
-> **Tempting-but-wrong:** Assuming that System Administrator's "View All Data" / "Modify All Data" profile permissions bypass FLS on custom fields. They do not. Object-level access and FLS are independent. The sysadmin sees the field in Setup UI because Setup uses system context; runtime SOQL uses the running-user's FLS.
->
-> **Verify:** Run `SELECT Revenue_Tier__c FROM Account LIMIT 1` as the target user (or use `Security.stripInaccessible` to see what gets stripped). If it still errors after adding the `<fieldPermissions>` entry, confirm the permission set is assigned to the user.
+## Changelog
 
----
-
-**Scenario 2 — Async tool choice: outbound callout needed from a trigger**
-
-> **Situation:** A business rule requires that when an `Opportunity` is closed-won, the org must POST the opportunity data to an external REST endpoint. A developer proposes doing this in an `after update` trigger directly, using `Http.send()`.
->
-> **Competent move:** Callouts are **prohibited in trigger context** — Apex throws `"System.CalloutException: You have uncommitted work pending"` if DML has already run in the transaction (which a trigger guarantees). The fix is to offload the callout to an `@future(callout=true)` method or a `Queueable` that implements `Database.AllowsCallouts`. Pass the Opportunity Id (primitive) to `@future`, or enqueue a `Queueable` from the trigger's after-update handler. Choose Queueable if you need to chain further jobs or track the job Id.
->
-> **Tempting-but-wrong:** Wrapping the `Http.send()` call in a `try/catch` inside the trigger and hoping it won't throw. The `CalloutException` is a runtime enforcement, not a code-path issue — it fires regardless of catch blocks because the runtime checks for uncommitted DML before allowing the callout.
->
-> **Verify:** In a sandbox trigger, call `Http.send()` directly — you'll see the exception immediately. Then replace with `System.enqueueJob(new MyCalloutQueueable(oppId))` from the after-update handler and confirm the callout fires via debug log after the transaction commits.
-
----
-
-**Scenario 3 — NPSP object trigger: raw trigger vs. TDTM registration**
-
-> **Situation:** A developer needs custom logic to run whenever a `Contact` is inserted or updated on an NPSP org. They write a standard `ContactTrigger.trigger` and deploy it.
->
-> **Competent move:** NPSP already has its own master `ContactTrigger` managing its TDTM framework. Deploying a second raw `ContactTrigger` either fails on deploy (duplicate trigger name error) or, on a different API name, creates a second trigger with **undefined firing order relative to NPSP's trigger**. The correct approach: create a handler class that implements `npsp.TDTM_Runnable`, then register it in `TDTM_Config__mdt` with the target object, action (Insert/Update), and load order. This slots the custom logic into NPSP's managed execution sequence without touching managed code.
->
-> **Tempting-but-wrong:** Naming the custom trigger something like `CustomContactTrigger` to avoid the duplicate-name problem. This appears to work but produces two triggers on the same object firing in unpredictable order, which can corrupt NPSP's household and relationship rollups or cause recursion that hits governor limits.
->
-> **Verify:** After registering the TDTM handler, insert a Contact in a sandbox and pull the debug log. Confirm the custom handler's entry and exit appear inside NPSP's trigger execution stack, not after it. Run the full suite of NPSP Apex tests to confirm no regressions.
-
----
-
-**Scenario 4 — Bulkification: "it works in dev, fails in production"**
-
-> **Situation:** A developer tests a trigger by updating a single Account. It works. In production, a nightly batch process updates 500 Accounts at once, and the trigger throws `"System.LimitException: Too many SOQL queries: 101"`.
->
-> **Competent move:** The trigger contains a SOQL query inside a `for (Account a : Trigger.new)` loop — each record issues one query, so 500 records = 500 queries, far above the synchronous limit of 100. Fix: extract all Account Ids from `Trigger.new` into a `Set<Id>` before the loop, run one `SELECT … WHERE Id IN :acctIds` query into a `Map<Id, SObject>`, then iterate `Trigger.new` doing only in-memory map lookups. Issue a single `update` or `insert` after the loop.
->
-> **Tempting-but-wrong:** Catching the `LimitException` and processing in smaller chunks inside the trigger. `LimitException` is not catchable in Apex — it terminates the transaction immediately. There is no retry path from inside a trigger.
->
-> **Verify:** Write a test that inserts or updates 200+ records in a single DML call and run it against the trigger. If the query count stays at 1–2 regardless of record volume, the bulkification is correct. The test will surface the `LimitException` before production does.
-
----
-
-**Scenario 5 — Quick Action cache: new fields silently missing after deploy**
-
-> **Situation:** A developer adds three new fields to an existing Quick Action's layout via SFDX (`quickActionLayoutItems` in the `.quickAction-meta.xml`) and deploys successfully. Testers report that the new fields do not appear in the Quick Action dialog — no error, just the old field list.
->
-> **Competent move:** Salesforce caches Quick Action layouts at the org level. Adding or removing fields from `quickActionLayoutItems` does **not** bust this cache, even on full logout/login. To force a cache invalidation, make a change to any *non-field-list* property of the Quick Action metadata — typically edit the `<description>` or `<label>` by one character — then redeploy. Salesforce treats the structural metadata change as new and flushes the cached layout.
->
-> **Tempting-but-wrong:** Clearing browser cache, logging out and back in, or using a different browser. The cache is server-side at the org level, not in the client browser. Client-side cache clearing has no effect.
->
-> **Verify:** After the cache-bust redeploy, open the Quick Action in a fresh browser session (incognito). The new fields should render. If they still do not, confirm the `quickActionLayoutItems` XML is correctly structured and that the deploy completed without errors using `sf project deploy report`.
-
----
-
-## Study resources & relevance
-
-Study resources (official Salesforce + community) and the NPSP/nonprofit relevance notes are kept in [references/study-resources.md](references/study-resources.md) so this skill stays focused on operational rules. Load that file when planning a study path or mapping these rules to a nonprofit org.
-
----
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. "Salesforce," "Apex," "Lightning," "NPSP," and related names are trademarks of Salesforce, Inc., used here solely to identify the subject matter. Guidance only — verify against official documentation and live orgs before acting.*

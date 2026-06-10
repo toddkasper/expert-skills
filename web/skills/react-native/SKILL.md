@@ -1,12 +1,12 @@
 ---
 name: react-native
-description: Operational playbook for building and reviewing React Native and Expo mobile apps — core components and APIs, navigation (Expo Router and React Navigation), native modules, the Expo SDK and EAS Build/Submit/Update, iOS/Android platform differences, and mobile performance. Assumes core React competence (see sibling skill `react`); covers the mobile/native deltas only. No first-party certification exists; this is a competence skill.
+description: Building and reviewing React Native and Expo mobile apps — core components and styling (Flexbox, FlatList), navigation (Expo Router, React Navigation), the Expo SDK and permissions, native modules and the New Architecture (JSI, Fabric, TurboModules), EAS Build/Submit/Update, iOS/Android platform differences, and mobile performance. Use when building, reviewing, or debugging RN/Expo apps or the native/mobile layer. Assumes core React (see react); covers the mobile deltas only. Competence skill — no first-party certification.
 metadata:
   credential: None — competence skill (no first-party React Native / Expo certification)
   domain: web
   type: competence-playbook
   status: active
-  last-updated: 2026-06-07
+  last-reviewed: 2026-06-09
 ---
 
 # React Native + Expo — Skills Reference
@@ -18,10 +18,24 @@ React Native lets you build iOS and Android apps in JavaScript/TypeScript using 
 Key shifts from the web:
 - No DOM, no CSS — layout is Flexbox-only via `StyleSheet`, components are `View`/`Text`/`Image`, not `div`/`span`/`img`
 - Two threads that must stay unblocked — the JS thread and the UI/main thread; dropped frames come from overloading either
-- New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory from Expo SDK 55+)
+- New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory from Expo SDK 55+) `[volatile — verify live]`
 - Ship cycle is different — JS-only changes can be pushed OTA via EAS Update; anything touching native code requires a new store binary
 
+> **Load this skill when…** building or reviewing a React Native or Expo mobile app; debugging dropped frames, list performance, or native module integration; working with EAS Build/Submit/Update or the New Architecture; handling iOS/Android platform differences or permissions.
+> **Not this skill:** core React hooks, state, and testing patterns → see `react`; this skill covers mobile deltas only.
+
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md). Load that file when looking up official docs or library links.
+
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
+---
+
+## Uncertainty & Escalation
+
+- **Always re-verify live:** Expo SDK versions and React Native releases change frequently — New Architecture defaults, SDK-required library minimum versions, and EAS Update behavior evolve each cycle. `[volatile — verify live]` marks apply to: New Architecture mandatory adoption (default RN 0.76+, mandatory Expo SDK 55+ — `[volatile — verify live]`, check `expo` version in `package.json`); Expo SDK version-specific library minimums (React Navigation, Reanimated, Gesture Handler version gates — `[volatile — verify live]`); `runtimeVersion` behavior for EAS Update (match semantics may change — `[volatile — verify live]`); iOS App Store SDK requirement (currently iOS 26 SDK from April 2026 — `[volatile — verify live]`, advances annually); Android target API level floor (`[volatile — verify live]`, check Google Play policy for current minimum). Always run `npx expo-doctor@latest` after any SDK upgrade to catch compatibility issues.
+- **Live wins:** the installed Expo SDK / RN version's actual behavior, [docs.expo.dev](https://docs.expo.dev), and [reactnative.dev](https://reactnative.dev) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** production store submissions (iOS App Store, Google Play); EAS Update pushes to a production channel (irreversible reach); major Expo SDK upgrades on a live app; Android keystore rotation or loss; permission message changes (require new binary — cannot be OTA'd).
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
 ---
 
@@ -175,16 +189,7 @@ Check [React Native Directory](https://reactnative.directory/) for New Architect
 
 **Critical Android gotcha:** removing a permission that a library adds via its own manifest requires explicitly listing it in `android.blockedPermissions`. Without this, the permission remains in the merged manifest even if you remove the library.
 
-### Native modules and JSI (when Expo SDK is not enough)
-
-Under the New Architecture, native modules are **TurboModules** — they expose a C++ spec to JS via JSI and are loaded lazily (only when first called, reducing startup cost).
-
-When you need custom native code:
-1. First, look for an Expo module via `expo-modules-core` — it generates the JSI bindings from a Swift/Kotlin API surface automatically
-2. If writing a TurboModule directly, define a TypeScript spec file (`NativeMyModule.ts` with `TurboModuleRegistry.getEnforcing`); codegen generates the C++/Java/ObjC glue
-3. Legacy "Native Modules" using the bridge (`NativeModules.MyModule`) still work in SDK 52-54 but will break in future versions — do not write new code against the old bridge
-
-**Red flag:** calling native module methods synchronously from the JS thread in a hot path. JSI calls are synchronous but still cross the JS-to-C++ boundary — batch calls and avoid per-frame native calls.
+**Custom native modules (TurboModules, expo-modules-core):** prefer `expo-modules-core` for new native code; it generates JSI bindings automatically from a Swift/Kotlin API. Do not write new code against the legacy `NativeModules.MyModule` bridge. Full TurboModule authoring guide: [references/new-architecture.md](references/new-architecture.md) → "Custom Native Modules."
 
 ---
 
@@ -225,56 +230,17 @@ Prerequisites:
 - **iOS:** Apple Developer Program membership ($99 USD/year). App Store Connect API key configured in `eas.json` for automated submission.
 - **Android:** Google Play Developer account ($25 USD one-time). Google Service Account Key with "Release manager" permission configured for automated submission.
 
-### EAS Update — OTA updates
+**EAS Update (OTA):** pushes JS and asset changes without a store review. Cannot update native code, new permissions, or new native modules — those require a new binary. The `runtimeVersion` in `app.json` must match the binary; bump it whenever native-facing code changes. Full OTA update mechanics (channels/branches, `runtime-version` semantics, OTA can/cannot table, rollback steps): [references/new-architecture.md](references/new-architecture.md) → "EAS Update."
 
-EAS Update pushes JavaScript and asset changes to users without a store review. It cannot update native code (anything in `ios/` or `android/`), new permissions, or new native modules.
-
-**Runtime version:** a label that identifies the JS-native interface contract of a build. When native code changes in a way that affects the JS API surface, bump the runtime version in `app.json`. Updates are only delivered to builds whose runtime version exactly matches.
-
-**Channels and branches:** a build is assigned a channel (e.g. `production`, `staging`). A channel is linked to a branch. Publishing an update pushes to a branch; all builds on the linked channel receive it.
-
-```bash
-eas update --branch production --message "Fix login crash"
-```
-
-**What OTA can and cannot update:**
-
-| Can update OTA | Cannot update OTA |
-|---|---|
-| JavaScript/TypeScript logic | Native modules (new or changed) |
-| React component tree | Permissions (Info.plist / AndroidManifest) |
-| Assets bundled at build time | App icons, splash screen |
-| Expo SDK version (JS side only) | SDK upgrades that change native code |
-
-**Red flag:** assuming an EAS Update can deliver a new native module, a new permission, or a new Expo SDK module that has native code. That requires a new build + store submission.
-
-### App store requirements (as of 2026)
-
-- **iOS:** requires building with the iOS 26 SDK or later (Apple updated this requirement for apps submitted from April 2026). Privacy manifest required. Account deletion required if the app has account creation. AI transparency disclosure required if the app uses external AI services.
-- **Android:** target API level must meet Google Play's minimum (verify the current floor at Google Play policy — it advances annually).
+**App store requirements** (iOS SDK minimum, privacy manifest, account deletion requirement, Android target API floor) — all volatile `[verify live]`: [references/new-architecture.md](references/new-architecture.md) → "App Store Requirements."
 
 ---
 
 ## 5. New Architecture — JSI, Fabric, TurboModules
 
-The New Architecture is the default from React Native 0.76+ and mandatory from Expo SDK 55+ (cannot be disabled).
+Mandatory from Expo SDK 55+ (cannot be disabled) `[volatile — verify live]`. JSI replaces the async bridge with direct C++ object references; Fabric enables synchronous layout measurement; TurboModules load lazily to improve cold-start. Always run `npx expo-doctor@latest` after adding dependencies to catch New Architecture incompatibilities. Legacy `NativeModules.X` bridge calls still work via interop in SDK 52-54 — plan migration before SDK 55.
 
-### The three components
-
-**JSI (JavaScript Interface):** replaces the async serialization bridge. JS holds a direct C++ reference to native objects and can call methods synchronously without JSON serialization. This eliminates the queuing latency and the copy overhead that made the old bridge a bottleneck.
-
-**Fabric:** the new renderer. It runs the React shadow tree calculation in C++ (on any thread) and can perform synchronous layout measurement — enabling Reanimated's `measure()` and React 18 concurrent features. The old renderer was JS-only and required a full async round-trip to measure views.
-
-**TurboModules:** native modules built on JSI. They load lazily (only when first accessed) rather than at startup. For apps with many native modules, this alone improves cold-start time measurably.
-
-### Migration checklist for existing projects
-
-1. Run `npx expo-doctor@latest` — it flags libraries incompatible with the New Architecture
-2. Check [React Native Directory](https://reactnative.directory/) for the `new arch` badge on every dependency
-3. Major ecosystem libraries that require minimum versions: React Navigation 7.2+, Reanimated 3.5.1+, Gesture Handler 2.16.2+, Vision Camera 4.0+
-4. Legacy bridge modules (`NativeModules.X`) still work via interop in SDK 52-54; plan migration before SDK 55
-
-**Red flag:** adding a library without checking its New Architecture support status — it may cause silent runtime failures or a hard crash rather than a clean error.
+> **Deep dive** (JSI/Fabric/TurboModules mechanics, full migration checklist, ecosystem library minimum versions): load [references/new-architecture.md](references/new-architecture.md).
 
 ---
 
@@ -315,6 +281,86 @@ Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Ship an OTA update safely (match runtimeVersion → EAS Update → verify reach, know what needs a new build)
+
+1. Before publishing, confirm the change is OTA-safe: JS/TS logic changes, React component updates, and bundled asset changes are OTA-safe. Any change to native modules, `ios/` or `android/` directories, `Info.plist` values, `AndroidManifest.xml` permissions, or Expo SDK modules with native code requires a new binary. → gate: run `git diff --name-only HEAD~1` — if any file under `ios/`, `android/`, or `app.json`'s `plugins`/`android`/`ios` arrays changed, this update needs a new build.
+2. Confirm the `runtimeVersion` in `app.json` matches the production binary. If native code changed since the last binary, bump `runtimeVersion` first and publish a new binary before sending an update. → gate: `eas build:list` shows the production channel build's runtime version equals `app.json`'s `runtimeVersion`.
+3. Publish the update: `eas update --branch production --message "description of change"`. → gate: the command completes without errors and prints an update ID.
+4. Monitor rollout: `eas update:list --branch production` shows the new update. Check Expo Dashboard for "reached" count — allow 15–30 min for users to pick up the update on app foreground. → gate: reached count is growing; no new crash reports in the monitoring tool.
+5. If a bad update ships, immediately publish a rollback: republish the previous known-good JS bundle (`eas update --branch production --message "rollback" --republish --group <previous-group-id>`). Do not wait for a new binary for JS-level bugs.
+
+### Workflow 2 — Add a native permission (config plugin → request flow → rebuild)
+
+1. Install the Expo SDK module that requires the permission (e.g., `npx expo install expo-camera`). The module's config plugin auto-adds the required entries to `Info.plist` and `AndroidManifest.xml` at prebuild time. → gate: check `app.json`'s `plugins` array — the module should be listed (some auto-register, some require explicit addition).
+2. For custom permission messages (required on iOS), add to `app.json`: `"ios": { "infoPlist": { "NSCameraUsageDescription": "Used to scan barcodes." } }`. iOS will reject App Store submissions without descriptive usage strings. → gate: the string is present in `app.json`; it is descriptive (not "needed for the app").
+3. Run `npx expo prebuild --clean` to regenerate native directories from the updated `app.json`. → gate: `ios/YourApp/Info.plist` contains the usage description key; `android/app/src/main/AndroidManifest.xml` contains the permission.
+4. Build a new binary: `eas build --platform all --profile preview` (for testing) or `--profile production`. This step is mandatory — permission changes cannot be shipped OTA. → gate: build completes; install on a physical device (not simulator) to test permission prompts.
+5. In the JS code, request the permission at the appropriate moment (before first use, not at app launch). Handle all three status outcomes: `granted` → proceed; `denied` → show a message with a button to `Linking.openSettings()`; `undetermined` → call the request API. → gate: on a fresh install, the system permission dialog appears at the correct moment; denying it shows the in-app guidance without a crash.
+
+### Workflow 3 — Optimize a long list (FlatList/FlashList: keyExtractor, getItemLayout, windowSize)
+
+1. Identify whether items are homogeneous (same component type, same approximate height) or heterogeneous. Homogeneous lists > ~100 items: use FlashList (`@shopify/flash-list`). Heterogeneous or shorter lists: use FlatList. → gate: FlashList requires New Architecture (SDK 55+ has it mandatory — verify).
+2. Provide `keyExtractor` returning a unique stable string from the item's data (e.g., `item.id.toString()`), never the array index. → gate: change the data order in state; confirm no unexpected component unmounting/remounting in React DevTools.
+3. If all items have the same height, provide `getItemLayout`: `(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })`. This enables instant `scrollToIndex` and removes layout-measuring overhead. → gate: `flatListRef.current.scrollToIndex({ index: 50 })` completes without "cannot scroll to index" warning.
+4. Tune `windowSize` (default 21 — 10 screens above + 10 below + 1 visible). For heavy items (images, complex layouts), lower to 5–11 to reduce memory. For fast-scroll lists, keep it higher. → gate: profile in a release build with Hermes; JS thread stays under 16ms per frame while scrolling.
+5. Extract `renderItem` to a stable function outside the render body or use `useCallback`. Wrap the item component in `React.memo`. → gate: React DevTools Profiler shows items that leave the viewport as "Did not render" when parent state changes unrelated to the list data.
+
+---
+
+## Decision Scenarios
+
+**Scenario 1 — Inline arrow in `renderItem` defeats `React.memo` on list items**
+
+> **Situation:** A developer wraps a `ProductCard` list item in `React.memo` to prevent re-renders when the parent's state changes. Profiling still shows every `ProductCard` re-rendering whenever the parent updates. The `FlatList` is defined as `renderItem={({ item }) => <ProductCard product={item} onPress={() => handlePress(item.id)} />}`.
+
+> **Competent move:** Extract `renderItem` to a stable function outside the render body (or use `useCallback`), and ensure the `onPress` callback reference is stable (e.g., accepts `item.id` as a parameter rather than closing over a new arrow per item). `React.memo` compares props by reference — a new inline arrow function is a new reference on every render, so the `memo` check always fails.
+
+> **Tempting-but-wrong:** Increasing `windowSize` or lowering `initialNumToRender` to reduce the number of re-renders at the cost of blank flashes. Tuning FlatList window props does not fix the root cause (unstable `renderItem` reference) — it just reduces how many items are in the window at once.
+
+> **Verify:** Use React DevTools Profiler (Hermes mode or Flipper) to confirm which prop triggered the re-render. After stabilizing `renderItem`, the profiler should show "Did not render" for off-screen items when unrelated parent state changes.
+
+---
+
+**Scenario 2 — Manually edited `ios/` files are overwritten by `npx expo prebuild`**
+
+> **Situation:** A developer in a managed-workflow Expo app adds custom iOS entitlements by directly editing `ios/MyApp.entitlements`. Three weeks later a teammate runs `npx expo prebuild --clean` during an SDK upgrade. The entitlements file is regenerated from `app.json` and the custom entries are silently lost, breaking push notification capabilities in the next store submission.
+
+> **Competent move:** Encode the entitlements in a config plugin instead of editing the native file directly. Config plugins transform `app.json` into the correct native file contents on every prebuild run, so changes survive upgrades. Committing manually edited `ios/` files and re-running `--clean` prebuild are fundamentally incompatible — the `--clean` flag is designed to regenerate from scratch.
+
+> **Tempting-but-wrong:** Committing the edited `ios/` directory and documenting "never run `prebuild --clean`." This couples the team to a fragile, undocumented constraint. The next developer or CI pipeline that follows standard upgrade procedures will lose the changes without warning.
+
+> **Verify:** Write the config plugin to add the entitlements entry. Run `npx expo prebuild --clean` and inspect the generated `ios/MyApp.entitlements`. Confirm the custom entry is present — the plugin is working. Remove the manually edited version from version control.
+
+---
+
+**Scenario 3 — FlashList used without verifying New Architecture compatibility**
+
+> **Situation:** A team on Expo SDK 54 adds Shopify's `FlashList` to replace `FlatList` on a heavy 1,000-item list. It works well. They upgrade to Expo SDK 55 (New Architecture mandatory) and the app crashes on launch with a native module error.
+
+> **Competent move:** Before upgrading to SDK 55, check `FlashList`'s New Architecture compatibility status on React Native Directory and verify the installed version meets the minimum required. Run `npx expo-doctor@latest` after adding any new dependency to catch NA incompatibility before attempting the SDK upgrade. Update `FlashList` to a NA-compatible version before upgrading the SDK.
+
+> **Tempting-but-wrong:** Disabling the New Architecture in SDK 55 to unblock the team. The New Architecture cannot be disabled in Expo SDK 55+ — it is mandatory. The only forward path is to bring every native dependency into NA compliance.
+
+> **Verify:** Run `npx expo-doctor@latest` with the target SDK version and confirm no "New Architecture incompatible" warnings. Build a development client (`eas build --profile development`) and smoke-test the list on a physical device before shipping.
+
+---
+
+**Scenario 4 — Heavy data processing on screen mount blocks the navigation transition animation**
+
+> **Situation:** A "Report" screen computes a statistics summary by synchronously iterating over 10,000 records immediately on component mount (outside any effect, in the component body). Users see the navigation transition stutter before the screen appears. A developer moves the computation into `useEffect([])` but the jank persists.
+
+> **Competent move:** Wrap the computation call in `InteractionManager.runAfterInteractions(() => { /* compute */ })`. Navigation transitions are driven by the JS thread — any synchronous work running on the JS thread during the transition competes with the animation interpolation and causes dropped frames. `InteractionManager.runAfterInteractions` defers the callback until all active navigation interactions have completed, allowing the transition to finish at full frame rate before the heavy work starts.
+
+> **Tempting-but-wrong:** Moving the computation into `useEffect([])`. A `useEffect` runs after the first render commit, but the render commit itself happens during the navigation transition — the computation still executes while the transition animation is in flight.
+
+> **Verify:** Record a slow-motion video of the transition using iOS Simulator's slow animations (`⌘T`) or Android GPU profiler before and after adding `InteractionManager`. After the fix, the transition should complete smoothly before the statistics appear (possibly with a brief loading indicator).
+
+Further scenario (expo-image vs core Image for remote-image caching): [references/scenarios.md](references/scenarios.md).
+
+---
+
 ## Operational Rules Quick Reference
 
 - **DO** wrap all visible strings in `<Text>` — a bare string inside `<View>` is a runtime error on Android
@@ -335,6 +381,21 @@ Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
 - **DO** plan iOS permission messages before the first production release — they cannot be changed OTA
 - **DON'T** lose the Android keystore — it is tied to the Play Store listing and unrecoverable
 - **DO** verify library compatibility with `npx expo-doctor@latest` before upgrading Expo SDK versions
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/react-native.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
+- **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: managed-workflow prebuild overwrite, FlashList/New Architecture compatibility, InteractionManager for transition jank) to meet the teaching-scenario standard (≥4 inline). Scenario 5 remains in references. Section 5 (New Architecture), native modules/JSI subsection, and App store requirements moved to references/new-architecture.md to offset body length.
 
 ---
 

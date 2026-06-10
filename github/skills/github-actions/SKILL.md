@@ -1,11 +1,14 @@
 ---
 name: github-actions
-description: Operational playbook for authoring, maintaining, and securing GitHub Actions — CI/CD workflows, reusable and composite workflows, custom actions, runners, secrets and OIDC, and enterprise governance. Use when building or reviewing GitHub Actions automation, pipelines, or release workflows. The GitHub Actions (GH-200) certification scopes and benchmarks this skill.
+description: Authoring, maintaining, and securing GitHub Actions — CI/CD workflows, triggers, matrix builds, contexts and expressions, reusable and composite workflows, custom actions (action.yml; JS/Docker/composite), self-hosted and GitHub-hosted runners, secrets and OIDC cloud auth, and enterprise governance. Use when building, reviewing, or debugging GitHub Actions workflows, pipelines, release automation, or runner/security policy. Scoped and benchmarked by the GitHub Actions (GH-200) certification blueprint.
 metadata:
   credential: "GitHub Actions (GH-200)"
   exam-code: GH-200
   domain: github
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
   blueprint: January 2026 revision
 ---
 
@@ -13,39 +16,23 @@ metadata:
 
 ## Overview
 
-The GitHub Actions certification (exam GH-200) validates that a practitioner can design, implement, and maintain automation workflows using GitHub Actions at individual, organizational, and enterprise scale. It covers five competency areas: workflow authoring, workflow consumption and troubleshooting, custom action development, enterprise management of runners and policies, and security hardening.
+**This file is an operational playbook, not an exam outline.** Each section states the rules an agent must apply when building or reviewing Actions automation: syntax constraints, security invariants, decision criteria, and anti-patterns to catch in review. Benchmarked against the GitHub Actions (GH-200) certification blueprint.
 
-**This file is an operational playbook, not an exam outline.** Each section states the rules an agent must apply when building or reviewing Actions automation: the concrete syntax constraints, the security invariants, the decision criteria for picking a pattern, and the anti-patterns to catch in review.
+> **Load this skill when…** authoring or reviewing GitHub Actions workflow YAML; designing reusable workflows, composite actions, or custom JS/Docker actions; configuring self-hosted runners, OIDC cloud auth, or enterprise runner/policy governance; or hardening an Actions pipeline against script-injection and supply-chain risks.
+> **Not this skill:** general Git/GitHub repository administration, branch protection without Actions, or application code in the repository.
 
-> **Deeper context:** Study resources, official links, and domain weight details live in [references/study-resources.md](references/study-resources.md) (loaded on demand).
+> **Study resources, domain weights, and credential logistics:** [references/study-resources.md](references/study-resources.md).
+
+> **Verify steps assume nothing about your tooling** — use your project's MCP/automation, the GitHub CLI (`gh`) and Actions log/`act`/workflow-lint, or the GitHub web UI, in that order of preference.
 
 ---
 
-## Certification Details
+## Uncertainty & Escalation
 
-| Field | Value |
-|---|---|
-| Exam code | GH-200 |
-| Provider | GitHub / Microsoft, delivered via Pearson VUE |
-| Format | Multiple choice + interactive components, proctored |
-| Time | 100 minutes |
-| Passing score | 700 / 1000 |
-| Cost | Varies by region; ~$99 USD (confirm at Pearson VUE scheduling) |
-| Retake | 24 h after first attempt; subsequent gaps vary |
-| Prerequisites | None; intermediate Actions experience recommended |
-| Languages | English, Spanish, Portuguese (Brazil), Korean, Japanese |
-
-> Logistics verified against the official Microsoft Learn certification page (updated Feb 2026). Cost is widely cited as $99 USD but is not published on the study guide page itself — confirm at registration. The exam migrated from PSI to Pearson VUE in July 2025.
-
-Domain weights (January 2026 revision):
-
-| Domain | Weight |
-|---|---|
-| Author and manage workflows | 20–25% |
-| Consume and troubleshoot workflows | 15–20% |
-| Author and maintain actions | 15–20% |
-| Manage GitHub Actions for the enterprise | 20–25% |
-| Secure and optimize automation | 10–15% |
+- **Always re-verify live — volatile facts:** GitHub-hosted runner image versions and pre-installed software (`ubuntu-latest`, `windows-latest`, `macos-latest` image mappings change on a rolling basis) `[volatile — verify live]`, action SHA pins for commonly-used actions (e.g., `actions/checkout`, `actions/setup-node`) `[volatile — verify live]`, free-tier minute allotments and per-minute pricing for larger runners `[volatile — verify live]`, reusable workflow nesting limit (currently 4 levels) `[volatile — verify live]`, artifact retention defaults and per-repo cache quota `[volatile — verify live]`.
+- **Live wins:** when the live GitHub platform, workflow logs, or official GitHub docs contradict a claim in this file, the live source is authoritative. Log the discrepancy via the Feedback protocol below so the skill can be corrected.
+- **Escalate to a human — do not silently execute:** enterprise runner policy changes (restricting which actions can run org-wide); modifying branch protection rules or required status checks; registering or deregistering self-hosted runners, especially on public repos; force-merging protected branches; rotating or deleting org-level secrets; enabling or disabling Actions for an org or enterprise; any OIDC trust policy change on a production cloud role.
+- **Confidence taxonomy:** every fact in this file is considered *stable* unless tagged `[volatile — verify live]` (changes with platform updates) or `[opinion — house style]` (a defensible default, not the only valid choice).
 
 ---
 
@@ -99,7 +86,7 @@ Key contexts: `github`, `runner`, `env`, `vars`, `secrets`, `inputs`, `matrix`, 
 
 ### YAML Reuse within a File
 
-YAML anchors (`&anchor`), aliases (`*anchor`), and merge keys (`<<: *anchor`) reduce repetition within a single workflow file. They are **not** cross-file; for cross-workflow reuse, use reusable workflows or composite actions.
+YAML anchors and merge keys reduce repetition within a single workflow file but are **not** cross-file. Full syntax reference in [references/advanced-features.md](references/advanced-features.md). For cross-workflow reuse, use reusable workflows or composite actions.
 
 ### Environments, Protections, and Concurrency
 
@@ -166,15 +153,7 @@ Three mechanisms, in order of preference:
 
 ## 3. Authoring Custom Actions
 
-### Action Types
-
-| Type | Runtime | Best for | Key file |
-|---|---|---|---|
-| JavaScript | Node.js (on runner, no container spin-up) | Fast, cross-OS, access to Actions toolkit | `action.yml` + `index.js` (or compiled dist/) |
-| Docker | Container | Custom OS/tools, Python/Ruby/compiled binaries | `action.yml` + `Dockerfile` |
-| Composite | YAML steps, no container | Wrapping a sequence of steps/shell commands | `action.yml` with `runs.steps` |
-
-**Immutable actions on GitHub-hosted runners:** GitHub has been rolling out enforcement that actions pinned to a tag are resolved against an immutable copy in the GitHub Container Registry (GHCR), not the live repo at that tag. This means floating tags (`@v3`) can no longer silently pick up new commits pushed to that tag — you get the GHCR snapshot. Implication: pin to a full commit SHA for exact reproducibility; use a tag for convenience only when you trust the publisher's release process.
+Three action types: **JavaScript** (Node.js, fast, cross-OS, no container spin-up), **Docker** (custom OS/tools, compiled binaries), **Composite** (YAML steps, runs on the caller's runner). With immutable actions enforcement, floating tags (`@v3`) resolve against a GHCR snapshot rather than the live repo — pin to a full SHA for auditability. Full type comparison table and immutable-actions details: [references/advanced-features.md](references/advanced-features.md) → "Action Types."
 
 ### `action.yml` Structure
 
@@ -199,11 +178,7 @@ runs:
 - For JavaScript actions, outputs are set by calling `core.setOutput('result', value)` from the `@actions/core` toolkit.
 - `branding:` (`icon` + `color`) is required to publish to the Marketplace but has no effect on functionality.
 
-### Versioning and Publishing
-
-- **Semantic tags + SHA pin:** tag releases (`v1`, `v1.2`, `v1.2.3`); move major version tags (`v1`) to point at the latest patch. Callers pin to `v1` for auto-updates within major, or to a full SHA for exact reproducibility.
-- **Marketplace publication:** the action repo must be public; `action.yml` must be at the repo root; Marketplace listing requires a description, icon, and color. A `README.md` is expected for discoverability.
-- **Private actions:** reference directly as `uses: org/private-repo/.github/actions/my-action@ref` — accessible if the calling repo has read access. No Marketplace publication needed.
+**Versioning and publishing details** (semantic tags, Marketplace requirements, private actions): [references/advanced-features.md](references/advanced-features.md) → "Action Versioning and Publishing."
 
 **Red flags in review:** a JavaScript action without a compiled `dist/` committed (the runner has no build step; the source must be pre-compiled); a Docker action with no health check or CMD; an action with hardcoded secrets in `action.yml` (use inputs mapped from `secrets:`).
 
@@ -309,11 +284,106 @@ Script injection occurs when user-controlled input (e.g., a PR title, issue body
 - Prefer vetted marketplace actions over inline `run:` scripts for complex processing.
 - Never grant `pull_request_target` workflows write permissions without careful review — this trigger runs in the context of the base repo (with secrets access) even for fork PRs.
 
-### Artifact Attestations
-
-Actions now supports generating signed provenance attestations (SLSA Build L2+) via `actions/attest-build-provenance`. This creates a verifiable record linking a build artifact to the workflow run that produced it. Consumers can verify attestations before deploying using `gh attestation verify`. Use this for release artifacts and container images in security-sensitive pipelines.
+**Artifact Attestations (SLSA provenance):** generate and verify signed build provenance for release artifacts. Full details, required permissions, and verify steps: [references/advanced-features.md](references/advanced-features.md) → "Artifact Attestations."
 
 **Red flags in review:** `permissions: write-all` or unscoped permissions on any workflow; `${{ github.event.*.body }}` or similar user-controlled context values inside a `run:` script; a `pull_request_target` workflow that checks out the PR head and runs it (classic code-exec attack surface); floating action tags (`@main`, `@v3`) without a SHA comment; OIDC trust policies scoped to an entire org rather than a specific repo+branch.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Ship a Reusable Workflow Safely (Typed Inputs/Secrets → Pin Actions to SHA → Test from a Caller)
+
+1. Create `.github/workflows/reusable-build.yml` in the shared repo. Declare `on: workflow_call:` with typed inputs (`string`, `boolean`, `choice`) and explicit secret declarations; set `required:` and `default:` on every input.
+   → gate: `gh workflow list --repo platform-org/platform` shows the file; it must NOT appear as a directly triggerable workflow (only callable via `workflow_call`).
+2. Pin every third-party action to a full 40-char SHA: `uses: actions/checkout@<sha>  # v4.x.x`.
+   → gate: `grep -r 'uses:' .github/workflows/reusable-build.yml | grep -v '@[0-9a-f]\{40\}'` returns no lines.
+3. Set `permissions:` at workflow level to the minimum required (e.g., `contents: read`).
+   → gate: `permissions:` block present; no job declares `write-all` or omits `permissions:`.
+4. In a caller repo, invoke the reusable workflow via `uses: platform-org/platform/.github/workflows/reusable-build.yml@main` with `with:` inputs and `secrets: inherit` (or explicit mapping).
+   → gate: `gh workflow run` triggers it; called workflow's jobs appear as nested groups in the caller UI; a debug step echoing `${{ inputs.my-input }}` confirms inputs are received.
+5. Confirm secrets are masked: all secret values in step logs must appear as `***`; if any appear in plain text the secret was passed via `inputs:` instead of `secrets:` — move it to the `secrets:` declaration.
+
+---
+
+### Workflow 2 — Set Up OIDC Cloud Auth (No Long-Lived Secrets) with a Scoped Trust Policy
+
+1. Add `permissions: id-token: write` to the workflow or job that needs cloud access.
+   → gate: run the workflow; if the auth step errors with "credentials could not be loaded" the permission is missing.
+2. Create an IAM OIDC identity provider for `token.actions.githubusercontent.com`: `aws iam create-open-id-connect-provider --url https://token.actions.githubusercontent.com --client-id-list sts.amazonaws.com --thumbprint-list <thumbprint>`.
+   → gate: `aws iam list-open-id-connect-providers` confirms the provider; `get-open-id-connect-provider` shows the correct URL and client ID.
+3. Create the IAM role with a trust policy scoped to the specific repo + branch or environment using `StringEquals` (not `StringLike`) on the `sub` claim: `"repo:my-org/my-service:ref:refs/heads/main"` or `"repo:my-org/my-service:environment:production"`.
+   → gate: `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — confirm `StringEquals` and the exact repo. Test from a different repo — `AssumeRoleWithWebIdentity` must return `AccessDenied`.
+4. Add the cloud provider's setup action (e.g., `aws-actions/configure-aws-credentials@<sha>`) with `role-to-assume:` and `aws-region:` set explicitly.
+   → gate: step output shows `Assumed role ... with web identity`; `aws sts get-caller-identity` confirms the expected role ARN.
+5. Confirm no long-lived credentials remain: `gh secret list` — delete any `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` after confirming OIDC works end-to-end.
+
+---
+
+### Workflow 3 — Harden a Public-Repo Workflow Against Fork-PR Injection (pull_request_target, Least-Privilege GITHUB_TOKEN)
+
+1. Audit the trigger. If it uses `pull_request_target:`, it runs with base-branch secrets access — the highest-risk trigger for public repos. Check whether it also checks out PR-head code.
+   → gate: `grep -r 'pull_request_target' .github/workflows/` — any hit requires review; a `checkout` step with `ref: ${{ github.event.pull_request.head.sha }}` is actively exploitable and must be fixed immediately.
+2. Set `permissions: {}` (all deny) as the workflow-level default; grant minimum overrides per job (typical CI: `contents: read`, `pull-requests: write`).
+   → gate: `grep -A5 'permissions:' .github/workflows/<workflow>.yml` — no job has `write-all` or omits `permissions:` against the restrictive default.
+3. For any step processing user-controlled input (PR title, issue body, branch name), pass through an `env:` variable and reference `$ENV_VAR` in the shell — never interpolate `${{ github.event.pull_request.title }}` directly in a `run:` block.
+   → gate: `grep -rn '\${{ github.event' .github/workflows/` — every hit must be in an `env:` assignment, not inside a `run:` body.
+4. Pin all external actions to full commit SHAs.
+   → gate: `grep -rn 'uses:' .github/workflows/ | grep -v '@[0-9a-f]\{40\}'` — no unpinned external actions.
+5. For workflows that must use `pull_request_target` (e.g., posting a comment from a fork), use the two-workflow pattern: `pull_request` (untrusted, no secrets) uploads artifacts; `workflow_run:` (trusted) downloads artifacts and posts the comment — never executes PR code.
+   → gate: the `workflow_run` workflow must have no checkout step using the PR head SHA; it only downloads artifacts from the untrusted `pull_request` workflow.
+
+---
+
+## Decision Scenarios
+
+**Scenario 1 — Composite action vs reusable workflow: which for a shared build step**
+
+> **Situation:** A platform team wants to share a "build and push Docker image" sequence across 15 repositories. The sequence is 4 steps: log in to ECR, build image, tag image, push image. A senior engineer proposes creating a reusable workflow (`.github/workflows/docker-build.yml`) in a shared `platform` repo and calling it from each app repo. A colleague suggests a composite action (`action.yml`) instead. The senior engineer says "they do the same thing, just pick one."
+
+> **Competent move:** Use a **composite action**, not a reusable workflow, for step-level logic you want to embed as a step inside a calling job. A composite action runs on the *caller's* runner and shares the runner's filesystem — it can access checked-out source code and build artifacts from preceding steps without artifact uploads/downloads. A reusable workflow spawns its own independent runner(s), requires explicit artifact passing, and counts as a full workflow nesting level against the 4-level limit. For "N steps that run in the context of a caller's job," composite action is the right abstraction.
+
+> **Tempting-but-wrong:** Defaulting to a reusable workflow because it is more familiar. Reusable workflows are the right abstraction for full independent jobs or multi-job pipelines (e.g., a complete deploy pipeline) — not for step sequences that need access to the calling job's runner workspace without artifact overhead.
+
+> **Verify:** In the `action.yml`'s `runs` section, confirm `using: composite` and that `steps:` lists the 4 steps directly; in the calling workflow, the action appears as a single `uses:` step within the job (not as a separate `uses:` at job level). `gh workflow list` in the shared repo should NOT show a new workflow file for a composite action.
+
+---
+
+**Scenario 2 — GITHUB_OUTPUT vs GITHUB_ENV for cross-job data**
+
+> **Situation:** A CI workflow has two jobs: `build` and `deploy`. The `build` job produces a Docker image tag. A developer writes `echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV` and references `${{ env.IMAGE_TAG }}` in the `deploy` job. The workflow runs but `env.IMAGE_TAG` is empty in the `deploy` job.
+
+> **Competent move:** `GITHUB_ENV` propagates environment variables to subsequent steps within the same job only — it does not cross job boundaries. To pass data between jobs, write to `GITHUB_OUTPUT` (`echo "image_tag=$TAG" >> $GITHUB_OUTPUT`), declare a job-level `outputs:` block mapping the output (`image_tag: ${{ steps.<step-id>.outputs.image_tag }}`), and reference it in the `deploy` job via `${{ needs.build.outputs.image_tag }}`. The `deploy` job must also declare `needs: build`.
+
+> **Tempting-but-wrong:** Using an artifact to pass a single string value. Artifacts work for files; for scalars, `GITHUB_OUTPUT` + job outputs is the canonical low-overhead pattern.
+
+> **Verify:** Add `- run: echo "${{ needs.build.outputs.image_tag }}"` as the first step in `deploy` and confirm the tag appears. In the `build` step log, the Actions runner logs `Set output image_tag=<value>`.
+
+---
+
+**Scenario 3 — OIDC trust policy scoped to organization rather than repo+branch**
+
+> **Situation:** A team sets up OIDC federation with AWS. The IAM role trust policy condition is `"StringLike": { "token.actions.githubusercontent.com:sub": "repo:my-org/*" }`. Production deployments succeed. A security reviewer flags the condition as dangerously broad.
+
+> **Competent move:** A wildcard `repo:my-org/*` allows any repository in the org — including forks and any future repo — to assume the production IAM role. Scope the condition to the specific repo and branch or environment: `"StringEquals": { "token.actions.githubusercontent.com:sub": "repo:my-org/my-service:ref:refs/heads/main" }` or `repo:my-org/my-service:environment:production` for protected environments.
+
+> **Tempting-but-wrong:** Adding an environment condition alongside the broad org wildcard. If `StringLike` with `repo:my-org/*` is the sub-claim check, any repo in the org can still assume the role — the repo restriction must be specific.
+
+> **Verify:** `aws iam get-role --role-name <role> --query 'Role.AssumeRolePolicyDocument'` — confirm `StringEquals` (not `StringLike`) and the exact repo+branch or environment. Test from a different repo in the org — `AssumeRoleWithWebIdentity` should return `AccessDenied`.
+
+---
+
+**Scenario 4 — Reusable workflow nesting depth exceeded**
+
+> **Situation:** A platform team builds a layered architecture: `app-pipeline.yml` → `build.yml` → `lint.yml` → `security-scan.yml` → `notify.yml`. The workflow fails at the `notify.yml` level. The team suspects a permissions issue.
+
+> **Competent move:** GitHub Actions limits reusable workflow nesting to 4 levels (caller + 3 levels of called workflows). A fifth level causes a runtime failure, not a permissions error. Fix: promote `notify.yml`'s steps into a composite action and call it from `security-scan.yml`, or collapse layers by inlining notify steps. The 4-level limit is a hard platform constraint `[volatile — verify live]`.
+
+> **Tempting-but-wrong:** Debugging IAM permissions or secrets inheritance first. The nesting-depth error is distinct from permission failures; check the workflow run's error message — it will reference the call depth.
+
+> **Verify:** Count the call chain: caller (1) → build.yml (2) → lint.yml (3) → security-scan.yml (4) → notify.yml (5 = over limit). After refactoring notify into a composite action called from level 4, `gh run list --workflow app-pipeline.yml` should show successful runs.
+
+Further scenario (self-hosted runner on a public repository): [references/scenarios.md](references/scenarios.md).
 
 ---
 
@@ -334,6 +404,23 @@ Actions now supports generating signed provenance attestations (SLSA Build L2+) 
 - **DO** use ephemeral (re-imaged) self-hosted runners for sensitive workloads; never allow persistent state between jobs on shared runners.
 - **DON'T** store a runner registration token beyond its 1-hour expiry — regenerate at provisioning time.
 - **DO** verify artifact attestations with `gh attestation verify` before deploying release artifacts in security-critical pipelines.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/github-actions.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
+- **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: GITHUB_OUTPUT vs GITHUB_ENV, OIDC org-scope trust, reusable workflow nesting depth) to meet the teaching-scenario standard (≥4 inline). Scenario 5 remains in references. "Versioning and Publishing" and "Artifact Attestations" subsections moved to references/advanced-features.md to offset body length.
 
 ---
 

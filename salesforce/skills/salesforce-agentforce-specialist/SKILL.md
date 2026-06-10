@@ -1,11 +1,14 @@
 ---
 name: salesforce-agentforce-specialist
-description: Operational playbook for building and governing Salesforce Agentforce and generative-AI features — Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex), Agentforce agents (topics, actions, agent-user security), Data Cloud and Knowledge grounding / RAG, and the Einstein Trust Layer (data masking, zero-retention, audit). Use when implementing or reviewing any of these; covers the agent reasoning loop, least-privilege agent users, and Service/Sales Cloud AI features. The Agentforce Specialist certification (AI-201) is the scaffold and benchmark used to scope and measure this skill, not its subject. Reflects the March 2025 rebrand from AI Specialist.
+description: Building and governing Salesforce Agentforce and generative-AI features — Agentforce agents (topics, actions, agent-user security, the reasoning loop), Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex), Data Cloud and Knowledge grounding/RAG, and the Einstein Trust Layer (data masking, zero-retention, audit). Use when implementing or reviewing agents, prompt templates, grounding, or AI guardrails. Not admin-level Agentforce permission setup alone (see salesforce-administrator) or Apex action-code internals (see salesforce-platform-developer-2). Scoped and benchmarked by the Agentforce Specialist (AI-201) blueprint.
 metadata:
   credential: Salesforce Certified Agentforce Specialist
   exam-code: AI-201
   domain: salesforce
   type: certification-playbook
+  status: current
+  last-reviewed: 2026-06-09
+  blueprint-verified: 2026-06-07
 ---
 
 # Salesforce Agentforce Specialist (AI-201) — Skills Reference
@@ -33,32 +36,31 @@ The certification sits between entry-level **AI Associate** (conceptual, no
 hands-on) and senior architecture credentials. Recommended (not required)
 prior knowledge: Salesforce Administrator or Platform App Builder.
 
-> **Deeper context:** Study resources and NPSP/nonprofit relevance notes live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md.
+> **Load this skill when…** building or reviewing Agentforce agents (topics, actions, agent-user security); creating Prompt Builder templates (Sales Email, Field Generation, Record Summary, Flex); configuring Data Cloud grounding or Knowledge RAG for a prompt or agent; or reviewing Einstein Trust Layer settings (data masking, zero-retention, audit trail).
+> **Not this skill:** admin-level Agentforce permission setup (enabling features, assigning licenses) without building an agent → see `salesforce-administrator`; writing the Apex code behind an agent action → see `salesforce-platform-developer-2`.
+
+> **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications of these rules, see a per-org appendix you maintain in your own project, referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+> **Verify steps assume nothing about your tooling** — use your project's Salesforce MCP connection, the Salesforce CLI (`sf`), or the Salesforce setup UI, in that order of preference.
 
 ---
 
-## Exam Details
+Credential logistics and study path: see [references/study-resources.md](references/study-resources.md).
 
-| Detail | Value |
-|---|---|
-| Credential name | Salesforce Certified Agentforce Specialist |
-| Exam code | AI-201 |
-| Number of questions | 60 scored + up to 5 unscored pilot questions |
-| Time limit | 105 minutes |
-| Passing score | 72% |
-| Cost | $200 USD + applicable taxes |
-| Retake fee | $100 USD + applicable taxes |
-| Prerequisites | None (Admin / Platform App Builder recommended) |
-| Retake policy | Up to 3 retakes per release cycle; standard retake fee per attempt |
-| Format | Multiple-choice and multiple-select |
-| Delivery | Online proctored or Pearson VUE testing center |
-| Maintenance | Annual maintenance exam required to keep credential active |
+---
 
-**Pricing note:** Salesforce ran a free-exam promotion ("AI for All") from
-September 23, 2024 through December 31, 2025. As of 2026, the standard $200 list
-price applies, though Salesforce periodically offers free or discounted attempts
-through Trailhead challenges and Agentblazer programs — check the official exam
-page before purchasing a voucher.
+## Uncertainty & Escalation
+
+- **Always re-verify live:** `[volatile — verify live]` items include: Agentforce agent type availability per edition and license (Service Agent, SDR Agent, Sales Coach Agent), Prompt Builder template type capabilities across releases, Data Cloud RAG/Data Library feature availability, Einstein Trust Layer masking configuration UI paths, and AI-201 blueprint topic weights.
+- **Live wins:** when this file and the live org or official AI-201 blueprint disagree — for example, a template type added or renamed in a recent release — trust the live system and flag this skill as stale via the Feedback protocol below.
+- **Escalate to a human:** surface — never silently execute — any configuration that points an agent at sensitive or PII-containing records without first verifying the running-user's FLS and sharing scope, grants an agent user a broad profile or "Modify All" permission, publishes a prompt template with no Trust Layer masking review for sensitive fields, or configures a production agent without Testing Center validation.
+- **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+Inline volatile tags applied:
+- Agent type roster (Service Agent, SDR Agent, Sales Coach Agent, Employee Agent) `[volatile — verify live]` — new agent types are introduced each release; verify available types in your org's Agentforce Setup.
+- AI Associate credential retired "in early 2026" `[volatile — verify live]` — retirement dates and credential transitions are announced on Trailhead; verify current status.
+- Data Cloud RAG / Data Library / vector search availability `[volatile — verify live]` — requires Data Cloud provisioning; feature names and configuration paths change across releases.
+- Einstein Trust Layer masking configuration for custom fields `[volatile — verify live]` — masking entity configuration UI and defaults evolve; verify which custom fields require explicit registration in your org's current release.
 
 ---
 
@@ -252,50 +254,14 @@ page before purchasing a voucher.
 
 ---
 
-## 4. Agentforce + Service Cloud (10%)
+## 4 & 5. Agentforce + Service Cloud / Sales Cloud (10% each)
 
-### The rules
+Key guard-rules (see Quick Reference below for the full list):
+- Ground service agents on Knowledge articles; always configure an escalation/hand-off path to a human.
+- Confirm `Case` / `KnowledgeArticleVersion` are in use before proposing a Service Cloud-grounded agent.
+- **Don't force-fit SDR/Coach/pipeline agents to orgs with no sales pipeline** (e.g. NPSP donation-based orgs — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
-- **Ground service agents on Knowledge articles** and set a confidence
-  threshold so low-confidence matches don't surface as authoritative answers.
-- **Match the generative feature to the service moment:**
-
-  | Moment | Feature |
-  |---|---|
-  | Suggest replies to a *human* agent | **Einstein Reply Recommendations** |
-  | AI-drafted first reply | **Service Replies** |
-  | End-of-case summary for QA/CSAT | **Work Summary** |
-  | Auto-fill case category/priority from text | **Case Classification** |
-  | Route case to right queue/skill | **Case Routing** (uses classification) |
-  | Surface KB articles to agents | **Article Recommendations** |
-
-- **Always configure an escalation/hand-off path** to a human and an
-  end-of-conversation action. An autonomous agent must know its exits.
-- A public-site Service Agent grounded on a small Knowledge base is a common
-  near-term fit; it requires Knowledge enabled and grounds on articles, not RAG.
-
-### Verify against the live org
-
-- Confirm whether `Case` / `KnowledgeArticleVersion` are in use before proposing
-  a Service Cloud-grounded agent.
-
----
-
-## 5. Agentforce + Sales Cloud (10%)
-
-### The rules
-
-- **SDR Agent** = autonomous prospecting, lead qualification, meeting booking.
-  **Sales Coach Agent** = rep skill development via simulated buyer conversations.
-- Match sales generative features to the scenario: **Einstein Sales Emails**
-  (drafted outreach from CRM), **Call Summary/Coaching** (transcription + next
-  steps), **Lead/Opportunity Scoring** (predictive scores on records), **Pipeline
-  Inspection** (deal-risk surfacing).
-- Sales Cloud agents only fit orgs that actually run a sales motion. In a
-  nonprofit/NPSP context the analogue is donor engagement, which lives in
-  NPSP/Nonprofit Cloud constructs (Opportunities as donations), not the standard
-  sales pipeline — don't force-fit SDR/Coach/pipeline agents where there's no
-  pipeline.
+Full feature-to-scenario matching tables (Service moment → feature; Sales generative feature → use case), Service Agent grounding configuration, SDR vs. Sales Coach Agent distinction, and cloud-specific anti-patterns: [references/study-resources.md](references/study-resources.md) — load when building a Service or Sales Cloud agent.
 
 ---
 
@@ -353,6 +319,55 @@ page before purchasing a voucher.
 - **DO** keep the Trust Layer audit trail on — it's the compliance record. **DON'T** put PII/sensitive content in static grounding or logs.
 - **DO** verify field API names + lengths + FLS with `describe` before wiring merge fields or agent actions.
 - **DO** dry-run an action's SOQL as the agent user before trusting it.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Build and ship an agent topic + action with a least-privilege agent user
+
+1. Create a dedicated named Salesforce user for the agent. Assign a minimal base profile (e.g. Minimum Access). Do NOT assign System Administrator or any "Modify All" permission.
+   → gate: user created; profile confirmed as restrictive in Setup.
+2. Identify exactly which objects and fields the agent's action(s) will read or write. Create a permission set granting only those object permissions and FLS (`readable`/`editable` as needed).
+   → gate: describe each object as the agent user (or via `runAs` in Apex) — only the required objects/fields are accessible.
+3. In Agent Builder, create the agent topic: write a tight scope description and explicit instructions including "when NOT to use this topic."
+   → gate: topic scope is narrower than the default; Testing Center correctly routes a representative utterance to this topic and not to an unrelated one.
+4. Build the action (Flow preferred over Apex when both work). Wire it to the topic. Dry-run the underlying SOQL/DML as the agent user before activating.
+   → gate: SOQL returns the expected records as the agent user; no `INSUFFICIENT_ACCESS` error.
+5. Test in Agentforce Testing Center with at least one happy-path utterance, one out-of-scope utterance, and one edge case (e.g. record not found). Review trustworthiness and topic-accuracy scores.
+   → gate: scores meet your quality bar; misrouted utterances are addressed by tightening topic instructions.
+6. Deploy the agent, its backing Flows/Apex, the agent user, and the permission set together to the target org. Confirm the agent user exists and the permission set is assigned before activating the agent.
+   → gate: post-deploy query confirms agent user + permset assignment; agent activates without errors.
+
+---
+
+### Workflow 2 — Build a grounded Field Generation prompt template safely (match field length, dynamic grounding)
+
+1. Describe the target object: confirm the exact API name and character length of the destination field before writing the template.
+   → gate: field length is documented; template's max-output instruction will be set to this value or below.
+2. Identify all facts the template needs. Map each to a dynamic merge field (resolved at run time from the record or a related object via lookup traversal). Do NOT paste any record data as static text in the template body.
+   → gate: zero hard-coded record facts in the template body; all variable content enters via merge fields.
+3. Build the template in Prompt Builder as Field Generation type. Set an explicit max-output instruction in the prompt that matches (or is below) the field length from step 1. Assign the template's object/field target.
+   → gate: template compiles; preview pane output is within field length on a real sandbox record.
+4. Activate the template. Verify status = Active before referencing it from a Flow, page, or agent action.
+   → gate: template status shows "Active" in Prompt Builder; draft templates don't resolve at run time.
+5. Review Trust Layer masking configuration: confirm that any PII or sensitive fields flowing through merge fields are registered for masking. Verify in the Trust Layer audit trail after the first run.
+   → gate: audit trail entry for the template invocation shows masked tokens where PII fields were grounded; no raw PII visible in the audit log.
+
+---
+
+### Workflow 3 — Diagnose "agent can't access a record" (running-user CRUD → FLS → sharing)
+
+1. Identify the agent user: check which named Salesforce user the agent is configured to run as in Agent Builder.
+   → gate: agent user identity confirmed.
+2. Check object-level CRUD: as the agent user's profile + permission set combination, confirm the target object has Read (and Write if needed) access. SOQL `SELECT Id FROM Object__c LIMIT 1` as the agent user is the definitive test.
+   → gate: object access confirmed or denied — if denied, add to the permission set and retest.
+3. Check FLS: describe the object as the agent user and verify every field the action queries or writes is listed as accessible/editable. A missing field returns `INVALID_FIELD` in SOQL even with full object access.
+   → gate: describe returns each required field with `accessible: true`; add missing fields to the permission set's `<fieldPermissions>`.
+4. Check sharing: verify the agent user can see the specific record. OWD Private + no sharing rule means the agent user sees only records it owns. Confirm via `SOQL WHERE Id = '<RecordId>'` as the agent user.
+   → gate: the specific record appears in the query result as the agent user; if not, add a sharing rule or adjust OWD.
+5. If all three checks pass but the action still fails, inspect the Apex action's SOQL for hard-coded profile or role filters that might exclude the agent user.
+   → gate: no phantom filter; action returns expected data in a test run logged as the agent user.
 
 ---
 
@@ -485,7 +500,23 @@ Original teaching scenarios — distinct from held-out eval scenarios in `evals/
 
 ## Study resources & relevance
 
-Study resources (official Salesforce + community, practice exams, hands-on environments), NPSP/nonprofit relevance notes, and supplemental rules for **Model Builder** and **Agent Channels** (blueprint-covered topics with lower exam weight) are kept in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path, mapping these rules to a nonprofit org, or working on those supplemental topics.
+Study resources (official Salesforce + community, practice exams, hands-on environments) and supplemental rules for **Model Builder** and **Agent Channels** (blueprint-covered topics with lower exam weight) are kept in [references/study-resources.md](references/study-resources.md). For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/salesforce-agentforce-specialist.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+---
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---
 

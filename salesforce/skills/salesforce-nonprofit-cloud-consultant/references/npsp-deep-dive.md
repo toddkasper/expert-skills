@@ -37,7 +37,7 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Contains the full operat
 
 - **Anti-pattern: bulk-loading 50k Contacts/Opportunities with all TDTM handlers active.** Each insert fires household creation, address mgmt, rollups, relationship mirroring — you'll blow governor limits and the load crawls. Disable handlers for the load window.
 - **Anti-pattern: leaving handlers disabled after the load.** New records stop getting Household Accounts, rollups, reciprocal relationships. Always re-enable.
-- Verify: `soql_query("SELECT Name, npsp__Object__c, npsp__Class__c, npsp__Active__c, npsp__Load_Order__c FROM npsp__Trigger_Handler__c ORDER BY npsp__Load_Order__c")`.
+- Verify: run `SELECT Name, npsp__Object__c, npsp__Class__c, npsp__Active__c, npsp__Load_Order__c FROM npsp__Trigger_Handler__c ORDER BY npsp__Load_Order__c` via your Salesforce MCP/connection, or `sf data query --query "SELECT Name, npsp__Object__c, npsp__Class__c, npsp__Active__c, npsp__Load_Order__c FROM npsp__Trigger_Handler__c ORDER BY npsp__Load_Order__c"` (Salesforce CLI), or the Developer Console Query Editor.
 
 ---
 
@@ -72,7 +72,7 @@ These are the **synchronous** per-transaction limits:
 
 - When adding a custom field via SFDX, you must also add it to a permission set's `<fieldPermissions>` block (or it's invisible).
 - **Required fields must be OMITTED from `<fieldPermissions>`.** Salesforce rejects the permset deploy with *"You cannot deploy to a required field"* — required fields are always visible/editable, so listing them errors.
-- Verify the assignment actually landed: query `PermissionSetAssignment` and the permset's `SetupEntityAccess` / field perms via the API, or just `soql_query` the field — if it returns, FLS is real.
+- Verify the assignment actually landed: query `PermissionSetAssignment` and the permset's `SetupEntityAccess` / field perms via the API, or just run a SOQL query for the field (MCP / `sf data query` / Developer Console) — if it returns, FLS is real.
 
 ---
 
@@ -82,7 +82,7 @@ These are the **synchronous** per-transaction limits:
 
 - **Anti-pattern: relying on Apex truncation as your length guard.** A defensive Apex truncation helper exists for legacy/direct-API records, but the form/integration layer must FAIL at validation rather than silently lose data. Truncation is a fallback, not a strategy.
 - A restricted picklist rejects out-of-list values at the API layer — submitting one throws, it does not coerce.
-- Verify: `describe_object("Contact")` returns each field's `length`, `type`, and for picklists the active `picklistValues` and `restrictedPicklist` flag. This is the source of truth.
+- Verify: describe the `Contact` object (your Salesforce MCP, `sf sobject describe --sobject Contact`, or Setup → Object Manager → Contact → Fields & Relationships) — it returns each field's `length`, `type`, and for picklists the active `picklistValues` and `restrictedPicklist` flag. This is the source of truth.
 
 ---
 
@@ -119,12 +119,23 @@ These are the **synchronous** per-transaction limits:
 
 ## 14. Duplicate management with the Household model
 
-**Rule: standard Duplicate/Matching Rules are complicated by Households** because many real people share a household address. Match Contacts on a stable combination (e.g. **email + birthdate**), not on name+address alone. RED FLAG: a matching rule keyed on address alone will collapse spouses into one Contact. Verify candidate dupes (`find_contacts` / SOQL) before any merge.
+**Rule: standard Duplicate/Matching Rules are complicated by Households** because many real people share a household address. Match Contacts on a stable combination (e.g. **email + birthdate**), not on name+address alone. RED FLAG: a matching rule keyed on address alone will collapse spouses into one Contact. Verify candidate dupes by querying matching Contacts (MCP / `sf data query` / a list view) before any merge.
 
 ---
 
 ## 15. Analytics — recognize the right report, know LYBUNT/SYBUNT
 
 - **LYBUNT** = gave **L**ast **Y**ear **B**ut **U**nfortunately **N**ot **T**his year. **SYBUNT** = gave **S**ome **Y**ear But not this year. Both are donor-retention/lapse reports built from time-bound giving rollups.
-- Use `run_report` to execute an existing report, or `soql_query` with date filters for ad-hoc retention math, rather than rebuilding report types blindly.
+- Run the report (your Salesforce MCP, the Reports tab, or the Analytics/reports REST API), or run a SOQL query with date filters (MCP / `sf data query` / Developer Console) for ad-hoc retention math, rather than rebuilding report types blindly.
 - Decision: standard Reports/Dashboards for internal KPIs; CRM Analytics/Tableau only when you need blended data sources or external-stakeholder dashboards — don't recommend the heavier tool for a small nonprofit's basic fundraising KPIs.
+
+---
+
+## 16. Experience Cloud / external portals on an NPSP org
+
+External-facing portals (donor, volunteer, program-participant) layer Experience Cloud on top of the NPSP data model. The general external-sharing discipline (CRUD + FLS + OWD + sharing set/share group, guest-user hardening) lives in [salesforce-experience-cloud-consultant](../../salesforce-experience-cloud-consultant/SKILL.md); the NPSP-specific deltas are:
+
+- **License tier:** for a nonprofit portal, default to the **Experience Cloud for Nonprofits** tier (not standard Customer/Partner Community) and confirm the NPSP objects you need are license-exposed **before** designing the sharing model — an object the license doesn't expose can't be shared into the portal no matter how the sharing set is built.
+- **Donor Portal sharing set — key on the Household, not the Contact.** A donor's gifts are Opportunities whose primary contact is reached via `Opportunity.npe01__Contact_Opp_For__r`. Because the Household Account model creates **one Account per household**, configure the sharing set against the **Household Account**, not the Contact, or spouses won't see shared household giving. Also in scope: `npe01__OppPayment__c` (payments), Enhanced Recurring Donations (RD2), and soft-credit/household roll-ups. **Verify:** describe `Opportunity` to confirm the `npe01__Contact_Opp_For__r` lookup path before building the sharing set.
+- **Volunteer Portal (Volunteers for Salesforce / V4SF):** the objects `Volunteer_Job__c`, `Volunteer_Shift__c`, `Volunteer_Hours__c` get the **same** CRUD + FLS + sharing-set discipline as any external-user scenario — being managed-package objects does not exempt them from the external-access layers.
+- **Program-participant access (Nonprofit Case Management / NCCM):** maps to the Customer Account Portal template + self-registration so participants can view referrals and update their own contact info.

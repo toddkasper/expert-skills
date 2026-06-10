@@ -1,11 +1,12 @@
 ---
 name: typescript
-description: Operational playbook for writing and reviewing TypeScript — the type system, generics, narrowing and inference, utility and conditional types, strictness configuration, typing JavaScript/Node APIs, and declaration files. Use when adding or reviewing types in any TypeScript codebase (Node, React, Lambdas). No first-party certification exists; this is a competence skill. Sibling skills handle framework-specific concerns (react, nodejs, nextjs, react-native).
+description: Writing and reviewing TypeScript — the type system and structural typing, generics, narrowing and inference, conditional/mapped/utility types, strictness configuration (tsconfig, the strict family), module resolution and project references, typing third-party/Node APIs, and declaration files (.d.ts). Use when adding or reviewing types in any TS codebase (Node, React, Lambdas). Framework-specific concerns live in the react/nodejs/nextjs/react-native skills. Competence skill anchored on the official TypeScript Handbook — no first-party certification.
 metadata:
   credential: None — competence skill (TypeScript has no first-party certification)
   domain: web
   type: competence-playbook
   status: active
+  last-reviewed: 2026-06-09
   anchored-to: TypeScript Handbook + official release notes (typescriptlang.org)
 ---
 
@@ -24,13 +25,27 @@ inference, narrowing, generics, configuration, and declaration files. Framework 
 Next.js server components, Node.js APIs) is deferred to the sibling skills (`react`, `nextjs`,
 `nodejs`).
 
+> **Load this skill when…** designing or reviewing type models (discriminated unions, generics, mapped types); configuring `tsconfig.json` (strictness, module resolution, project references); authoring or fixing `.d.ts` declaration files; migrating a JavaScript codebase to TypeScript.
+> **Not this skill:** React component and hook typing → see `react`; Node.js API typing in the context of building a service → see `nodejs`; Next.js server-component typing → see `nextjs`; React Native/Expo typing → see `react-native`.
+
 > Study resources and version history live in
 > [references/study-resources.md](references/study-resources.md) — load that file when planning
 > a learning path or verifying a version-specific fact.
 
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
+
 ---
 
-## TypeScript 6.0 — Breaking-change release (March 2026)
+## Uncertainty & Escalation
+
+- **Always re-verify live:** TypeScript compiler defaults and strictness options changed materially at 6.0 and will change again at 7.0 — always check the installed TypeScript version (`npm ls typescript`) and compare against the [release notes](https://devblogs.microsoft.com/typescript/). `[volatile — verify live]` marks apply to: `strict` default (was `false` before TS 6.0); `module`/`target` defaults (changed in TS 6.0); `types` default (changed from auto-load all to `[]` in TS 6.0); `--moduleResolution node` deprecation timeline (deprecated 6.0, removal in 7.0 — `[volatile — verify live]`); `const` type parameters (TS 5.0+ only); TypeScript 7.0 Go-native compiler timeline and option removal (expected late 2026 — `[volatile — verify live]`).
+- **Live wins:** the installed TypeScript version's actual compiler behavior and [typescriptlang.org](https://typescriptlang.org) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** major TypeScript version upgrades in production monorepos (breaking defaults can silently change inferred types); removing `strict: false` overrides across a large legacy codebase (compile errors may cascade); dependency major-version bumps; production deploys after tsconfig changes.
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
+
+---
+
+## TypeScript 6.0 — Breaking-change release (March 2026) `[volatile — verify live]`
 
 TypeScript 6.0 shipped March 2026 as the **last release compiled by TypeScript itself**. It
 changed nine defaults at once. Know these before touching a tsconfig in 2026.
@@ -57,7 +72,7 @@ changed nine defaults at once. Know these before touching a tsconfig in 2026.
 { "compilerOptions": { "types": ["node", "jest"] } }
 ```
 
-TypeScript 7.0 (Go-native compiler, ~late 2026) will remove everything deprecated in 6.0 and is
+TypeScript 7.0 (Go-native compiler, ~late 2026) `[volatile — verify live]` will remove everything deprecated in 6.0 and is
 expected to deliver ~10× build speedups. All 6.0-deprecated options must be cleaned up before
 adopting 7.0.
 
@@ -226,7 +241,7 @@ on new code.
 `"moduleResolution": "bundler"` is the right choice for any project that goes through a bundler;
 it does not enforce the `.js` extension requirement that `nodenext` requires.
 
-**`--module node20`** (introduced TS 5.9): stable, non-floating alias for Node 20 behavior with
+**`--module node20`** (introduced TS 5.9) `[volatile — verify live]`: stable, non-floating alias for Node 20 behavior with
 `--target es2023` implied. Prefer over `nodenext` when pinning to Node 20 specifically.
 
 ### Project references
@@ -287,6 +302,96 @@ cast raw parsed data with `as`.
 
 ---
 
+## Executable Workflows
+
+### Workflow 1 — Type an external/Node API safely (runtime validator at boundary → narrow → honest .d.ts)
+
+1. Identify the trust boundary: any value arriving via `JSON.parse`, `fetch().then(r => r.json())`, `req.body`, `process.env`, or a third-party callback is `unknown` at the boundary.
+2. Define a Zod (or Valibot) schema that matches what the API actually returns — not what you hope it returns. Use `.parse()` to validate; on failure it throws a `ZodError` with field-level diagnostics. → gate: call `.parse()` with a deliberately malformed payload; confirm it throws `ZodError`, not a silent `undefined`.
+3. Let the validator infer the TypeScript type: `type MyPayload = z.infer<typeof MyPayloadSchema>`. Do not write the `type` separately and then cast — the schema is the single source of truth.
+4. If you must author a `.d.ts` for a plain-JS library, load the library in a Node.js REPL and inspect `Object.keys(require('the-lib'))` and the prototype chain before declaring anything. → gate: `node -e "const lib = require('the-lib'); console.log(typeof lib.method)"` — only declare methods that return `'function'`.
+5. Publish the `.d.ts` alongside the JS output by setting `"declaration": true` and `"declarationMap": true` in `tsconfig.json`. → gate: `tsc --build` produces `.d.ts` and `.d.ts.map` files in `dist/`; consumers can jump-to-source across the package boundary.
+
+### Workflow 2 — Tighten strictness incrementally on a JS→TS codebase
+
+1. Check the installed TypeScript version (`npm ls typescript`). If on TS 6.0+, `strict: true` is already the default — confirm the project's `tsconfig.json` is not explicitly setting `"strict": false`. → gate: `tsc --showConfig | grep strict` reflects the actual effective value.
+2. If `strict: false` is set and the codebase is large, enable sub-flags one at a time in order of value/effort ratio: `strictNullChecks` first (highest yield — catches most real bugs), then `noImplicitAny`, then the rest of the strict family.
+3. After enabling each flag, run `tsc --noEmit 2>&1 | wc -l` to count new errors. Fix or explicitly type-assert with a `// TODO: type this` comment — never add `// @ts-ignore` without a ticket. → gate: error count decreases monotonically across commits; no `// @ts-ignore` without a linked tracking note.
+4. Add `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` after the strict family is clean — these are the highest-value non-strict additions. → gate: `tsc --noEmit` exits 0 with both flags enabled.
+5. Add `"noUnusedLocals": true` and `"noUnusedParameters": true` in a CI-only `tsconfig.ci.json` that extends the base. Run it in CI to catch dead code before review without blocking local development. → gate: CI `tsc -p tsconfig.ci.json --noEmit` exits 0.
+
+### Workflow 3 — Model a discriminated union with exhaustiveness checking
+
+1. Define a shared literal-typed discriminant field (`kind`, `type`, or `tag`) on every variant: `{ kind: 'circle'; radius: number }`, `{ kind: 'rect'; w: number; h: number }`. The discriminant must be a string literal, not a general `string`. → gate: `tsc` narrows correctly in a `switch (shape.kind)` block without type assertions.
+2. Combine variants into a union type: `type Shape = Circle | Rect | Triangle`.
+3. Write a switch over the discriminant. In the `default` branch, assign to `never`: `const _exhaustive: never = shape`. → gate: add a new union member (`Square`) without adding a case — `tsc` reports "Type 'Square' is not assignable to type 'never'" immediately.
+4. If the switch is in a function that must return a value, throw in the default: `throw new Error('Unhandled shape: ' + (shape as any).kind)`. This satisfies `noImplicitReturns` and provides a runtime safety net for values that enter the union after a bad cast.
+5. Use `satisfies` (not `as`) when constructing union members to validate the literal shape while preserving the inferred specific type. → gate: attempting `const s = { kind: 'circle' } satisfies Shape` with a missing `radius` field produces a compile error, not a runtime one.
+
+---
+
+## Decision Scenarios
+
+**Scenario 1 — A `.d.ts` declaration file promises a method that the underlying JS library does not export**
+
+> **Situation:** A developer hand-writes a `.d.ts` file for an untyped legacy charting library. They add a `chart.destroy()` method to the declaration because they saw it mentioned in an old README. After shipping, users call `chart.destroy()` and get a runtime `TypeError: chart.destroy is not a function` on the current version of the library.
+
+> **Competent move:** Audit the actual JS runtime export before declaring it. Load the library in a Node.js REPL and inspect its prototype, or read its source, before adding anything to the `.d.ts`. The declaration file must faithfully describe what the JS actually does — phantom declarations give TypeScript false confidence and shift the error from compile time to runtime.
+
+> **Tempting-but-wrong:** Adding the declaration and leaving a `// TODO: verify this method exists` comment, deferring the audit to later. Until the comment is resolved, every caller that uses `chart.destroy()` compiles cleanly but crashes at runtime. "Works in TypeScript" gives no runtime guarantee when the declaration is a lie.
+
+> **Verify:** In a test file, import the library and call the declared method in isolation. Run `node test.js` (not `tsc`) — the runtime will immediately throw if the method doesn't exist. Only after the runtime test passes should the declaration be considered correct.
+
+---
+
+**Scenario 2 — Structural typing allows an `OrderId` to be passed where a `UserId` is expected**
+
+> **Situation:** A codebase uses `type UserId = string` and `type OrderId = string`. Both are aliases for `string`. A function `getOrder(userId: UserId, orderId: OrderId)` is called in one place with the arguments reversed — `getOrder(orderId, userId)`. TypeScript emits no error and the bug reaches production.
+
+> **Competent move:** Use branded (nominal) types for distinct ID domains. A minimal brand: `` type UserId = string & { readonly __brand: 'UserId' } ``. Assign them via constructor functions: `function toUserId(s: string): UserId { return s as UserId }`. Now `UserId` and `OrderId` are structurally distinct and the compiler catches transposed arguments.
+
+> **Tempting-but-wrong:** Adding a code comment like `// first arg must be userId` and relying on review. Comments do not survive refactoring. A structural type alias (`type UserId = string`) provides no compiler protection whatsoever — both types are assignment-compatible with each other and with `string`.
+
+> **Verify:** After branding, swap the arguments intentionally and run `tsc`. The compiler should report "Argument of type 'OrderId' is not assignable to parameter of type 'UserId'." This is the compile-time guarantee the plain type alias could not provide.
+
+---
+
+**Scenario 3 — Overly broad generic constraint lets any object through instead of enforcing a minimum shape**
+
+> **Situation:** A generic utility `function pluck<T, K extends keyof T>(obj: T, key: K): T[K]` is being used correctly. A developer then writes a new utility `function merge<T>(a: T, b: T): T` for merging config objects. Code review flags the `T` constraint as too broad — the function is called with non-plain-object values like arrays and class instances.
+
+> **Competent move:** Add a constraint that matches the intended usage: `function merge<T extends Record<string, unknown>>(a: T, b: T): T`. This narrows `T` to plain object types and prevents accidental calls with arrays, primitives, or class instances, all of which would compile without the constraint. The constraint communicates intent and catches misuse at the callsite.
+
+> **Tempting-but-wrong:** Removing generics entirely and typing the parameters as `object`. `object` excludes primitives but is too broad — it includes arrays and class instances — and the return type loses the specific shape of `T`, forcing callers to cast.
+
+> **Verify:** Attempt to call `merge([1, 2], [3, 4])` with and without the `Record<string, unknown>` constraint. Without it, the call compiles silently. With it, TypeScript reports "Argument of type 'number[]' is not assignable to parameter of type 'Record<string, unknown>'."
+
+---
+
+**Scenario 4 — Runtime boundary: `unknown` API response cast with `as` instead of a runtime validator**
+
+> **Situation:** A service receives a webhook payload, parses it with `JSON.parse`, and immediately casts: `const event = JSON.parse(body) as WebhookPayload`. The type checks pass. In production, a vendor changes the payload schema and omits a required field — the code silently proceeds with `undefined` where a string is expected, causing corrupt database writes.
+
+> **Competent move:** Use a runtime validator (Zod, Valibot, or similar) to parse and validate the payload at the boundary: `const event = WebhookPayloadSchema.parse(JSON.parse(body))`. The validator throws on schema mismatch, turning a silent corruption into an explicit 400/500 error. The TypeScript type of `event` is then inferred from the schema — no `as` cast needed.
+
+> **Tempting-but-wrong:** Adding defensive `if (event.field !== undefined)` checks throughout the business logic downstream. This scatters validation across the codebase and is easy to miss for new fields. Validating at the single entry point (the boundary) catches all failures in one place regardless of how many fields the payload has.
+
+> **Verify:** Define a Zod schema that matches the expected payload. Call `.parse()` with a deliberately malformed payload (missing a required field). Confirm the validator throws a `ZodError` with a clear field-level message. Then confirm the correctly shaped payload parses cleanly and the inferred type matches.
+
+---
+
+**Scenario 5 — `unknown` vs `any` in an error-handling utility at an API edge**
+
+> **Situation:** A shared `handleError(err: any)` utility function is used throughout the codebase to log and format errors. A junior engineer proposes changing `err: any` to `err: unknown` but a teammate objects that doing so will break every call site where `err.message` is accessed directly.
+
+> **Competent move:** Change the parameter to `unknown` and add a type guard at the top of the function: `const message = err instanceof Error ? err.message : String(err)`. This is exactly the right design for a shared error handler — errors from any source (rejected Promises, thrown strings, legacy code) can have any shape. `unknown` forces the narrowing to happen inside the utility, once, rather than spreading unchecked `.message` access across every call site.
+
+> **Tempting-but-wrong:** Keeping `err: any` to avoid touching existing code. `any` propagates upward — every downstream expression derived from `err` also becomes `any`, silently disabling type checking on anything the error touches. A single `unknown` + guard in the utility is a smaller and safer change than `any` left in place indefinitely.
+
+> **Verify:** With `err: unknown` in place, attempt to access `err.message` directly (without a guard) inside the utility. `tsc` should report "Property 'message' does not exist on type 'unknown'." After adding the `instanceof Error` guard, the access compiles and the check is explicit.
+
+---
+
 ## Operational Rules Quick Reference
 
 - **DO** model with discriminated unions (shared `kind` literal field) for mutually exclusive
@@ -336,6 +441,20 @@ cast raw parsed data with `as`.
 - A `tsconfig.json` that still has `"moduleResolution": "node"` (node10) or `--baseUrl` — both
   deprecated in 6.0, removed in 7.0.
 - `JSON.parse(rawInput) as SomeType` without a runtime validation step.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/typescript.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 

@@ -70,3 +70,27 @@ AMPscript edge cases, Intelligence Reports, or publication/suppression list wiri
   **RED FLAG:** confusing them — applying a suppression list as the send target (instead of a
   publication list or DE) sends to nobody; applying a publication list as a suppression silently
   blocks your intended audience.
+
+---
+
+## Email design rules
+
+- Mobile-first: design fluid/responsive with `@media` queries; ~half of opens are mobile. Use large tap targets, big fonts, and single-column layouts — especially for older audiences.
+- Subject line + preheader are the open-rate levers. Avoid spam-trigger words, ALL CAPS, excessive `!`.
+- A/B test ONE variable at a time (subject OR from-name OR send-time), define the winner metric up front (open vs. click vs. conversion), and use a large enough test cell to be significant.
+
+---
+
+## Profile & preference management
+
+- **Profile Attributes** = identity fields. **Preference Attributes** = opt-in/opt-out toggles by category (e.g. "Donor appeals" vs. "Volunteer updates"). Give people granular preferences via the **Subscription Center** so they downgrade instead of fully unsubscribing.
+- Capture/update subscribers with **Web Collect** (forms posting to MC) or **Smart Capture** (forms on CloudPages). For consent-sensitive lists, gate activation behind **Double Opt-In**.
+
+---
+
+## Marketing Cloud Connect (MCC) — the CRM bridge
+
+- MCC is the integration layer between SFMC and Salesforce CRM. Two modes: **Synchronized Data Sources** (replicate CRM objects into MC as Synchronized DEs for segmentation) and **Salesforce Send** (send tied to a CRM Campaign, tracking flows back to the Contact/Lead activity timeline).
+- MCC uses tenant-specific endpoints + an integration user with API access. **Verify the CRM objects you intend to segment on are actually synced** before building a journey on them.
+- **Verify field-level security for the MCC integration user.** A field can be synced but unreadable — if FLS isn't granted to the integration user, the synced field returns blank or "Invalid field." Confirm read access for every field you intend to segment on.
+- **Exposing a custom object to MC** is possible via the connected/external client app, but the app's permission assignment and consumer-key retrieval often have org-specific friction — verify the integration user can actually query the object before designing segments on it.

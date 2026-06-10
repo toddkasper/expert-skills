@@ -1,10 +1,12 @@
 ---
 name: nodejs
-description: Operational playbook for building and reviewing Node.js applications and services — the event loop and async patterns, streams and buffers, the module system, error handling, diagnostics, packaging, and HTTP services with security. Use when writing or reviewing Node.js code, CLIs, services, or AWS Lambda handlers. The OpenJS JSNAD and JSNSD certifications (retired September 2025) provide the competence blueprint; the skill covers their full scope. Sibling skills handle React (`react`), Next.js (`nextjs`), React Native (`react-native`), and TypeScript (`typescript`) — this skill stays focused on the Node.js runtime.
+description: Building and reviewing Node.js applications and services — the event loop and async patterns, streams and buffers, the module system (ESM/CJS), packaging and the toolchain, error handling and diagnostics, and HTTP services with security. Use when writing, reviewing, or debugging Node.js code, CLIs, services, or AWS Lambda handlers. Stays on the Node runtime; excludes React (see react), Next.js (see nextjs), and TypeScript typing (see typescript). Competence skill mapped to the retired OpenJS JSNAD/JSNSD curriculum.
 metadata:
   credential: OpenJS Node.js Application Developer (JSNAD) / Services Developer (JSNSD) — both retired September 30, 2025
   domain: web
   type: certification-playbook
+  status: operational
+  last-reviewed: 2026-06-09
   blueprint: JSNAD / JSNSD curriculum (retired Sep 2025 — used as competence map only)
 ---
 
@@ -14,47 +16,31 @@ metadata:
 
 A strong Node.js engineer reasons about the runtime, not just the library. That means understanding how the event loop schedules work, how to move data through streams without blowing memory, how modules resolve at runtime vs at build time, and how to keep services secure against injection and header-based attacks. The retired OpenJS exams (JSNAD and JSNSD) are used here only as a public competence map — they defined what practitioners must know without being about the exam itself.
 
+> **Load this skill when…** writing or reviewing Node.js services, CLIs, or Lambda handlers; debugging event-loop blocking or stream backpressure issues; auditing HTTP security (injection, Helmet, JWT); reviewing module/packaging configuration (ESM, exports map, npm ci).
+> **Not this skill:** React UI concerns → see `react`; Next.js framework (App Router, Server Actions) → see `nextjs`; TypeScript type-system questions → see `typescript`; React Native/mobile runtime → see `react-native`.
+
 > **Deeper context:** Study resources, certification history, and learning paths live in [references/study-resources.md](references/study-resources.md). Load that file when planning a study path. Sibling skills: `typescript`, `react`, `nextjs`, `react-native`.
+
+> **Verify steps assume nothing about your tooling** — use your project's own scripts and the language toolchain (`tsc`, `node`, the test runner, the package manager), in that order of preference.
 
 ---
 
-## Certification Details
+Credential context (retired JSNAD/JSNSD) and study path: see [references/study-resources.md](references/study-resources.md).
 
-**Both JSNAD and JSNSD were retired September 30, 2025.** As of June 2026, no official successor has been announced. The facts below describe the exams as they existed — useful for understanding the competence bar, not for registration.
+---
 
-| Field | JSNAD | JSNSD |
-|---|---|---|
-| Full name | OpenJS Node.js Application Developer | OpenJS Node.js Services Developer |
-| Status | **Retired Sep 30, 2025** | **Retired Sep 30, 2025** |
-| Format | Remote-proctored, performance-based (live coding in browser VM) | Same format |
-| Duration | 2 hours | 2 hours |
-| Passing score | 68% | 68% |
-| Cost (at retirement) | $300 USD (free retake included) | $300 USD (free retake included) |
-| Allowed resources | nodejs.org and npm docs only; StackOverflow blocked | Same |
-| Prerequisites | None formal; 2+ years Node.js recommended | None formal |
-| Task count (approx.) | ~25 coding tasks, 5–10 min each | ~4–5 longer tasks, 15–30 min each |
+## Uncertainty & Escalation
 
-> Passing score (68%) is confirmed from multiple first-hand candidate reports and the archived Linux Foundation FAQ. Cost ($300) is confirmed from multiple sources at or near retirement; earlier it was $200. Task counts are best estimates from candidate reports, not official figures.
+- **Always re-verify live:** Node.js LTS release lines and their API stability tier change on a schedule — APIs stable in Node 18 may be deprecated or removed in Node 22/24. `[volatile — verify live]` marks apply to: the `node:test` runner API surface (added Node 18, still gaining features each release); `require(esm)` support for CJS-loading ESM (stable in Node 22 — behavior varies by version); `stream.pipeline()` Promise variant availability (`node:stream/promises` — verify against the project's Node version); `worker_threads` API surface (stable Node 12+, but options evolve). Check `engines` in `package.json` and the [Node.js release schedule](https://nodejs.org/en/about/releases/) before relying on a version-specific API.
+- **Live wins:** the installed Node.js version's actual runtime behavior and the [official Node.js docs](https://nodejs.org/docs/latest/api/) are authoritative over this file → log discrepancies via Feedback protocol below.
+- **Escalate to a human:** production deploys; dependency major-version bumps (especially `express`→`fastify` or Node LTS upgrades); data migrations; deleting or force-pushing git history; infrastructure changes (Redis, load balancer config, rate-limit store).
+- **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
 
-**JSNAD domain weights** (from the official curriculum PDF, confirmed by multiple sources):
-
-| Domain | Weight |
-|---|---|
-| Control flow | 12% |
-| Buffers & Streams | 11% |
-| Events | 11% |
-| Child processes | 8% |
-| Error handling | 8% |
-| File system | 8% |
-| JavaScript prerequisites | 7% |
-| Module system | 7% |
-| Debugging / Diagnostics | 6% |
-| Process / OS | 6% |
-| package.json | 6% |
-| Unit testing | 6% |
-| Node.js CLI | 4% |
-
-**JSNSD domain weights:** Servers & Services 70%, Security 30%.
+Specific volatile facts in this skill:
+- `require(esm)` in CJS files — `[volatile — verify live]` — stable Node 22+, not available in Node 18/20.
+- `node:test` runner API (e.g., `--test`, `--test-reporter`) — `[volatile — verify live]` — features added each LTS cycle.
+- `stream.pipeline()` from `node:stream/promises` — `[volatile — verify live]` — verify it exists in the project's Node version (Node 15+).
+- Fastify vs Express security default behavior (Helmet bundled, AJV schema validation) — `[volatile — verify live]` — confirm against installed library version.
 
 ---
 
@@ -128,7 +114,7 @@ await pipeline(readableSource, transformStep, writableDest);
 |---|---|---|
 | File extension | `.js` (default) / `.cjs` | `.mjs` / `.js` with `"type":"module"` |
 | Load | Synchronous, dynamic | Async, static |
-| Interop from CJS | `require('./foo.cjs')` works | `require('esm-only-pkg')` requires dynamic `import()` or Node ≥22 `require(esm)` (stable in Node 22) |
+| Interop from CJS | `require('./foo.cjs')` works | `require('esm-only-pkg')` requires dynamic `import()` or Node ≥22 `require(esm)` (stable in Node 22) `[volatile — verify live]` |
 | Interop from ESM | `import cjsPkg from 'cjs-pkg'` works (default export = `module.exports`) | |
 | Tree-shaking | ❌ (dynamic require) | ✅ (static analysis) |
 | `__dirname` / `__filename` | Available | Not available — use `import.meta.url` + `fileURLToPath` |
@@ -237,7 +223,7 @@ Helmet sets 14+ security headers with safe defaults. Customize CSP per route if 
 
 ## 6. Unit Testing
 
-Node.js has a built-in test runner (`node:test`, stable from Node 18; Assert module for assertions) — no test framework required for simple cases.
+Node.js has a built-in test runner (`node:test`, stable from Node 18; Assert module for assertions) `[volatile — verify live]` — no test framework required for simple cases.
 
 ```js
 import { test } from 'node:test';
@@ -253,6 +239,110 @@ For richer features (mocking, snapshot, coverage): Jest (most popular ecosystem)
 **What to test (and not):** test behavior at module boundaries, not implementation details. Stub I/O (filesystem, network, DB) at the lowest practical layer. Prefer integration tests for stream pipelines — mock streams are error-prone. Mock `child_process.spawn` carefully; it's easier to extract the shell logic into a testable pure function and call the process-boundary once.
 
 **Coverage:** 80% line/branch is a useful floor, not a ceiling. 100% coverage with bad assertions is worse than 70% with precise assertions.
+
+---
+
+## Executable Workflows
+
+### Workflow 1 — Build a streaming file/transform pipeline with backpressure + error propagation
+
+1. Import `pipeline` from `node:stream/promises` (not the callback form). → gate: `node -e "require('node:stream/promises').pipeline"` prints the function without error; if it fails, check your Node version.
+2. Create the source with `fs.createReadStream(inputPath)` — no `highWaterMark` tuning until a benchmark says otherwise.
+3. Create each transform with `new Transform({ transform(chunk, enc, cb) { … cb(null, processed); } })` or use a built-in like `zlib.createGzip()`.
+4. Create the sink with `fs.createWriteStream(outputPath + '.tmp')`. → gate: confirm the `.tmp` file is created (no "ENOENT" on the directory).
+5. `await pipeline(source, ...transforms, sink)`. The call handles backpressure and propagates errors end-to-end; no manual `.on('error')` wiring needed.
+6. After `await pipeline(...)` resolves, `await fs.promises.rename(outputPath + '.tmp', outputPath)` — atomic move prevents partial reads. → gate: source and `.tmp` files closed (`lsof | grep <pid>` shows no dangling fds after rename).
+7. Wrap the whole function in `try/catch`; on error, `await fs.promises.unlink(outputPath + '.tmp').catch(() => {})` for cleanup.
+
+### Workflow 2 — Ship a safe HTTP handler (validate → map errors → never log PII)
+
+1. Install a schema validator at the project boundary (Fastify uses AJV built-in; for Express add `zod` or `joi`). Define the expected shape of `req.body`, `req.params`, and `req.query`.
+2. At the top of the handler, parse/validate the input. On failure, return `res.status(400).json({ error: 'Invalid input' })` — do not echo back user-supplied values in the message. → gate: send a malformed body; confirm 400 response and that the error message contains no user data.
+3. Map domain/operational errors (DB not found, auth fail) to explicit HTTP status codes in a central error handler — never let a generic `500` reveal a stack trace to the client. → gate: trigger each error type in a test; assert the status code and that the response body contains no stack trace.
+4. Strip sensitive fields before logging. Create a `sanitizeHeaders(headers)` helper that removes `authorization`, `cookie`, and `x-api-key`. Log the sanitized headers object, not `req.headers` directly. → gate: send a request with `Authorization: Bearer TOKEN`; grep structured log output for `Bearer` — it must not appear.
+5. Set `Helmet` on the app once at startup: `app.use(helmet())`. → gate: `curl -I <endpoint>` — response must include `X-Content-Type-Options` and `Strict-Transport-Security` headers.
+
+### Workflow 3 — Package a CLI/lib (deps vs devDeps → lockfile → npm ci in CI)
+
+1. Audit `package.json`: every package used only in tests, builds, or linting goes in `devDependencies`. Packages the consumer needs at runtime stay in `dependencies`. → gate: `npm install --omit=dev` in a clean directory; the app starts without "Cannot find module" errors.
+2. Add an `engines` field: `{ "engines": { "node": ">=20.0.0" } }`. → gate: `node --version` in CI matches the range.
+3. Add a `files` array allowlisting `dist/` (or `lib/`), `README`, and `LICENSE`. Run `npm pack --dry-run` and confirm `src/`, `test/`, and `.env*` are absent from the tarball. → gate: tarball size is reasonable; no source maps or test fixtures included.
+4. Commit `package-lock.json`. In CI, replace `npm install` with `npm ci` — it errors if the lockfile is missing or out of sync, guaranteeing reproducible installs. → gate: CI run uses `npm ci`; deliberately introduce a version mismatch in `package.json` and confirm `npm ci` fails with "npm ci can only install packages when your package.json and package-lock.json are in sync."
+5. Run `npm audit --omit=dev` in the CI pipeline after install; fail the build on critical vulnerabilities. → gate: audit output exits 0 (or a known-OK non-zero when no criticals exist).
+
+---
+
+## Decision Scenarios
+
+**Scenario 1 — `.pipe()` leaves a writable stream open after a readable error**
+
+> **Situation:** A service pipes a `ReadStream` to a `WriteStream` to copy uploaded files to disk: `readStream.pipe(writeStream)`. In production, network disruptions occasionally cause the read stream to error mid-transfer. Monitoring shows orphaned file handles accumulating on the server.
+
+> **Competent move:** Replace `.pipe()` with `stream.pipeline()` from `node:stream/promises`. `pipeline()` automatically destroys all streams in the chain and propagates errors end-to-end when any one stream errors. `.pipe()` forwards data but does not propagate errors — the destination stream stays open and the file handle leaks.
+
+> **Tempting-but-wrong:** Adding an `error` listener to the readable and manually calling `writeStream.destroy()` inside it. This closes the gap but is fragile (must be repeated on every new pipeline) and easy to forget. `pipeline()` is the single-call fix that handles it for every stream in the chain.
+
+> **Verify:** Simulate a read error by destroying the readable mid-transfer. With `.pipe()`, confirm the write stream fd remains open (`lsof | grep <pid>`). After switching to `pipeline()`, confirm the fd is closed immediately on error.
+
+---
+
+**Scenario 2 — CPU-bound work deferred with `setImmediate` blocks concurrent requests**
+
+> **Situation:** A developer breaks up a 500ms JSON-transformation loop by inserting `await new Promise(r => setImmediate(r))` every 10,000 iterations so the event loop "can breathe." Under load tests with 20 concurrent requests, response times for all other endpoints still spike dramatically during the transformation.
+
+> **Competent move:** Move the CPU-bound transformation into a `worker_threads` Worker. `setImmediate` defers work to the next event-loop iteration on the **same thread** — it yields briefly but the heavy computation still runs on the main thread and blocks all other I/O while it executes each chunk. Worker threads run on a separate OS thread and never block the event loop.
+
+> **Tempting-but-wrong:** Increasing the chunk size so `setImmediate` is called fewer times, believing this reduces the blocking overhead. Fewer interruptions actually mean longer blocking windows per chunk — the total time spent blocking the main thread is essentially unchanged.
+
+> **Verify:** Benchmark concurrent request latency with `autocannon` while a transformation is running. Compare main-thread deferral vs `worker_threads` — the worker approach should show near-zero latency impact on concurrent requests.
+
+---
+
+**Scenario 3 — In-memory rate limiter does not share state across pods**
+
+> **Situation:** A three-instance Node.js API uses `express-rate-limit` with the default in-memory store. Security testing reveals that an attacker can bypass the 100 req/min limit by distributing requests across the three instances (34 requests per pod per minute — under the per-pod limit).
+
+> **Competent move:** Configure `express-rate-limit` with a Redis-backed store (e.g. `rate-limit-redis`). In-memory stores track counts per process — each pod has its own counter, so the effective limit is `n × per-pod-limit` across a cluster. A shared Redis store means all instances share one counter and the limit is enforced globally.
+
+> **Tempting-but-wrong:** Increasing the per-pod limit to compensate, reasoning that the average distribution will stay under the intended total. This does not enforce the limit reliably — a single attacker who knows the instance count can saturate the service with targeted requests.
+
+> **Verify:** Use a Redis `MONITOR` command during the load test to confirm all instances are incrementing the same key, and verify that a burst from a single client across all pods triggers the limit correctly.
+
+---
+
+**Scenario 4 — Structured log accidentally includes a JWT in the request log**
+
+> **Situation:** A Node.js service logs the full `req.headers` object on every request for debugging: `logger.info({ headers: req.headers }, 'incoming request')`. A security audit finds that `Authorization: Bearer <jwt>` tokens are persisted in the log store.
+
+> **Competent move:** Scrub sensitive headers at the log boundary before calling the logger. Create a helper that strips `authorization`, `cookie`, and `x-api-key` from the headers object (or logs only an allowlist of safe headers). Log the scrubbed object, never the raw `req.headers`.
+
+> **Tempting-but-wrong:** Removing the header-logging line entirely. That's overcorrection — headers like `content-type`, `user-agent`, and `x-request-id` are useful diagnostics. The correct fix is selective scrubbing, not wholesale deletion.
+
+> **Verify:** Send a request with an `Authorization` header and grep the log output for `Bearer`. After scrubbing, the JWT must not appear. Also check `cookie` and `x-api-key` headers as a regression guard.
+
+---
+
+**Scenario 5 — `util.promisify` vs manually wrapping a callback — the `this` binding trap**
+
+> **Situation:** A developer wraps a legacy database client method with `new Promise((resolve, reject) => client.query(sql, (err, rows) => err ? reject(err) : resolve(rows)))`. Code review flags this as a footgun. A teammate instead uses `const query = util.promisify(client.query)` and calls `query(sql)` — it throws "cannot read property 'pool' of undefined."
+
+> **Competent move:** Bind the method when promisifying: `const query = util.promisify(client.query).bind(client)`. `util.promisify` strips the `this` context — calling the promisified function as a plain function loses the object reference the method needs internally. Binding restores the correct receiver.
+
+> **Tempting-but-wrong:** Falling back to the `new Promise` constructor wrapper because "at least it works." The wrapper works, but it's verbose and must be repeated for every method. Binding once on `util.promisify` is the canonical, concise fix.
+
+> **Verify:** Run the promisified query against a live test DB connection. With `.bind(client)`, the call succeeds. Without it, the error references an internal property of the client object — confirming the `this` loss.
+
+---
+
+**Scenario 6 — `exec` with a user-controlled filename enables command injection**
+
+> **Situation:** A file-conversion service accepts a filename from the user and runs: `exec(`convert ${req.body.filename} output.pdf`)`. A penetration tester submits `filename = "input.jpg; rm -rf /tmp/uploads"` and the command executes both parts.
+
+> **Competent move:** Switch to `spawn('convert', [req.body.filename, 'output.pdf'])`. `exec` passes the full string to the shell — shell metacharacters (`; | && $()`) are interpreted. `spawn` with an explicit argument array bypasses the shell entirely; each element is passed as a literal argument to the process and no shell expansion occurs.
+
+> **Tempting-but-wrong:** Sanitizing `req.body.filename` with a regex that strips semicolons and pipes. Regex sanitization is incomplete — there are many shell metacharacter forms (`$()`, `` ` `` , newlines, null bytes, environment variable expansion) and any missed character is a vulnerability. Structural avoidance (no shell) is always safer than filtering.
+
+> **Verify:** Pass `"input.jpg; echo INJECTED > /tmp/proof"` to both the `exec` and `spawn` implementations. The `exec` version creates the file; the `spawn` version passes the entire string as a literal filename argument and the injection fails.
 
 ---
 
@@ -279,6 +369,20 @@ For richer features (mocking, snapshot, coverage): Jest (most popular ecosystem)
 - **DO** use `bcrypt` or `argon2` for passwords — never SHA-256 or MD5.
 - **DO** verify JWT signatures and `exp` on every request; never skip verification.
 - **DON'T** log PII, tokens, or passwords — scrub at the log boundary.
+
+---
+
+## Feedback protocol
+
+Using this skill and hit a wall? If you find a claim contradicted by the live system or official docs, a missing rule that cost you a wrong attempt, or a decision this skill gave no criteria for — append an entry **in the moment** to `.skill-feedback/nodejs.md` at the project root (create it if absent):
+
+`date | skill last-reviewed | claim or gap | what you observed instead | evidence (error text / doc URL / query output) | suggested fix`
+
+These are harvested back into the skill via the learning loop. When the live system and this file disagree, trust the live system.
+
+## Changelog
+
+- **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 
 ---
 
