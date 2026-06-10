@@ -4,6 +4,12 @@ How we measure whether a skill actually makes an agent more competent — **not*
 could pass an exam. A skill earns its place only if a skill-loaded agent makes better calls than
 the same agent without it.
 
+> This file covers the **knowledge eval** (Lens 3 below). It is one of five assessment lenses —
+> the full protocol (static rubric audit, trigger tests, knowledge eval, application eval,
+> adversarial freshness audit) is in [docs/ASSESSMENT.md](docs/ASSESSMENT.md); the quality
+> rubric is [docs/SKILL-STANDARD.md](docs/SKILL-STANDARD.md); the feedback→curation loop is
+> [docs/LEARNING-LOOP.md](docs/LEARNING-LOOP.md).
+
 ## What we measure
 
 - **Pass rate** — % of held-out decision scenarios a *skill-loaded* agent answers competently.

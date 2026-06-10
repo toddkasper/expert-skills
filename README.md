@@ -50,6 +50,23 @@ so a reader can tell how stale any claim might be; exam logistics live in
 competence eval — method in [EVALS.md](EVALS.md), the executable protocol in
 [evals/run-eval.md](evals/run-eval.md), and the scoreboard in [evals/RESULTS.md](evals/RESULTS.md).
 
+## Quality standard & learning loop
+
+Every skill is held to a 12-dimension rubric ([docs/SKILL-STANDARD.md](docs/SKILL-STANDARD.md)) —
+trigger precision, operational depth, decision support, failure-mode coverage, verification
+discipline, uncertainty/escalation behavior, executable workflows, and more (publish bar: no
+dimension below 2, total ≥ 28/36). Skills are exercised, not just read, through a five-lens
+assessment ([docs/ASSESSMENT.md](docs/ASSESSMENT.md): static audit, trigger tests, knowledge
+eval, application eval, adversarial freshness audit), recorded per skill in
+[evals/scorecards/](evals/scorecards/) and trended in [evals/RESULTS.md](evals/RESULTS.md).
+
+Skills improve from real use through a closed loop ([docs/LEARNING-LOOP.md](docs/LEARNING-LOOP.md)):
+each `SKILL.md` carries a **Feedback Protocol** footer telling the using agent to log gaps and
+contradictions to a project-local `.skill-feedback/<skill>.md`; `scripts/harvest-feedback.sh`
+collects those into [feedback/INBOX.md](feedback/INBOX.md), where a curation pass validates each
+item against official docs, integrates accepted ones, and closes the loop with a new held-out
+eval scenario + a changelog entry + a `last-reviewed` bump.
+
 ## Per-org / per-project specialization
 
 The skills are deliberately org-agnostic. To tie a rule to one organization's specific fields,
