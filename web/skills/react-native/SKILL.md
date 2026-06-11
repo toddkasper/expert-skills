@@ -6,7 +6,7 @@ metadata:
   domain: web
   type: competence-playbook
   status: active
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
 ---
 
 # React Native + Expo — Skills Reference
@@ -18,7 +18,7 @@ React Native lets you build iOS and Android apps in JavaScript/TypeScript using 
 Key shifts from the web:
 - No DOM, no CSS — layout is Flexbox-only via `StyleSheet`, components are `View`/`Text`/`Image`, not `div`/`span`/`img`
 - Two threads that must stay unblocked — the JS thread and the UI/main thread; dropped frames come from overloading either
-- New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory from Expo SDK 55+) `[volatile — verify live]`
+- New Architecture is mandatory — JSI replaces the async bridge; Fabric replaces the old renderer; TurboModules replace legacy native modules (default from RN 0.76+, mandatory and non-disableable from Expo SDK 55+ / Feb 2026) `[volatile — verify live]`
 - Ship cycle is different — JS-only changes can be pushed OTA via EAS Update; anything touching native code requires a new store binary
 
 > **Load this skill when…** building or reviewing a React Native or Expo mobile app; debugging dropped frames, list performance, or native module integration; working with EAS Build/Submit/Update or the New Architecture; handling iOS/Android platform differences or permissions.
@@ -32,7 +32,7 @@ Key shifts from the web:
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** Expo SDK versions and React Native releases change frequently — New Architecture defaults, SDK-required library minimum versions, and EAS Update behavior evolve each cycle. `[volatile — verify live]` marks apply to: New Architecture mandatory adoption (default RN 0.76+, mandatory Expo SDK 55+ — `[volatile — verify live]`, check `expo` version in `package.json`); Expo SDK version-specific library minimums (React Navigation, Reanimated, Gesture Handler version gates — `[volatile — verify live]`); `runtimeVersion` behavior for EAS Update (match semantics may change — `[volatile — verify live]`); iOS App Store SDK requirement (currently iOS 26 SDK from April 2026 — `[volatile — verify live]`, advances annually); Android target API level floor (`[volatile — verify live]`, check Google Play policy for current minimum). Always run `npx expo-doctor@latest` after any SDK upgrade to catch compatibility issues.
+- **Always re-verify live:** Expo SDK versions and React Native releases change frequently — New Architecture defaults, SDK-required library minimum versions, and EAS Update behavior evolve each cycle. `[volatile — verify live]` marks apply to: New Architecture mandatory adoption (mandatory and non-disableable from Expo SDK 55+ / Feb 2026 — `[volatile — verify live]`, check `expo` version in `package.json`); Expo SDK version-specific library minimums (React Navigation, Reanimated, Gesture Handler version gates — always check each library's own compatibility page, not hard-coded patch minimums — `[volatile — verify live]`); `runtimeVersion` behavior for EAS Update (match semantics may change — `[volatile — verify live]`); iOS App Store SDK requirement (currently iOS 26 SDK from April 2026 — `[volatile — verify live]`, advances annually); Android target API level floor (`[volatile — verify live]`, check Google Play policy for current minimum). Always run `npx expo-doctor@latest` after any SDK upgrade to catch compatibility issues.
 - **Live wins:** the installed Expo SDK / RN version's actual behavior, [docs.expo.dev](https://docs.expo.dev), and [reactnative.dev](https://reactnative.dev) are authoritative over this file → log discrepancies via Feedback protocol below.
 - **Escalate to a human:** production store submissions (iOS App Store, Google Play); EAS Update pushes to a production channel (irreversible reach); major Expo SDK upgrades on a live app; Android keystore rotation or loss; permission message changes (require new binary — cannot be OTA'd).
 - **Confidence taxonomy:** facts in this file are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`.
@@ -78,7 +78,7 @@ Key shifts from the web:
 
 **Red flag:** using `<ScrollView>` with a `.map()` for a list of unknown length. It renders all items immediately, causes layout jank, and can exhaust memory.
 
-**FlashList alternative:** Shopify's FlashList is significantly faster than FlatList for homogeneous-item lists because it recycles item components. Use it for any list > ~100 items with a consistent item type. Requires New Architecture.
+**FlashList alternative:** Shopify's FlashList is significantly faster than FlatList for homogeneous-item lists because it recycles item components. Use it for any list > ~100 items with a consistent item type. **FlashList v2** (current) is New-Architecture-only and removes the `estimatedItemSize` requirement — it measures item sizes automatically. **FlashList v1** is the legacy-architecture path and requires `estimatedItemSize`. Because SDK 55+ mandates the New Architecture, v2 is the version to use on any current project. `[volatile — verify live]`
 
 ### Platform-specific code
 
@@ -238,9 +238,9 @@ Prerequisites:
 
 ## 5. New Architecture — JSI, Fabric, TurboModules
 
-Mandatory from Expo SDK 55+ (cannot be disabled) `[volatile — verify live]`. JSI replaces the async bridge with direct C++ object references; Fabric enables synchronous layout measurement; TurboModules load lazily to improve cold-start. Always run `npx expo-doctor@latest` after adding dependencies to catch New Architecture incompatibilities. Legacy `NativeModules.X` bridge calls still work via interop in SDK 52-54 — plan migration before SDK 55.
+Mandatory from Expo SDK 55+ (cannot be disabled) `[volatile — verify live]`. SDK 55 shipped February 25, 2026 — the New Architecture is now the only architecture; it cannot be disabled. JSI replaces the async bridge with direct C++ object references; Fabric enables synchronous layout measurement; TurboModules load lazily to improve cold-start. Always run `npx expo-doctor@latest` after adding dependencies to catch New Architecture incompatibilities. Legacy `NativeModules.X` bridge calls worked via interop in SDK 52–54; interop is not available in SDK 55+.
 
-> **Deep dive** (JSI/Fabric/TurboModules mechanics, full migration checklist, ecosystem library minimum versions): load [references/new-architecture.md](references/new-architecture.md).
+> **Deep dive** (JSI/Fabric/TurboModules mechanics, full migration checklist, ecosystem library compatibility pages): load [references/new-architecture.md](references/new-architecture.md).
 
 ---
 
@@ -259,7 +259,7 @@ Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
 
 **Animations:** always pass `useNativeDriver: true` to `Animated` API calls. This moves the animation interpolation to the UI thread; without it, every animation frame crosses to the JS thread and drops when JS is busy. Use `react-native-reanimated` for animations that need to react to gesture state — Reanimated worklets run entirely on the UI thread.
 
-**Lists:** for lists with >50 items, provide `getItemLayout` to `FlatList` if items are fixed-height. For variable-height or very long lists (>200 items), consider FlashList. Never put `FlatList` inside a `ScrollView` with the same scroll axis — the outer scroll view disables virtualization.
+**Lists:** for lists with >50 items, provide `getItemLayout` to `FlatList` if items are fixed-height. For variable-height or very long lists (>200 items), consider FlashList v2 (New-Arch-only, no `estimatedItemSize` needed). Never put `FlatList` inside a `ScrollView` with the same scroll axis — the outer scroll view disables virtualization.
 
 **Images:** do not animate `width`/`height` — iOS re-crops from the original on every frame. Animate `transform: [{ scale }]` instead. For remote images, use `expo-image` (not the core `Image` component) — it has built-in memory and disk caching and BlurHash placeholder support.
 
@@ -301,7 +301,7 @@ Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
 
 ### Workflow 3 — Optimize a long list (FlatList/FlashList: keyExtractor, getItemLayout, windowSize)
 
-1. Identify whether items are homogeneous (same component type, same approximate height) or heterogeneous. Homogeneous lists > ~100 items: use FlashList (`@shopify/flash-list`). Heterogeneous or shorter lists: use FlatList. → gate: FlashList requires New Architecture (SDK 55+ has it mandatory — verify).
+1. Identify whether items are homogeneous (same component type, same approximate height) or heterogeneous. Homogeneous lists > ~100 items: use FlashList v2 (`@shopify/flash-list`). FlashList v2 is New-Architecture-only and does not require `estimatedItemSize` — it measures automatically. Heterogeneous or shorter lists: use FlatList. → gate: FlashList v2 requires New Architecture (SDK 55+ mandates it — verify with `npx expo-doctor@latest`). `[volatile — verify live]`
 2. Provide `keyExtractor` returning a unique stable string from the item's data (e.g., `item.id.toString()`), never the array index. → gate: change the data order in state; confirm no unexpected component unmounting/remounting in React DevTools.
 3. If all items have the same height, provide `getItemLayout`: `(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })`. This enables instant `scrollToIndex` and removes layout-measuring overhead. → gate: `flatListRef.current.scrollToIndex({ index: 50 })` completes without "cannot scroll to index" warning.
 4. Tune `windowSize` (default 21 — 10 screens above + 10 below + 1 visible). For heavy items (images, complex layouts), lower to 5–11 to reduce memory. For fast-scroll lists, keep it higher. → gate: profile in a release build with Hermes; JS thread stays under 16ms per frame while scrolling.
@@ -339,9 +339,9 @@ Dropped frames happen when either thread misses its 16.67ms (60 FPS) budget.
 
 > **Situation:** A team on Expo SDK 54 adds Shopify's `FlashList` to replace `FlatList` on a heavy 1,000-item list. It works well. They upgrade to Expo SDK 55 (New Architecture mandatory) and the app crashes on launch with a native module error.
 
-> **Competent move:** Before upgrading to SDK 55, check `FlashList`'s New Architecture compatibility status on React Native Directory and verify the installed version meets the minimum required. Run `npx expo-doctor@latest` after adding any new dependency to catch NA incompatibility before attempting the SDK upgrade. Update `FlashList` to a NA-compatible version before upgrading the SDK.
+> **Competent move:** Before upgrading to SDK 55, check `FlashList`'s New Architecture compatibility status on React Native Directory and verify the installed version is v2+ (the New-Arch-only rewrite). FlashList v1 is the legacy-architecture path; FlashList v2 is required for SDK 55+. Run `npx expo-doctor@latest` after adding any new dependency to catch NA incompatibility before attempting the SDK upgrade.
 
-> **Tempting-but-wrong:** Disabling the New Architecture in SDK 55 to unblock the team. The New Architecture cannot be disabled in Expo SDK 55+ — it is mandatory. The only forward path is to bring every native dependency into NA compliance.
+> **Tempting-but-wrong:** Disabling the New Architecture in SDK 55 to unblock the team. The New Architecture cannot be disabled in Expo SDK 55+ (released Feb 25, 2026) — it is mandatory. The only forward path is to bring every native dependency into NA compliance.
 
 > **Verify:** Run `npx expo-doctor@latest` with the target SDK version and confirm no "New Architecture incompatible" warnings. Build a development client (`eas build --profile development`) and smoke-test the list on a physical device before shipping.
 
@@ -396,6 +396,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. `last-reviewed` set to 2026-06-09.
 - **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: managed-workflow prebuild overwrite, FlashList/New Architecture compatibility, InteractionManager for transition jank) to meet the teaching-scenario standard (≥4 inline). Scenario 5 remains in references. Section 5 (New Architecture), native modules/JSI subsection, and App store requirements moved to references/new-architecture.md to offset body length.
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Updated New-Arch library version guidance in references/new-architecture.md — Reanimated 4.x New-Arch-only/v3 unmaintained; Gesture Handler 3.x (May 2026 rewrite for New Arch); replaced hard-coded patch minimums with links to each library's compatibility page. (2) Reframed SDK 55 migration language from future to present tense — SDK 55 shipped Feb 25, 2026, New Architecture mandatory/non-disableable; interop only on SDK 54 and earlier. (3) Added FlashList v1/v2 split — v2 New-Arch-only, no estimatedItemSize; v1 is the legacy-arch path; updated body guidance, Workflow 3, and Scenario 3 accordingly.
 
 ---
 

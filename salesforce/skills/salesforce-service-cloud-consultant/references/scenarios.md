@@ -16,15 +16,15 @@
 
 ---
 
-**Scenario 5 — Web-to-Case submission spike drops cases silently**
+**Scenario 5 — Web-to-Case submission spike risks delayed or lost cases**
 
 **Situation:** An organization runs an annual open-enrollment drive. Historically they receive 200 applications/day but expect 800–1,000 on peak days during the two-week window. They plan to use native Web-to-Case.
 
-**Competent move:** Native Web-to-Case is hard-capped at 500 cases/day — submissions beyond that are silently dropped (no error to the submitter, no record in Salesforce). For peak volumes that exceed 500/day, replace or supplement the intake path: either a custom web form that POSTs to an Experience Cloud / Salesforce Site Apex REST endpoint (no 500-cap), or a queue-based async path (e.g. Platform Events / MuleSoft). Implement a server-side acknowledgment email from the intake endpoint so applicants have proof of submission regardless of path.
+**Competent move:** Native Web-to-Case is capped at 5,000 cases/24 hours `[volatile — verify live]`. At 800–1,000/day the org stays well under that cap, so the volume concern is not a blocking issue for native Web-to-Case. However, the correct recommendation still considers failure modes: if the org runs other intake flows (Web-to-Lead, batch imports) that could push the shared pending queue toward its 50,000-request combined limit, or if volumes could spike unexpectedly beyond 5,000/day, a custom REST endpoint removes the dependency entirely. Overflow beyond 5,000/24 h goes into a shared pending request queue (Web-to-Case + Web-to-Lead combined, 50k cap) and is processed after the next midnight UTC reset — it is NOT silently dropped unless the pending queue is also full. Implement a server-side acknowledgment email from the intake endpoint so applicants have proof of submission regardless of path.
 
-**Tempting-but-wrong:** Assuming the cap is a soft throttle that queues overflow for later processing — it is not; over-cap submissions are lost. Another trap: proposing an authenticated Experience Cloud portal to solve the cap — that solves the volume problem but adds login friction that is a real cost for a one-time, low-tech applicant population.
+**Tempting-but-wrong:** Assuming the cap is 500/day (that is the Web-to-Lead limit, not Web-to-Case). Also wrong: assuming overflow is silently lost — queued requests are held and processed after the limit resets, though the queue itself has a 50k cap beyond which requests are permanently lost. Another trap: proposing an authenticated Experience Cloud portal to solve a volume concern — that adds login friction that is a real cost for a one-time, low-tech applicant population.
 
-**Verify:** Load-test the custom intake path at 2× expected peak using a staging org or sandbox. Query `Case` count after the test to confirm all records landed. Monitor the sandbox error logs for any governor limit hits at the intake endpoint.
+**Verify:** Confirm the org's current Web-to-Case daily volume vs. the 5,000/24-h cap in Setup → Web-to-Case. If a custom endpoint is chosen, load-test it at 2× expected peak using a sandbox and query `Case` count to confirm all records landed.
 
 ---
 *Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

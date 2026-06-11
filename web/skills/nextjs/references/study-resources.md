@@ -21,6 +21,8 @@ Official sources only. No third-party content reproduced here — link and read 
 | Forms Guide | https://nextjs.org/docs/app/guides/forms | Server Actions + useActionState |
 | Streaming Guide | https://nextjs.org/docs/app/guides/streaming | Suspense, loading.js, PPR trade-offs |
 | `use cache` directive | https://nextjs.org/docs/app/api-reference/directives/use-cache | Serialization constraints, cache keys |
+| `cacheLife` function | https://nextjs.org/docs/app/api-reference/functions/cacheLife | Built-in profiles, default profile, 30s client-cache floor |
+| `cacheComponents` config | https://nextjs.org/docs/app/api-reference/config/next-config-js/cacheComponents | v16.0.0 opt-in flag — enables `use cache` + PPR |
 | `use client` directive | https://nextjs.org/docs/app/api-reference/directives/use-client | Boundary semantics |
 | `use server` directive | https://nextjs.org/docs/app/api-reference/directives/use-server | Server Action security, allowed origins |
 | Deploying | https://nextjs.org/docs/app/getting-started/deploying | Node.js server, Docker, static export, adapters |
@@ -35,7 +37,8 @@ Docs retrieved at version **16.2.7** (May 2026). Key version-sensitive changes:
 | v15.5.0 | Proxy/Middleware Node.js runtime stable |
 | v15.2.0 | Proxy/Middleware Node.js runtime experimental |
 | v15.x | `fetch()` requests **not cached by default** (previous model changed from v14) |
-| v15.x | `cacheComponents` flag introduced (enables `use cache` + PPR as default) |
+| v15.x | `experimental.ppr`, `experimental.useCache`, `experimental.dynamicIO` flags (opt-in precursors; replaced by `cacheComponents` in v16.0.0) |
+| v16.0.0 | `cacheComponents` opt-in flag introduced — single config that enables `use cache` + PPR; replaces separate v15 experimental flags |
 | v13.4 | Server Actions (experimental) |
 | v14.0 | Server Actions stable |
 

@@ -7,7 +7,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -17,7 +17,7 @@ metadata:
 
 The Salesforce Certified Platform Developer II (PD2 / PDII) certification validates advanced proficiency in designing, building, and optimizing Salesforce applications using Apex, Lightning Web Components, Aura, Visualforce, and the full integration and automation stack. It targets developers who write *correct, performant, and maintainable* code at enterprise scale.
 
-The credential has **two parts**: a multiple-choice exam **and four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist).
+The credential has **two parts**: a multiple-choice exam **and three Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Advanced Apex Specialist) `[volatile — verify live]`.
 
 **This file is an operational playbook, not an exam outline.** Rules are stated as actionable instructions with concrete limits, decision criteria, and anti-patterns to catch in review.
 
@@ -148,7 +148,11 @@ The trigger body is a thin dispatcher; all logic lives in a handler. **Anti-patt
 
 ### Write selective queries
 
-A query is **selective** when its `WHERE` filters on an indexed field returning under the threshold: **<10% of rows (first 1M) for standard fields, <33% for custom-indexed fields** `[volatile — verify live]`, capped at 1M rows examined. Non-selective queries on large objects throw `QueryException: Non-selective query against large object type`.
+A query is **selective** when its `WHERE` filters on an indexed field returning under the threshold `[volatile — verify live]`:
+- **Standard index:** <30% of the first 1M records, <15% of records beyond 1M (max 1M rows examined total).
+- **Custom index:** <10% of the first 1M records, <5% of records beyond 1M (max ~333k rows examined total).
+
+Non-selective queries on large objects throw `QueryException: Non-selective query against large object type`.
 
 **Indexed by default:** `Id`, `Name`, `CreatedDate`, `SystemModstamp`, lookup/master-detail fields, External Id fields, Unique fields. Custom indexes are requested via Salesforce Support.
 
@@ -200,7 +204,7 @@ Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' I
 
 - Define as `MyEvent__e`; publish with `EventBus.publish(events)`; subscribe via an **after-insert trigger on the event** (only after-insert is valid), a Flow, or CometD/external subscriber.
 - `publish-after-commit` (default): suppressed on rollback. `publish-immediately`: delivered regardless of transaction outcome.
-- `ReplayId` enables durable replay. 72-hour retention (24h standard-volume) `[volatile — verify live]`.
+- `ReplayId` enables durable replay. **High-volume events: 72-hour retention** (the default for all new events). Standard-volume events retain for 24 hours but are **scheduled for retirement in Winter '27 (October 2026)** — after which publishing/subscribing to standard-volume events will be blocked; migrate to high-volume. `[volatile — verify live]`
 - Use for decoupled, fire-and-forget integration.
 
 **Change Data Capture (CDC):** publishes change events (`AccountChangeEvent`, `MyObject__ChangeEvent`, etc.) on record changes; subscribe via after-insert trigger on the change-event object. Key payload: `ChangeEventHeader.changeType` (CREATE/UPDATE/DELETE/UNDELETE), `changedFields`, `recordIds`. CDC events are NOT suppressed on transaction rollback — design consumers to be idempotent. Deep dive with enabling, payload, and testing: [references/cdc.md](references/cdc.md) — load when implementing CDC-based integration or debugging delivery behavior.
@@ -247,6 +251,10 @@ Use **SOSL** for full-text search across multiple objects/fields (`FIND 'term' I
 ### Framework selection
 
 LWC (default) > Aura (only for platform features still requiring it; Aura can host LWC, not vice-versa) > Visualforce (PDF rendering via `renderAs="pdf"`, legacy). Don't write new Aura/VF unless a specific platform capability forces it.
+
+### Visualforce — PD2 exam scope (~20% of User Interface domain)
+
+Visualforce is explicitly tested in PD2. Core tested topics: `StandardSetController` (paginated list views), controller extensions, partial page refresh (`<apex:actionFunction>` + `reRender`), `{!$Component.id}` for JS DOM targeting, `ApexPages.addMessage` + `<apex:pageMessages/>` for error display, and `<apex:page renderAs="pdf">` for PDF output. Deep dive: [references/visualforce.md](references/visualforce.md) — load when building or reviewing Visualforce pages or working through PD2 UI exam topics.
 
 ---
 
@@ -325,7 +333,7 @@ CMT vs Custom Settings decision, multi-currency handling, and enterprise design 
 3. Rewrite the filter to use an indexed field (Id, Name, External Id, lookup, audit fields like `CreatedDate`) and an equality or range predicate. If no native index exists, request a custom index via Salesforce Support.
    → **gate:** re-run Query Plan on the rewritten query — `Leading Operation Type` must change to `Index`.
 4. If a custom index was requested, confirm it is active: describe the field and check `filterable` + `sortable` attributes, or run the Query Plan again after Salesforce confirms the index is built.
-   → **gate:** Query Plan shows `Index` as leading operation; estimated row count is within the selectivity threshold.
+   → **gate:** Query Plan shows `Index` as leading operation; estimated row count is within the selectivity threshold (custom index: <10% of first 1M records, <5% beyond).
 5. Load-test the rewritten query with production-scale data (use a Full sandbox): confirm query returns in under 5 seconds and does not throw `QueryException: Non-selective query`.
    → **gate:** query executes without error; response time acceptable under peak load in Full sandbox.
 
@@ -370,7 +378,7 @@ Read this first. Each is imperative and concrete.
 - **DO** mutate records in `before` contexts; create related records / roll-ups in `after`. **DON'T** assign to `Trigger.new` in an `after` trigger (throws).
 - **DO** use Validation Rule → Flow → Apex in increasing order of complexity; one automation owner per (object, event). **DON'T** have a Flow and a trigger both mutating the same object on the same event.
 - **DO** check how an object distinguishes record kinds before branching (Record Types vs. boolean flags) and branch accordingly. **DON'T** assume every object uses Record Types.
-- **DO** make queries selective on indexed fields and verify with Query Plan. **DON'T** use leading wildcards, `!=`, `NOT IN`, or functions on indexed fields on large objects.
+- **DO** make queries selective on indexed fields and verify with Query Plan (standard index: <30%/first-1M, <15%/beyond; custom index: <10%/first-1M, <5%/beyond `[volatile — verify live]`). **DON'T** use leading wildcards, `!=`, `NOT IN`, or functions on indexed fields on large objects.
 - **DO** move HTTP callouts off the synchronous/UI path (Queueable + `Database.AllowsCallouts`). **DON'T** call out synchronously from a trigger.
 - **DO** pass Ids/JSON to `@future`; prefer `Queueable` for anything with state or chaining. **DON'T** pass sObjects to `@future`, or try to chain from a future.
 - **DO** use Batch Apex (`QueryLocator`, 50M ceiling) above ~10k records. **DON'T** process LDV in a single synchronous transaction.
@@ -396,6 +404,7 @@ Read this first. Each is imperative and concrete.
 - [references/cdc.md](references/cdc.md) — Change Data Capture: enabling, payload structure, rollback behavior, Apex testing.
 - [references/scenarios.md](references/scenarios.md) — additional decision scenarios (platform event rollback, Flow/trigger recursion, dynamic SOQL injection).
 - [references/advanced-fundamentals.md](references/advanced-fundamentals.md) — CMT vs Custom Settings decision, multi-currency handling, and enterprise design patterns (Singleton, Strategy, fflib).
+- [references/visualforce.md](references/visualforce.md) — Visualforce PD2 exam topics: StandardSetController pagination, controller extensions, partial page refresh, JS DOM targeting, error handling, PDF rendering.
 
 ---
 
@@ -409,6 +418,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): corrected SOQL selectivity thresholds (standard 30%/15%, custom 10%/5% — was inverted 10%/33%); added Platform Events Winter '27 standard-volume retirement note; updated superbadge count 4→3 (Lightning Component Framework Specialist removed per current requirements); updated stale PDF exam-guide link to live Trailhead Help page; added Visualforce PD2 exam scope section (StandardSetController, extensions, partial-page refresh, JS targeting, error handling).
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; "Salesforce," "Apex," "Lightning," and all related marks are trademarks of Salesforce, Inc., used here solely to identify the subject matter. All trademarks belong to their respective owners. Guidance only — verify against official Salesforce documentation and live orgs before acting. No certification outcome is implied or guaranteed.*

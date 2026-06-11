@@ -6,7 +6,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -33,7 +33,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 - **Always re-verify live:** governor limit numbers (SOQL/DML/CPU/heap) `[volatile — verify live]`; sandbox storage sizes `[volatile — verify live]`; LWC lifecycle API changes and decorator behavior across API versions `[volatile — verify live]`; any coverage threshold or deployment requirement.
 - **Live wins:** if this skill's numbers or rules conflict with what the Apex runtime, deploy output, or official Salesforce docs show, treat the live system as authoritative. Log the discrepancy immediately using the Feedback protocol below.
-- **Escalate to a human before proceeding:** production deployments touching managed-package Apex or triggers without sandbox validation; any code path that hard-deletes or mass-updates production records; adding `without sharing` to a class that processes PII or financial data; disabling or bypassing a package trigger framework in production.
+- **Escalate to a human before proceeding:** production deployments touching managed-package Apex or triggers without sandbox validation; any code path that hard-deletes or mass-updates production records; adding `without sharing` to a class that processes PII or financial data (v67+ note: `without sharing` is now an explicit opt-in, not the default); disabling or bypassing a package trigger framework in production.
 - **Confidence taxonomy:** facts in this skill are stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. When in doubt, describe the object or run a SOQL query rather than trusting repo XML.
 
 ---
@@ -78,7 +78,7 @@ PD1 heavily tests whether a requirement can be met with clicks before code. Defa
 
 **Anti-pattern:** writing a trigger to do what a validation rule or roll-up summary already does. **Red flag in review:** an Apex trigger whose entire job is "if field A is blank, throw an error" — that's a validation rule.
 
-**Watch for legacy automation.** Workflow Rules and Process Builder are retired for new build — use Flow or Apex. But an org may still *contain* live legacy automation — see Order of Execution.
+**Watch for legacy automation.** Workflow Rules and Process Builder reached end of support Dec 31 2025 (not retired — existing rules still fire). Use Flow or Apex for all new automation. An org may still contain live legacy automation — see Order of Execution.
 
 ### Relationship types — pick the right one
 
@@ -110,7 +110,8 @@ Deploying a custom field via SFDX `field-meta.xml` creates the field but grants 
 | Tool | Volume | Objects | Use when |
 |---|---|---|---|
 | Import Wizard | < 50k | standard + custom | one-off, UI-driven, dedup needed |
-| Data Loader | 5M+ | all | bulk, CLI/scriptable, scheduled |
+| Data Loader (Bulk API 1.0) | up to 5M | all | bulk, CLI/scriptable |
+| Data Loader (Bulk API 2.0) | up to 150M `[volatile — verify live]` | all | very-large-volume, scheduled, preferred for new bulk work |
 
 ### Apex OOP essentials
 
@@ -163,21 +164,27 @@ update accts.values();
 
 **Package coexistence:** some managed packages own a trigger framework — register custom logic into it, never add a second raw trigger (e.g. NPSP/TDTM). See [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
-### Order of Execution — the 14 steps that decide what fires when
+### Order of Execution — the steps that decide what fires when
+
+The complete sequence for a record save (Spring '22+):
 
 1. System validation (required, format, length)
-2. **Before triggers**
-3. Custom **validation rules**, duplicate rules
-4. Record saved to DB (not committed)
-5. **After triggers**
-6. Assignment / auto-response rules
-7. **Workflow rules** (legacy) — *if a workflow field-updates, before+after triggers fire AGAIN*
-8. Escalation rules
-9. Roll-up summary recalc on parent (re-triggers parent's automation)
-10. Criteria-based sharing recalc
-11. **Legacy Process Builder + record-triggered Flows**
-12. **Commit** to database
-13. Post-commit: email alerts, async (`@future`, Queueable, Batch enqueued), Platform Event publish
+2. **Before-save record-triggered Flows** ← runs *before* before-triggers
+3. **Before triggers** (before insert / before update)
+4. Custom **validation rules**, duplicate rules
+5. Record saved to DB (not committed)
+6. **After triggers** (after insert / after update)
+7. Assignment rules / auto-response rules
+8. **Workflow rules** (end-of-support Dec 31 2025; existing rules still fire) — *if a workflow field-updates, before+after triggers re-fire*
+9. Escalation rules
+10. Flows launched by Process Builder (end-of-support Dec 31 2025; existing processes still fire)
+11. **After-save record-triggered Flows** ← current tool; runs here, after workflow
+12. Roll-up summary recalc on parent (re-triggers parent's automation)
+13. Criteria-based sharing recalc
+14. **Commit** to database
+15. Post-commit: email alerts, async (`@future`, Queueable, Batch enqueued), Platform Event publish
+
+**Key before-save flow insight:** Before-save record-triggered Flows run at step 2 — *before* before-triggers and *before* validation rules. They can update fields on the record being saved without a DML statement. A before-trigger at step 3 can therefore be overwritten by subsequent automation; conversely, a before-save flow's changes are visible to the before-trigger.
 
 **Why it matters:** a later step can silently overwrite a field your trigger just set. When a field mysteriously changes after your trigger, suspect a later step (workflow/flow/rollup) — confirm with an Apex debug-log probe.
 
@@ -211,10 +218,16 @@ Enforce target-field length and picklist constraints at your *input-validation* 
 
 ### with/without/inherited sharing
 
+> **API v67+ (Summer '26) breaking change — version-gated:** `[volatile — verify live]`
+> - **API v67.0+:** A class with *no* sharing keyword declared now defaults to **`with sharing`**. Bypassing sharing requires an explicit `without sharing` declaration.
+> - **API v66.0 and lower:** Classes with no keyword still default to `without sharing` (old behavior unchanged for code compiled at ≤v66).
+> - The change is version-gated per class — bumping an existing class to v67 changes its runtime sharing mode. **Test carefully before promoting.**
+> - `WITH SECURITY_ENFORCED` is removed in v67; replace with `WITH USER_MODE`.
+
 - `with sharing` → enforces running user's record-level sharing.
-- `without sharing` → ignores sharing. **Apex runs `without sharing` by default if unspecified in the top-level entry class.**
-- `inherited sharing` → adopts the caller's sharing; safest default for reusable classes.
-- Sharing keywords govern *record access*, not FLS/CRUD — enforce FLS separately with `WITH SECURITY_ENFORCED` or `Security.stripInaccessible()`.
+- `without sharing` → ignores sharing. **In API v66 and below, Apex defaults to `without sharing` if unspecified; in v67+ you must declare it explicitly to bypass sharing.**
+- `inherited sharing` → adopts the caller's sharing; safest default for reusable helper/service classes regardless of API version.
+- Sharing keywords govern *record access*, not FLS/CRUD — enforce FLS separately with `WITH USER_MODE` (v67+) or `Security.stripInaccessible()`.
 
 ---
 
@@ -380,13 +393,15 @@ Read this first. Each rule is imperative and concrete.
 - **DON'T** assume a field is queryable after an SFDX deploy — `field-meta.xml` grants FLS to nobody. Add explicit `<fieldPermissions>`, or confirm with a live SOQL query.
 - **DON'T** put a `<fieldPermissions>` entry on a `required` field — deploy fails. Required fields need no FLS entry.
 - **DO** give two lookups to the same parent object distinct `relationshipName`s (role-suffixed) or deploy fails on duplicate relationship name.
-- **DO** trace mysterious post-save field changes through the 14-step order of execution — suspect later steps (workflow/flow/rollup), not your own code.
+- **DO** trace mysterious post-save field changes through the full order of execution (before-save flows → before triggers → validation → after triggers → workflow → after-save flows → rollup → commit) — suspect later steps, not your own code.
 - **DON'T** hand-edit generated schema constants; regenerate them from the org when field metadata changes, and commit.
 - **DO** enforce field-length/picklist limits at your input-validation boundary, not via Apex truncation. Apex truncation is a legacy fallback only.
 - **DON'T** log PII (names, addresses, DOB, medical, file contents) in `System.debug` or downstream logs. Log Ids only.
 - **DO** wrap async + the code under test in `Test.startTest()/stopTest()`; mock all callouts with `HttpCalloutMock`. Create all test data (`SeeAllData=false`).
 - **DO** hit 75% org-wide coverage to deploy; test bulk (200+), single, and negative paths; never hardcode Ids.
 - **DON'T** string-concatenate user input into dynamic SOQL — use `:bind` variables.
+- **DO** declare sharing mode explicitly on every Apex class. In API v67+ (Summer '26), no-keyword defaults to `with sharing`; in v66 and below it defaults to `without sharing`. Relying on the implicit default is fragile across version bumps — prefer `inherited sharing` for service/helper classes, `with sharing` for entry points, `without sharing` only when explicitly needed.
+- **DON'T** use `WITH SECURITY_ENFORCED` in new code targeting API v67+ — it was removed; use `WITH USER_MODE` instead.
 - **DO** use `@AuraEnabled(cacheable=true)` for read-only wired Apex (no DML); plain `@AuraEnabled` + imperative call for mutations.
 - **DO** bust the Quick Action cache by editing non-field metadata (`<description>`) and redeploying when new QA fields don't render.
 - **DO** run all `sf project` commands from the SFDX project root (the directory with `sfdx-project.json`).
@@ -418,6 +433,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Apex default sharing: added version-aware guidance — API v67+ (Summer '26) defaults to `with sharing` when no keyword declared; v66 and below default to `without sharing`; `without sharing` is now an explicit opt-in in v67+; `WITH SECURITY_ENFORCED` removed in v67, use `WITH USER_MODE`. (2) Order of Execution rewritten: before-save record-triggered Flows added at step 2 (before before-triggers); after-save record-triggered Flows correctly placed at step 11 (separate from legacy Process Builder); 15-step list replaces 13-step list; "legacy" label corrected from "Flows" to workflow/PB end-of-support. (3) Flow/WFR/PB "retired" language corrected to "end of support Dec 31 2025 — existing rules still fire." (4) Data Loader table split: Bulk API 1.0 = 5M, Bulk API 2.0 = 150M. (5) Answer key scenario 3 updated to be version-aware (v66 vs v67 default). Eval probes 13–16 added.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 *Independent educational content to upskill AI agents. Not affiliated with or endorsed by Salesforce; all trademarks belong to their owners. "Salesforce," "Apex," "Lightning," "NPSP," and related names are trademarks of Salesforce, Inc., used here solely to identify the subject matter. Guidance only — verify against official documentation and live orgs before acting. No certification outcome is implied or guaranteed.*

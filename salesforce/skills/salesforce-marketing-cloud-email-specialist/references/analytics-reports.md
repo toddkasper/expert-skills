@@ -1,4 +1,4 @@
-# SFMC Insights & Analytics — Operational Detail
+# SFMC Tracking & Reporting — Operational Detail
 
 > Load this file when building dashboards, diagnosing deliverability trends, or writing engagement-suppression queries. Moved from SKILL.md §5 to keep body ≤ ~4,500 words.
 

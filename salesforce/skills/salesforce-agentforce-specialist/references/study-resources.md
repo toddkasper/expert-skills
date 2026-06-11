@@ -12,7 +12,7 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 | Exam code | AI-201 |
 | Number of questions | 60 scored + up to 5 unscored pilot questions |
 | Time limit | 105 minutes |
-| Passing score | 72% |
+| Passing score | 73% (44/60) `[volatile — verify live]` |
 | Cost | $200 USD + applicable taxes |
 | Retake fee | $100 USD + applicable taxes |
 | Prerequisites | None (Admin / Platform App Builder recommended) |
@@ -67,14 +67,14 @@ page before purchasing a voucher.
 ### Hands-On Practice Environments
 
 - **Developer Edition org with Agentforce:** sign up at https://developer.salesforce.com — free; includes Agentforce and Prompt Builder
-- **Data Cloud dev org:** separate signup at Trailhead; required to practice Data Library, chunking, and vector search features
+- **Data 360 (formerly Data Cloud) dev org:** separate signup at Trailhead; required to practice Data Library, chunking, and vector search features
 - **Trailhead Playground:** available from any Trailhead module; suitable for most Prompt Builder exercises
 
 ---
 
 ## Relevance to other verticals
 
-Agentforce and Prompt Builder skills apply to any Salesforce org. For NPSP/Nonprofit Cloud-specific agent and AI guidance — Agentforce Nonprofit, constituent-outreach prompt templates, Data Cloud availability in nonprofit orgs — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
+Agentforce and Prompt Builder skills apply to any Salesforce org. For NPSP/Nonprofit Cloud-specific agent and AI guidance — Agentforce Nonprofit, constituent-outreach prompt templates, Data 360 availability in nonprofit orgs — see [salesforce-nonprofit-cloud-consultant](../../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
 ---
 
@@ -100,6 +100,16 @@ Channels and conversation design are not covered in SKILL.md's main sections but
 - **Always configure an explicit hand-off to a live agent and an end-of-session action.** An agent without a defined escalation path traps users. The hand-off should transfer conversation context (summary, key entities) to the receiving agent or queue.
 - **Conversation design governs the agent's voice.** Set persona, tone, response-length guidance, and topic-level instructions consistently. Mismatched tone across topics signals poor prompt governance.
 - **Channel-specific constraints:** SMS and WhatsApp have character or media limits that differ from web widget. Size response templates to the most constrained channel you deploy to, or maintain per-channel variants.
+
+---
+
+## Multi-Agent Interoperability — supplemental rules (AI-201 Domain 5, ~5%) [volatile — verify live]
+
+- **Model Context Protocol (MCP)** is the open standard Salesforce uses for agent-to-agent communication. An Agentforce agent can expose its capabilities as an MCP server (callable by another agent or external system) or consume another MCP server as a client.
+- **Agent API** enables external systems or orchestrating agents to invoke an Agentforce agent programmatically as a step in a broader workflow. Use Agent API when the trigger is outside the Agentforce platform.
+- **Design each agent for a single responsibility.** An orchestrating agent receives the user intent and routes sub-tasks to specialist agents (lookup, generate, notify). One "super-agent" trying to do everything is harder to test, govern, and debug.
+- **Least-privilege extends to every agent in a multi-agent network.** The calling agent cannot expand the permissions of the called agent; each runs as its own named user with its own scoped permission set.
+- **Trust Layer masking and audit apply to every AI call**, regardless of whether the call originates from a human interaction or an agent-to-agent protocol. There is no inter-agent bypass of the Trust Layer.
 
 ---
 *Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

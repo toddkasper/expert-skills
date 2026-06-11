@@ -7,7 +7,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -126,7 +126,7 @@ Salesforce's strategic direction: **permission-set-first** — new grants in per
 
 - **Approval processes do NOT run validation rules on submission.** Gate entry with approval entry criteria, not validation rules.
 - **Before-save flows = cheapest same-record update** — no extra DML, runs before commit.
-- **Workflow Rules and Process Builder are retired** — build in Flow, migrate legacy ones.
+- **Workflow Rules and Process Builder reached end of support Dec 31 2025** — Salesforce no longer provides support or bug fixes; existing active rules still execute. Build all new automation in Flow and migrate legacy ones.
 
 **Red flags:**
 - Get/Update/Create **inside a flow loop** → SOQL/DML limits on bulk loads. Move outside; operate on a collection.
@@ -156,7 +156,7 @@ configured separately — you need both.
 | Tool | Records | Objects | Use when |
 |---|---|---|---|
 | Data Import Wizard | up to 50,000 | Accounts, Contacts, Leads, Solutions, custom objects — **NOT Opportunities** | Quick UI import, simple de-dup |
-| Data Loader | up to 5,000,000 | **All** objects incl. Opportunities | Large volume, CLI/batch, upsert via External ID |
+| Data Loader | up to ~5M (Bulk API 1.0) / up to ~150M (Bulk API 2.0) `[volatile — verify live]` | **All** objects incl. Opportunities | Large volume, CLI/batch, upsert via External ID |
 
 Some managed packages provide a purpose-built import tool that enforces their data model (e.g. NPSP Data Importer/BDI for Contact/Account/Opp with Household matching — see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
@@ -348,10 +348,10 @@ Read this first. Each is imperative and concrete.
   that updates its own object.
 - **DO** enumerate ALL automation (incl. managed-package workflow rules) before blaming your
   own code — use a debug log trace flag.
-- **DON'T** import Opportunities via Data Import Wizard — use Data Loader (or a package-specific tool that supports Opportunities).
+- **DON'T** import Opportunities via Data Import Wizard — use Data Loader (or a package-specific tool that supports Opportunities). Data Loader handles all objects and supports up to ~5M records via legacy Bulk API 1.0, or up to ~150M via Bulk API 2.0 `[volatile — verify live]`.
 - **DO** upsert by External ID for idempotent re-linking; both a Matching Rule and a
   Duplicate Rule are required for de-dup.
-- **DO** build new automation in Flow — Workflow Rules and Process Builder are retired.
+- **DO** build new automation in Flow — Workflow Rules and Process Builder reached end of support Dec 31 2025 (existing rules still run; no support or bug fixes).
 - **DO** keep large file contents in external storage, only a reference key in SF — file vs.
   data storage are separate quotas.
 - **DO** run `sf project …` from the SFDX project root, not the repo root.
@@ -385,6 +385,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Data Loader capacity corrected: import tool table and quick-ref now read "up to ~5M via Bulk API 1.0 / up to ~150M via Bulk API 2.0 [volatile — verify live]" — official Salesforce dev-limits cheatsheet and Data Loader guide confirm both figures for the two underlying APIs. (2) WFR/Process Builder wording corrected: "retired" replaced with "end of support Dec 31 2025; existing active rules still execute" in both the Process Automation section and Operational Rules Quick Reference — verified against https://help.salesforce.com/s/articleView?id=001096524.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ## Disclaimer

@@ -7,7 +7,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -47,6 +47,8 @@ Operational playbook for designing, building, and reviewing external-facing Sale
 | Authenticated customers see *their own* records, no peer visibility | Customer model (Contact + Account) | Customer Community | Cheapest authenticated tier; no role hierarchy |
 | Authenticated customers need reports, dashboards, sharing rules, or cross-account visibility | Customer model | Customer Community **Plus** | Adds role hierarchy + reports |
 | Resellers/partners working Leads, Opportunities, Campaigns | Partner (Business Account) | Partner Community (PRM) | Full CRM objects + role hierarchy |
+| Partner-focused B2B site with pooled partner-user quota (up to 40 users per partner account) | Partner (Business Account) | **Channel Account** | Pooled licensing; read/create/edit Accounts, Assets, Contacts, Contracts, Leads `[volatile — verify live]` |
+| External users need only identity services (SSO, passwordless login, profile management) — no Salesforce data access | Customer or partner model | **External Identity** | Authentication-only; lowest-cost tier; upgrade to a Community license to expand object access `[volatile — verify live]` |
 | Custom high-object-count app, many logins | Customer model | External Apps license | Flexible object access, login- or member-based pricing |
 | Managed-package org (e.g. NPSP nonprofit portal) | Customer model | **Experience Cloud for Nonprofits** (or vendor-specific tier) | Package-aware licensing; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md) for NPSP specifics |
 
@@ -99,11 +101,13 @@ Fix the first failing layer; do not jump to sharing rules before confirming CRUD
 
 ### External license cheat values
 
+- **External Identity:** identity/SSO/passwordless only — no Salesforce object access; cheapest external tier. Upgradeable to any Community license. `[volatile — verify live]`
 - **Customer Community:** own records only, no peer sharing, no role hierarchy,
   cheapest. Self-service support. `[volatile — verify live]`
 - **Customer Community Plus:** + role hierarchy, + reports/dashboards, + sharing
   rules. Authenticated portals needing cross-visibility. `[volatile — verify live]`
 - **Partner Community:** + Leads/Opps/Campaigns, role hierarchy. Resellers/channel. `[volatile — verify live]`
+- **Channel Account:** pooled partner-user quota (up to 40 users per partner account); B2B partner sites needing account-level license management. `[volatile — verify live]`
 - **External Apps:** high object count, custom apps. `[volatile — verify live]`
 
 ---
@@ -139,6 +143,13 @@ Fix the first failing layer; do not jump to sharing rules before confirming CRUD
 
 - **Anti-pattern:** choosing LWR, then discovering Reputation (Aura-only) is required — forces a rebuild. Confirm the component matrix against the chosen runtime before committing.
 - **Theme export/import** carries theme settings, not custom components — redeploy custom LWCs separately when moving themes between orgs.
+
+### Enhanced Sites and Content Platform (Enhanced LWR) `[volatile — verify live]`
+
+Salesforce's next-generation LWR tier — **not** the same as standard Build Your Own (LWR). Adds expression-based visibility/variations, enhanced CMS workspaces, Data Cloud visitor insights, and partial deployment. Full feature list and upgrade-path detail are in [references/coverage-notes.md](references/coverage-notes.md).
+
+- **Decision rule:** for new builds requiring expression-based personalization or Data Cloud integration, start on Enhanced LWR. Upgrade from standard LWR is one-way; remove the `/s` URL suffix and update CI/CD pipelines (`ExperienceBundle` → `DigitalExperienceBundle`) before migrating.
+- **Anti-pattern:** assuming standard Audience targeting covers expression-based component variations — it does not; that requires Enhanced LWR.
 
 ---
 
@@ -312,7 +323,7 @@ Scenarios 1–4 inline below. Scenario 5 (Authentication — JIT vs. self-regist
 
 > **Tempting-but-wrong:** Assuming the component is just missing from the library and attempting to build a custom LWC Reputation replacement. This is an unbounded engineering effort that re-implements a managed platform feature, creates an unsupported upgrade path, and could have been avoided by confirming the feature-template matrix before committing to LWR.
 
-> **Verify:** Check the official Salesforce Experience Cloud feature comparison table (Help article: "Considerations for Experience Cloud Sites Built on LWR") before locking in a template. Add a feature-matrix review step to every project scoping checklist.
+> **Verify:** Check the official Salesforce Experience Cloud feature comparison table (Help article: "Considerations Before You Migrate an Aura Site to Lightning Web Runtime (LWR)") before locking in a template. Add a feature-matrix review step to every project scoping checklist.
 
 ---
 
@@ -358,6 +369,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to 12-dimension skill standard: task-vocab description, Scope block, Uncertainty & Escalation with `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, feedback protocol. Exam logistics relocated to references/study-resources.md.
 - **2026-06-09** — Inlined 4 decision scenarios; §10 Coverage Notes moved to references/coverage-notes.md; prose compression pass.
+- **2026-06-10** — Cycle-4 curation (inbox): (1) §4 new "Enhanced Sites and Content Platform (Enhanced LWR)" subsection — expression-based visibility/variations, enhanced CMS workspaces, Data Cloud visitor insights, partial deployment, URL/metadata-type upgrade path, decision rule and anti-pattern (INTEGRATED); (2) Scenario 2 verify step and answer-key item 8 — corrected cited article title from "Considerations for Experience Cloud Sites Built on LWR" to "Considerations Before You Migrate an Aura Site to Lightning Web Runtime (LWR)" (INTEGRATED); (3) §1 license table + §2 cheat values — added Channel Account (pooled partner B2B, up to 40 users/account) and External Identity (authentication-only, upgradeable, lowest-cost) rows with `[volatile — verify live]` marks (INTEGRATED). Eval probes 13–15 appended.
 
 ## Disclaimer
 

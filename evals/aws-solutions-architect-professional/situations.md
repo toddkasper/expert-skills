@@ -27,3 +27,15 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. A company has 200 EC2 instances across 3 accounts. Trusted Advisor flags 40 instances as "low utilization." Compute Optimizer also recommends downsizing those instances. Before acting on the recommendations, what must you verify in CloudWatch, and why might a "low average CPU" signal be misleading for a latency-sensitive application?
 
 12. A startup is building a fraud-detection pipeline that ingests transaction events via Kinesis Data Streams, processes them in a Lambda function, and writes verdicts to an RDS PostgreSQL database. During a surge the engineering team notices Lambda invocations are succeeding but RDS connections are timing out. They propose scaling up the RDS instance class. Identify the actual bottleneck, explain the underlying mechanism, and describe the correct architectural fix.
+
+---
+
+> _Held-out probes — Cycle-4 curation 2026-06-10. Do not use as study material; these probe lessons integrated this cycle._
+
+13. A fintech startup needs an immutable, append-only ledger to record every transfer between internal accounts with cryptographic verification of the full transaction history. The lead engineer opens the AWS console, searches for "QLDB," and finds the service listed but cannot order new instances. She asks you to recommend the correct AWS-native approach for this requirement today. What do you recommend and why is QLDB no longer a valid answer?
+
+14. A media company needs to ship 600 TB of archived video content from an on-premises data center to Amazon S3. Their internet uplink is 50 Mbps with high contention during business hours. A solutions architect suggests ordering Snowball Edge devices. A project manager pushes back, saying Snowball Edge is no longer available. Who is correct, and what physical transfer option(s) should the architect evaluate instead?
+
+15. An enterprise network architect is designing a new AWS Direct Connect circuit for a financial services workload requiring more than 10 Gbps of dedicated bandwidth. She tells the team "Direct Connect only supports 1 Gbps and 10 Gbps ports — we'll need ECMP across multiple 10 Gbps circuits." Is her statement accurate? What port speeds are actually available, and when would multi-circuit ECMP still make sense?
+
+16. A global logistics company connects its on-premises data center to AWS via a Transit Gateway VPN attachment. Peak nightly batch jobs saturate the two standard IPsec tunnels at 1.25 Gbps each (2.5 Gbps aggregate with ECMP). The network team wants to double throughput without provisioning additional VPN connections. A colleague suggests enabling Large Bandwidth Tunnels. What is the per-tunnel bandwidth ceiling for Large Bandwidth Tunnels, what attachment type is required, and what does the team need to know about regional availability before committing?

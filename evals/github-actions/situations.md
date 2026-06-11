@@ -27,3 +27,13 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. Your team pins all third-party actions to a full commit SHA (e.g., `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`). A new member argues this is unnecessary because GitHub now resolves tag-pinned actions from an immutable GHCR snapshot. Is the new member correct that SHA pinning is therefore redundant?
 
 12. A workflow passes `secrets: inherit` when calling a reusable workflow. The called workflow's job targets an environment named `production` that has a required reviewer gate and its own environment secrets. Which secrets does the called workflow's job actually see: the inherited org/repo secrets, the environment secrets, or both?
+
+---
+
+> _Held-out — Cycle 4 (2026-06-10). Do not use as training data for the skill._
+
+13. A newly formed platform team wants to build a shared automation library as a chain of reusable workflows: a top-level orchestrator calls a build workflow, which calls a test workflow, which calls a lint workflow, which calls a security-scan workflow, which calls a notify workflow, which calls an audit-log workflow, which calls a reporting workflow, which calls a badge-update workflow, which calls a cleanup workflow, which calls a final archival workflow. Will this chain execute successfully end-to-end? If not, at which level does it fail, and what is the correct remedy?
+
+14. A team lead notices that her repository's CI cache has grown to 18 GB and she is now receiving unexpected billing charges. She assumed the "10 GB cache limit" was a hard cap and is confused why GitHub accepted more data. What is the correct understanding of GitHub Actions cache storage limits, and how should she manage the overage?
+
+15. Your organization's security team wants to move beyond voluntary SHA-pinning. They want a platform-level guarantee that no workflow in the org can reference an action via a floating tag or branch name — if a developer pushes `uses: actions/checkout@v4` without a SHA, the workflow should fail before it even runs. Is this possible with GitHub Actions policy controls, and if so how?

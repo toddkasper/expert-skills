@@ -10,9 +10,9 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 |---|---|
 | Exam Name | Salesforce Certified Service Cloud Consultant |
 | Exam Code | Service-Con-201 |
-| Questions | 60 multiple-choice / multiple-select (Salesforce may include a small number of unscored questions) |
+| Questions | 60 multiple-choice / multiple-select; Salesforce may include up to 5 unscored questions `[volatile — verify live]` |
 | Time Limit | 105 minutes |
-| Passing Score | 63% |
+| Passing Score | 67% (≈40/60 scored questions) `[volatile — verify live]` |
 | Cost | $200 USD registration; $100 USD retake (plus applicable tax) |
 | Prerequisites | Salesforce Certified Administrator credential (required before registering) |
 | Retake Policy | Up to 3 attempts per release; no mandatory waiting period beyond scheduling logistics; a fourth attempt requires a new release cycle |

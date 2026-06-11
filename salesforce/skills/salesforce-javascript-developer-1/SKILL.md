@@ -7,7 +7,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -56,7 +56,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 Inline volatile tags applied:
 - The Node.js runtime version your environment pins `[volatile — verify live]` — Lambda, CDK, and Salesforce Functions runtimes update independently; check the platform's current runtime docs.
-- LWC Lightning Web Security (LWS) vs. Lightning Locker behavior `[volatile — verify live]` — sandbox enforcement model has evolved across releases; verify in your org's current API version.
+- LWC Lightning Web Security (LWS) is the default since Winter '23 (GA all orgs Summer '23); it replaced Lightning Locker and is less DOM-restrictive. Specific behavior changes per release `[volatile — verify live]` — verify your org's active security model in Setup → Session Settings.
 - `@track` deep-reactivity behavior since Spring '20 `[volatile — verify live]` — verify against your org's current API version if on an older release.
 - Jest/LWC-Jest version compatibility `[volatile — verify live]` — `@salesforce/sfdx-lwc-jest` version requirements change with SFDX CLI and API version updates; check the current package README.
 
@@ -167,10 +167,15 @@ field API names with a describe call — a wrong field name fails silently or re
 ### Browser and Events (17%)
 
 **Use `textContent`, never `innerHTML`, for untrusted data.** `innerHTML` parses and executes
-markup — an XSS vector. In LWC this is enforced (Lightning Locker / Lightning Web Security
-sandboxes the DOM and blocks most direct DOM access), but in a React front-end the same
-rule holds: **rendering user input through `innerHTML`/`dangerouslySetInnerHTML` is a hard
-red flag**, all the more so for apps handling PII or sensitive documents.
+markup — an XSS vector. In LWC this is enforced by the security sandbox — since Winter '23
+**Lightning Web Security (LWS)** is the default for all orgs (GA for existing orgs Summer '23),
+replacing the older Lightning Locker model. LWS runs components in an isolated JavaScript
+environment per namespace; it is **less** DOM-restrictive than Locker (some Locker restrictions
+were removed), but it still enforces XSS protections and namespace isolation. Verify your org's
+active security model in Setup → Session Settings → Lightning Web Security `[volatile — verify live]`.
+In a React front-end the same `innerHTML` rule holds: **rendering user input through
+`innerHTML`/`dangerouslySetInnerHTML` is a hard red flag**, all the more so for apps handling
+PII or sensitive documents.
 
 **Event propagation: capturing → target → bubbling.** `addEventListener(type, fn, true)`
 listens in the capture phase; default is bubbling. `stopPropagation()` halts further
@@ -249,8 +254,9 @@ a child query that needs a parent Id is sequential, not parallel.
 
 ### Server-Side JavaScript / Node.js (8%)
 
-**Know the runtime version your environment pins** (e.g. Node 20.x for current Lambda/CDK
-toolchains). Know `node`, `npm`, `npx`, and the `package.json` fields. `dependencies` ship to
+**Know the runtime version your environment pins** — `nodejs22.x` and `nodejs24.x` are the
+current supported Lambda runtimes as of 2026 (`nodejs20.x` deprecated Apr 30 2026)
+`[volatile — verify live]`. Know `node`, `npm`, `npx`, and the `package.json` fields. `dependencies` ship to
 production; `devDependencies` (test/build tools like Vitest, Playwright, CDK) do not. **Red
 flag:** a runtime import (e.g. an SF client or `aws-sdk v3`) sitting in `devDependencies`, or a
 test-only tool in `dependencies` bloating the Lambda bundle.
@@ -509,6 +515,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Corrected LWS framing — LWS (not Locker) is the default since Winter '23/Summer '23; LWS is less DOM-restrictive than Locker; updated §Browser and Events and the volatile-tag block. (2) Updated Node.js Lambda runtime example — `nodejs20.x` deprecated Apr 30 2026; current runtimes are `nodejs22.x` and `nodejs24.x`. (3) LWC Specialist superbadge structure updated in references/study-resources.md — 16 challenges + 2 quizzes.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---

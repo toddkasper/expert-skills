@@ -122,3 +122,50 @@ PASS = competent move identified AND trap avoided. Partial = right instinct, mis
     result here, but confused rationale), or believing distribution is a bug to avoid by default.
     **Verify:** in the TypeScript playground, hover `R` to confirm `string | number`; then test
     with `[T] extends` to confirm distribution is suppressed.
+
+13. **Competent:** The timeline claim is wrong. TypeScript 7.0 Beta shipped 2026-04-21, and the
+    official announcement states stable release is expected within ~two months of Beta — placing
+    stable around **June 2026**, not "late 2026." The team should start preparing now: audit
+    `tsconfig.json` for all 6.0-deprecated options (`--baseUrl`, `--moduleResolution node`,
+    `target: es5`, `--downlevelIteration`, `--esModuleInterop false`,
+    `--allowSyntheticDefaultImports false`) and migrate them before upgrading, since 7.0 removes
+    all of them. **Trap:** trusting an outdated or estimated "late 2026" date and deferring prep
+    work; or assuming Beta = alpha-quality and ignoring it. **Verify:** check
+    devblogs.microsoft.com/typescript for the 7.0 Beta announcement and RC schedule;
+    run `tsc --version` after upgrade and confirm deprecated options now error.
+    `[volatile — verify live]`
+
+14. **Competent:** The guide is inaccurate. `target: es5` and `--downlevelIteration` are
+    **deprecated** in TypeScript 6.0, not removed. They still work in 6.0 when
+    `"ignoreDeprecations": "6.0"` is set in `compilerOptions`. They are scheduled for removal in
+    TypeScript 7.0. A project that still needs them should add `"ignoreDeprecations": "6.0"` as a
+    short-term bridge and track a follow-up task to migrate the target/iteration pattern before
+    upgrading to 7.0. **Trap:** immediately deleting these options from tsconfig upon 6.0 upgrade
+    without a migration plan (breaks polyfill-dependent or older-browser targeting), or confusing
+    them with `--outFile` and `--moduleResolution classic` which *were* removed in 6.0.
+    **Verify:** set `"ignoreDeprecations": "6.0"` and confirm the project builds; check the
+    typescriptlang.org 6.0 release notes for the definitive removed-vs-deprecated split.
+
+15. **Competent:** The likely cause is `strictBuiltinIteratorReturn`, added in TypeScript 5.6 and
+    enabled by default in 6.0 as part of the nine-flag `strict` family. This flag changes the
+    `TReturn` type of built-in iterators from `any` to `undefined`. Code that previously depended
+    on the `TReturn` being `any` — for example, consuming the final `.value` of a generator's
+    `done: true` result as a typed value — will now see `undefined` instead, causing downstream
+    mismatches. The team should search for generator `.return()` / iterator `.next()` usages that
+    assumed a non-`undefined` `TReturn`, add explicit return-type annotations to generators, and
+    validate that completion values are handled correctly. **Trap:** blaming the TS 6.0 `target`
+    or `module` default changes, or disabling `strict` entirely — neither addresses the root cause.
+    **Verify:** isolate with a minimal generator that returns a value; confirm the type error names
+    `strictBuiltinIteratorReturn`; fix the generator's return annotation.
+
+16. **Competent:** The missing default is `libReplacement`, which changed from **`true`** to
+    **`false`** in TypeScript 6.0. With `libReplacement: true` (the old default), TypeScript would
+    attempt to resolve each `lib.*.d.ts` as a replaceable module — causing a large number of failed
+    module-resolution lookups on every build and adding watch overhead. Setting the default to
+    `false` improves cold-build and watch performance. For projects that use custom lib replacements
+    (e.g. shipping a polyfilled `lib.dom.d.ts`), the option must now be explicitly set to `true`;
+    without it the custom lib files are silently ignored. **Trap:** believing the wiki table is
+    complete at six entries (it is seven in 6.0 — `strict`, `module`, `target`, `rootDir`, `types`,
+    `noUncheckedSideEffectImports`, `libReplacement`); or not auditing custom-lib setups after
+    upgrade. **Verify:** check `tsc --showConfig | grep libReplacement` in an affected project;
+    confirm lib-replacement files are loaded only when the flag is explicitly re-enabled.

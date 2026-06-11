@@ -1,13 +1,13 @@
 ---
 name: salesforce-service-cloud-consultant
-description: Designing and configuring Salesforce Service Cloud — cases, assignment/escalation rules, queues, entitlements and milestones (SLAs), the Lightning Service Console, Knowledge (Knowledge__kav, data categories, KCS), Omni-Channel routing, Web-to-Case/Email-to-Case, CTI/voice, and contact-center analytics (AHT, FCR, CSAT). Use when scoping or implementing a case-management/support solution, intake channels, or routing. Not Sales Cloud pipeline (see salesforce-sales-cloud-consultant), external portals (see salesforce-experience-cloud-consultant), or general org admin (see salesforce-administrator). Scoped and benchmarked by the Service Cloud Consultant (Service-Con-201) blueprint.
+description: Designing and configuring Salesforce Service Cloud — cases, assignment/escalation rules, queues, entitlements and milestones (SLAs), the Lightning Service Console, Knowledge (Knowledge__kav, data categories, KCS), Omni-Channel routing, Web-to-Case/Email-to-Case, CTI/voice, and contact-center analytics (AHT, FCR, CSAT). Use when scoping or implementing a case-management/support solution, intake channels, or routing. Not Sales Cloud pipeline (see salesforce-sales-cloud-consultant), portals (see salesforce-experience-cloud-consultant), Field Service dispatch/work orders (a separate credential), or general org admin (see salesforce-administrator). Scoped and benchmarked by the Service Cloud Consultant (Service-Con-201) blueprint.
 metadata:
   anchor-credential: Salesforce Certified Service Cloud Consultant
   exam-code: Service-Con-201
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -22,10 +22,8 @@ metadata:
 
 The Salesforce Certified Service Cloud Consultant credential (exam code Service-Con-201) validates that a practitioner can design, configure, and implement Service Cloud solutions that are scalable, maintainable, and aligned to documented business requirements. It covers the full contact-center lifecycle: discovery, solution architecture, channel configuration (email, chat, voice, messaging, social), case management automation, entitlement-based SLA enforcement, knowledge base design, agent-desktop optimization via the Service Console, and operational analytics.
 
-Service Cloud concepts map cleanly onto any intake-and-review workflow: a custom intake object can play the role of the Case object, entitlements/milestones model a review SLA, Knowledge can power a self-service FAQ hub, Omni-Channel routes work to reviewers, and the Lightning Service Console skills apply to any role-specific contextual tabs on a record.
-
 > **Load this skill when…** designing or configuring a case-management or support solution; setting up intake channels (Email-to-Case, Web-to-Case, chat); implementing entitlements/milestones for SLA enforcement; configuring the Service Console or Omni-Channel routing.
-> **Not this skill:** Sales Cloud pipeline (Leads, Opportunities, forecasting) → see `salesforce-sales-cloud-consultant`; authenticated self-service portals → see `salesforce-experience-cloud-consultant`; general org admin (profiles, flows, reports) → see `salesforce-administrator`.
+> **Not this skill:** Sales Cloud pipeline (Leads, Opportunities, forecasting) → see `salesforce-sales-cloud-consultant`; authenticated self-service portals → see `salesforce-experience-cloud-consultant`; field service dispatching/work orders → see `salesforce-field-service-consultant`; general org admin (profiles, flows, reports) → see `salesforce-administrator`.
 
 > **Deeper context:** Study resources live in [references/study-resources.md](references/study-resources.md) (loaded on demand). For org-specific applications, see a per-org appendix in your own project referenced from a CLAUDE.md. For NPSP/nonprofit-specific guidance, see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md).
 
@@ -39,7 +37,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 
 ## Uncertainty & Escalation
 
-- **Always re-verify live:** volatile facts in this skill include channel caps (Web-to-Case 500/day `[volatile — verify live]`), case merge limits, sandbox refresh intervals, SMS/10DLC registration requirements, Knowledge license names, and any feature-availability detail — verify against official Salesforce documentation and your live org before acting.
+- **Always re-verify live:** volatile facts in this skill include channel caps (Web-to-Case 5,000/24 h `[volatile — verify live]`), case merge limits, sandbox refresh intervals, SMS/10DLC registration requirements, Knowledge license names, and any feature-availability detail — verify against official Salesforce documentation and your live org before acting.
 - **Live wins:** when the live org or official documentation contradicts a statement in this file, trust the live source and log the discrepancy via the Feedback protocol below.
 - **Escalate to a human before proceeding on:** OWD or sharing-model changes in production; adding or widening guest-user sharing; any destructive operation on production data (hard delete, mass status update); deactivating managed-package automation in a production org; enabling or reconfiguring SMS/messaging channels (10DLC compliance implications).
 - **Confidence taxonomy:** every fact in this file is considered stable unless tagged `[volatile — verify live]` or `[opinion — house style]`. If you act on an untagged fact and the live system disagrees, file feedback — do not silently trust this file over the live org.
@@ -54,7 +52,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 |---|---|---|
 | Async, paper-trail intake, low volume | Email-to-Case / Web-to-Case | Cheapest, no agent-presence required |
 | Real-time, agent online | Chat / Messaging | Synchronous SLA, deflects phone |
-| Voice with CTI/transcription | Service Cloud Voice (Amazon Connect) | Native, screen-pop, supervisor barge-in |
+| Voice with CTI/transcription | Service Cloud Voice (see §5 for model options) | Native, screen-pop, supervisor barge-in |
 | Unauthenticated public access | Salesforce Site / Help Center | No login friction |
 | Authenticated self-service | Experience Cloud community | Per-user record visibility |
 
@@ -73,6 +71,7 @@ Credential logistics and study path: see [references/study-resources.md](referen
 - **RED FLAG:** building in Apex what a Validation Rule or simple Flow does declaratively — unmaintainable for a small or volunteer admin team.
 - **Einstein / Agentforce features** (Case Classification, Article Recommendations, bots) require data volume to be useful. Low-volume orgs (hundreds of records per year) can't justify them — recognize the use case but don't recommend.
 - **Verify** the current automation surface before adding more: list the org's objects (your Salesforce MCP, `sf sobject list`, or Setup → Object Manager), then describe the target object (your Salesforce MCP, `sf sobject describe --sobject <object>`, or Object Manager → <object> → Fields & Relationships) to see existing fields and record types; check existing Flows/triggers in source control before authoring a new one.
+- **Field Service Lightning (FSL) is out of scope for this skill.** FSL (Work Orders, Work Types, Service Territories, Service Resources, Scheduling, and the Field Service mobile app) is covered by the separate Salesforce Certified Field Service Consultant credential and is not a current Service Cloud Consultant (Service-Con-201) exam domain. When a requirement involves dispatching field technicians, managing work orders, or scheduling on-site service visits, recognize FSL as the correct product and route to FSL-specific resources. Do not design native Case-management patterns as a substitute for FSL capabilities.
 
 ---
 
@@ -126,11 +125,11 @@ A custom intake object can be treated as the Case analog; the same lifecycle dis
 
 ## 5. Intake & Interaction Channels — operational rules
 
-- **Web-to-Case hard cap: 500 cases/day** `[volatile — verify live]` — exceed it and cases are dropped/queued. A custom web app POSTing to your own API (rather than native Web-to-Case) is not bound by this cap.
+- **Web-to-Case hard cap: 5,000 cases/24 hours** `[volatile — verify live]` — submissions beyond that limit are NOT silently dropped; they enter a shared pending request queue (combined Web-to-Case + Web-to-Lead, 50,000-request capacity). Queued requests are processed after the next midnight UTC reset. If the pending queue itself is full, additional submissions are permanently lost (the admin receives a notification for the first five rejections only). A custom web app POSTing to your own API (rather than native Web-to-Case) is not bound by this cap.
 - **Email-to-Case:** prefer **On-Demand** (no Email Service Agent appliance) over the legacy on-premise agent. Thread-ID in subject/body stitches replies to the same case — don't strip it.
 - **Omni-Channel routing model:** Most Available (by configured capacity) vs. Least Active. Push routing with a capacity model prevents agent overload; queue-based is simpler. For low volume, a queue list view is sufficient.
 - **Messaging consent is mandatory** for SMS/WhatsApp (10DLC registration for US SMS). Any SMS link-delivery feature requires 10DLC — flag this as a prerequisite, not a quick toggle.
-- **Social Studio is sunset** — do not design net-new on it; recognize it only for legacy.
+- **Social Studio is fully retired as of November 18, 2024** — no live instances remain; all customer access ended and data was deleted per contract. Do not design on it or present it as a current option; omit it from solution proposals.
 - **Verify** channel-created records by querying for their origin: run a SOQL query (MCP / `sf data query` / Developer Console) filtering on the origin/source field to confirm which intake path produced a record.
 
 CTI/Voice depth (Open CTI vs. Service Cloud Voice, screen pop, supervisor features, PBX considerations): [references/cti-voice.md](references/cti-voice.md) — load when designing or troubleshooting a telephony integration.
@@ -281,7 +280,7 @@ Five original scenarios. Scenarios 4–5 are in [references/scenarios.md](refere
 - **REMEMBER** assignment/auto-response/escalation: first matching entry wins; order entries specific→general.
 - **DO** bust the Quick Action cache by editing non-field metadata (`<description>`) when new QA fields don't render — logout/login alone won't.
 - **DO** order the compact layout to control the Highlights panel.
-- **REMEMBER** Web-to-Case caps at 500 cases/day; Case merge at 3 records.
+- **REMEMBER** Web-to-Case caps at 5,000 cases/24 h; overflow → shared pending queue (50k combined cap with Web-to-Lead), processed at next midnight UTC reset; if queue full, submissions are permanently lost. Case merge: 3 records max.
 - **REMEMBER** Lightning Knowledge = one object `Knowledge__kav`; Data Categories drive visibility.
 - **DO** run `sf project ...` from the SFDX project root (where `sfdx-project.json` lives), never an arbitrary dir.
 - **DO** validation-only deploy first; have a rollback plan.
@@ -318,6 +317,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): corrected Web-to-Case cap 500→5,000/24 h and "silently dropped" behavior → pending queue (50k combined cap, midnight UTC reset) in §5, Quick Reference, and scenarios.md Scenario 5; corrected Service Cloud Voice to three-model architecture (Amazon Connect, Partner Telephony, BYOT) in cti-voice.md; marked Social Studio as fully retired 2024-11-18 in §5; corrected passing score 63%→67% in study-resources.md; added FSL scope note to §1 and description. Updated description to surface SCV models and FSL boundary.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 
 ---

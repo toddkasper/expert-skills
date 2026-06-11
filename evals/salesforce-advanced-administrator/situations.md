@@ -27,3 +27,11 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
 11. The Account OWD is Private. A user named Dana is the owner of an Account. Dana's manager (via the role hierarchy) can see the Account because "Grant Access Using Hierarchies" is enabled. You now need Dana's manager to be able to see the Account but you want to prevent Dana's manager's manager (two levels up) from seeing it. The role hierarchy is already set correctly — Dana is under Manager, Manager is under Director. How do you prevent the Director from seeing it?
 
 12. A Matching Rule and a Duplicate Rule are both active for Contact. A batch import via Data Loader completes with no errors and no duplicate alerts — but you later discover the import created hundreds of duplicate contacts that should have been merged with existing records. What are two likely causes, and what should be verified before re-running the import?
+
+---
+
+> _Held-out — added Cycle-4 curation 2026-06-10. Do not use as training examples._
+
+13. A manufacturing company needs to migrate 120 million historical Order records into Salesforce using Data Loader. A junior admin says Data Loader can only handle up to 5 million records and insists you must split the file into 24 separate runs. Is the junior admin correct? What is the actual Data Loader capacity, and what configuration change (if any) is required to handle this volume in fewer runs?
+
+14. A financial services client has 30 active Workflow Rules in their production org that auto-send confirmation emails and update fields on Opportunity close. It is now January 2026. A stakeholder read that "Salesforce retired Workflow Rules on December 31, 2025" and wants to immediately disable all 30 rules before they "break." What do you tell the stakeholder, and what is the actually correct guidance for these existing rules?

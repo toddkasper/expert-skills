@@ -91,3 +91,25 @@ Answer each: state the **competent action** and the **reason**. Be concise (2–
     ```
     A junior engineer expects `R` to be `string | number`. What is the actual type of `R`, why does
     it differ from the engineer's expectation, and is this behavior correct or a bug?
+
+13. Your team is planning a production TypeScript upgrade for Q3 2026. A colleague says "Let's wait
+    until TypeScript 7.0 stable ships — it's still in development and not expected until late 2026,
+    so we have plenty of time." Is this timeline accurate? What is the actual state of TypeScript 7.0
+    as of mid-2026, and what should the team do now to prepare regardless of exact timing?
+
+14. You are auditing a TypeScript 6.0 migration guide written by a contractor. It lists
+    `target: es5` and `--downlevelIteration` under "Options removed in 6.0 — delete these from your
+    tsconfig immediately." A teammate asks: is that accurate? What is the correct status of these
+    two options in 6.0, and what must a project actually do if it still needs them?
+
+15. A new team member inherits a TypeScript 5.5 codebase that heavily uses custom async generators.
+    After upgrading to TypeScript 6.0 with the new defaults, a suite of previously passing tests
+    begins failing with unexpected `undefined` values at generator completion boundaries. The error
+    message mentions iterator return types. What TypeScript 5.6 change, now enabled by default in
+    6.0's `strict` mode, is most likely the cause, and how should the team investigate?
+
+16. You are reviewing a PR that migrates a project to TypeScript 6.0. The author updates the 6.0
+    defaults table in the internal wiki and lists six changed defaults: `strict`, `module`, `target`,
+    `rootDir`, `types`, and `noUncheckedSideEffectImports`. A reviewer comments the table is
+    incomplete. What default is missing, what did it change from and to in 6.0, and why does it
+    matter for projects that use custom lib files?

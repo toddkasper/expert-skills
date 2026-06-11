@@ -8,7 +8,7 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 
 | Questions | Time Limit | Passing Score | Cost | Prerequisites | Retake Policy |
 |---|---|---|---|---|---|
-| 60 multiple-choice / multiple-select | 105 minutes | 68% (≈41 of 60) | USD 200 + applicable taxes | Salesforce Certified Administrator (ADM-201) | USD 100 + applicable taxes per attempt |
+| 60 multiple-choice / multiple-select (+ up to 5 unscored) | 105 minutes | ~69–73% `[volatile — verify live]` — confirm against official exam guide (help.salesforce.com article 005298976); third-party sources conflict (69% per SalesforceBen, 73% per vmexam); official source not publicly machine-readable at last check | USD 200 + applicable taxes | Salesforce Certified Administrator (ADM-201) | USD 100 + applicable taxes per attempt |
 
 - **Delivery:** Online proctored or in-person testing center.
 - **Open-book:** No — no reference materials allowed.
@@ -30,8 +30,21 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 | Apex Governor Limits reference | https://developer.salesforce.com/docs/atlas.en-us.apexref.meta/apexref/apex_gov_limits.htm |
 
 **Note on the PDF exam guide:** The official PDF reflects the Winter '19
-structure and has not been updated. The live exam uses the June 2024 restructure;
+structure and has not been updated. The live exam uses the June 2024 restructure
+with a subsequent addition of a Predictive and Generative AI domain;
 the Trailhead credential page is the authoritative current source.
+
+**Current blueprint (third-party-sourced — `[volatile — verify live]`; confirm against official exam guide at help.salesforce.com article 005298976):**
+
+| Domain | Reported Weight |
+|---|---|
+| Consulting and Implementation Strategies (merged from two prior domains) | ~25% |
+| Practical Application of Sales Cloud Expertise | ~24% |
+| Data Management | ~18% |
+| Sales Lifecycle | ~20% |
+| Predictive and Generative AI (new domain, post-2024) | ~13% |
+
+> The older five-domain structure (Practical Application 33%, Sales Lifecycle 23%, Implementation Strategies 15%, Data Management 15%, Consulting Practices 14%) appears in pre-2025 third-party guides and is no longer current. The AI domain covers Agentforce for Sales (formerly Einstein Copilot), predictive AI tools in Sales Cloud, and Salesforce's Trusted AI Principles. Do not distribute study time based on the old weights.
 
 ### Key Trailhead Modules & Trails (Free)
 

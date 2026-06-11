@@ -7,7 +7,7 @@ metadata:
   domain: aws
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
   blueprint: DOP-C02 (launched March 2023; verify at official exam guide link below)
 ---
@@ -40,7 +40,9 @@ Operational playbook for AWS DevOps work. Each section states the rule to apply:
 
 ### Pipeline Architecture
 
-**Core stack:** CodeCommit/CodeConnections (source) → CodeBuild (build/test) → CodeDeploy or ECS/EKS deploy action → CodePipeline (orchestrator). CodeArtifact for private artifact repositories (npm, Maven, PyPI).
+**Core stack:** CodeConnections (source; preferred — supports GitHub, GitLab, Bitbucket) → CodeBuild (build/test) → CodeDeploy or ECS/EKS deploy action → CodePipeline (orchestrator). CodeArtifact for private artifact repositories (npm, Maven, PyPI).
+
+> **CodeCommit note `[volatile — verify live]`:** CodeCommit is not in the current DOP-C02 in-scope services list; lead new pipeline designs with CodeConnections. CodeCommit was closed to new customers Jul 2024 and returned to GA Nov 2025 — status may continue to evolve; confirm against the official exam guide and AWS docs before citing it in exam prep or new architecture work.
 
 **Role boundaries:** build role has no deploy permissions; deploy role has no build permissions. Cross-account pipelines require a KMS CMK (not SSE-S3) on the artifact bucket, plus trust policies in both accounts.
 
@@ -56,7 +58,7 @@ Operational playbook for AWS DevOps work. Each section states the rule to apply:
 | **Linear** | Incrementally shift traffic in equal steps | Lambda, ECS when you want gradual exposure | Automatic rollback on alarm |
 | **All-at-once** | Replace all instances simultaneously | Dev/test environments; fastest but riskiest | Re-deploy; no gradual fallback |
 
-**ECS blue/green with CodeDeploy** registers new tasks, waits for health checks, then shifts the ALB listener. Lifecycle hooks (`BeforeInstallHook`, `AfterInstallHook`, `AfterAllowTestTraffic`, `BeforeAllowTraffic`, `AfterAllowTraffic`) invoke Lambda; failures trigger automatic rollback.
+**ECS blue/green with CodeDeploy** registers new tasks, waits for health checks, then shifts the ALB listener. Lifecycle hook events (`BeforeInstall`, `AfterInstall`, `AfterAllowTestTraffic`, `BeforeAllowTraffic`, `AfterAllowTraffic`) invoke Lambda validation functions; failures trigger automatic rollback. In AppSpec YAML, the value under each hook key is the Lambda function name (a placeholder like `{{BeforeInstallHookFunctionName}}`), not part of the event name itself.
 
 **Lambda strategies** use aliases with weighted versions (`CodeDeployDefault.LambdaCanary10Percent5Minutes` = 10% for 5 min then 100%, or rollback on alarm).
 
@@ -143,14 +145,24 @@ Match the DR pattern to the stated RTO/RPO: Backup & Restore (hours/hours, lowes
 
 **AWS Backup** centralizes backup policies across RDS, DynamoDB, EFS, EC2 (EBS snapshots), FSx, and S3. Use Backup Plans with lifecycle rules. Cross-region copies require a Backup Vault in the destination region. Test restores — an untested backup is not a backup.
 
+**AWS Elastic Disaster Recovery (DRS)** is the in-scope AWS service for continuous server replication–based DR patterns (Pilot Light, Warm Standby). DRS replicates on-premises or cloud servers to AWS using lightweight agents; recovery spins up pre-staged instances in minutes. Use it when the RTO/RPO requires near-continuous replication rather than periodic snapshot restore.
+
+### Resilience Validation
+
+**AWS Fault Injection Simulator (FIS)** runs controlled chaos experiments — CPU stress, network disruption, AZ-level faults, RDS failover — against live AWS resources. Use FIS experiments to validate that Auto Scaling, ALB health checks, Route 53 failover, and RDS Multi-AZ actually behave as designed before a real incident. Integrate into a pipeline `post_build` stage or a Maintenance Window for recurring game days.
+
+**AWS Resilience Hub** assesses the resilience of an application (defined as a collection of AWS resources) against a target RTO/RPO and maps it to the AWS Well-Architected Framework resilience pillar. It generates a resilience score and actionable recommendations. Use Resilience Hub to baseline and track resilience posture across multi-account environments; embed it in change-management gates to block deployments that regress the resilience score.
+
 **Red flags in review:**
 - RDS Multi-AZ presented as a DR solution for regional failures (it isn't).
 - Auto Scaling group with no lifecycle hook on termination — active sessions killed mid-flight.
 - Route 53 failover with no health check on the primary — failover never triggers.
 - DR runbook that requires manual console steps — automate with SSM Automation documents.
 - AWS Backup plan with no restore test in the last 90 days.
+- Pilot Light / Warm Standby DR design that relies on periodic snapshots only for server workloads — evaluate DRS for continuous replication when the RPO is minutes, not hours.
+- Resilience claims without FIS experiment evidence — "it will fail over" is not the same as "we have run a controlled experiment proving it fails over."
 
-**Verify:** `aws route53 get-health-check-status --health-check-id <id>` to confirm health check state; `aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names <asg>` to inspect lifecycle hooks and termination policies.
+**Verify:** `aws route53 get-health-check-status --health-check-id <id>` to confirm health check state; `aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names <asg>` to inspect lifecycle hooks and termination policies; `aws drs describe-replication-configuration-templates` to confirm DRS replication is configured; `aws fis list-experiments` to confirm FIS experiments exist and have completed successfully.
 
 ---
 
@@ -266,7 +278,7 @@ Explicit Deny wins at any layer (SCPs → resource-based → identity → bounda
    → gate: `aws cloudwatch describe-alarms --alarm-names <alarm>` — state must be `OK` before deploying; deploying into `ALARM` state causes immediate rollback.
 3. Wire the alarm ARN into the deployment group: `aws codedeploy update-deployment-group ... --alarm-configuration alarms=[{name=<alarm-name>}],enabled=true,ignorePollAlarmFailure=false`.
    → gate: `get-deployment-group` confirms `alarmConfiguration.enabled: true`.
-4. Trigger the deployment. Monitor lifecycle events: `BeforeInstallHook` → `AfterInstallHook` → `AfterAllowTestTraffic` → `BeforeAllowTraffic` → `AfterAllowTraffic`.
+4. Trigger the deployment. Monitor lifecycle events: `BeforeInstall` → `AfterInstall` → `AfterAllowTestTraffic` → `BeforeAllowTraffic` → `AfterAllowTraffic`.
    → gate: new task set / Lambda version is receiving test traffic at the ALB test port before `AfterAllowTestTraffic` hook completes.
 5. After traffic shifts to 100%, the alarm must stay `OK` through the evaluation period.
    → gate: `aws codedeploy get-deployment --deployment-id <id> --query 'deploymentInfo.status'` — `Succeeded` = done; `Stopped` with `autoRollbackConfiguration` = alarm-triggered rollback.
@@ -396,6 +408,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 - **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: StackSet permission models, CDK bootstrap versioning, cross-account ECR pull) to meet the teaching-scenario standard (body now has 4 scenarios total).
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Fixed CodeDeploy ECS lifecycle hook event names — `BeforeInstall`/`AfterInstall` (not `BeforeInstallHook`/`AfterInstallHook`) across §1 deployment strategy table and Workflow 1 step 4; clarified that `*HookFunctionName` strings are Lambda function-name placeholders in AppSpec YAML, not part of the event key. (2) Added AWS FIS and AWS Resilience Hub to §3 (new "Resilience Validation" subsection) — both in DOP-C02 in-scope services list. (3) Added AWS Elastic Disaster Recovery (DRS) to §3 DR Strategy Selection — in-scope for Pilot Light/Warm Standby server replication patterns. (4) Demoted CodeCommit in §1 Pipeline Architecture — CodeConnections now leads; CodeCommit note with `[volatile — verify live]` added (not in DOP-C02 in-scope list; closed Jul 2024; returned GA Nov 2025).
 
 ---
 

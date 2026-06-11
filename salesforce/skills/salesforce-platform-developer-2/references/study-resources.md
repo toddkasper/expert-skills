@@ -12,7 +12,7 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 | Time Limit | 120 minutes |
 | Passing Score | 70% |
 | Cost | USD 200 registration / USD 100 retake (plus local taxes) |
-| Prerequisites | Salesforce Certified Platform Developer I credential **+ four Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Lightning Component Framework Specialist, Advanced Apex Specialist) |
+| Prerequisites | Salesforce Certified Platform Developer I credential **+ three Trailhead Superbadges** (Apex Specialist, Data Integration Specialist, Advanced Apex Specialist) `[volatile — verify live]` |
 | Retake Policy | No mandatory waiting period between attempts; no published attempt cap; failed attempts do not appear on your public Trailhead profile |
 
 *Delivery: onsite Kryterion testing center or online proctored, registered via Trailhead Academy (Plat-Dev-301; replaced Webassessor July 2025).*
@@ -25,9 +25,8 @@ Load-on-demand companion to [../SKILL.md](../SKILL.md). Use when planning a stud
 - [Superbadge: Apex Specialist](https://trailhead.salesforce.com/en/content/learn/superbadges/superbadge_apex) — Official / Required superbadge (triggers, async, scheduling)
 - [Superbadge: Advanced Apex Specialist](https://trailhead.salesforce.com/en/content/learn/superbadges/superbadge_aap) — Official / Required superbadge (design patterns, integration, testing)
 - [Superbadge: Data Integration Specialist](https://trailhead.salesforce.com/en/content/learn/superbadges/superbadge_integration) — Official / Required superbadge (REST, SOAP, Bulk API, external services)
-- [Superbadge: Lightning Component Framework Specialist](https://trailhead.salesforce.com/en/content/learn/superbadges/superbadge_lcf_specialist) — Official / Required superbadge (Aura/LWC)
 - [Apex Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_dev_guide.htm) — Official reference documentation
-- [Platform Developer II Exam Guide (PDF)](https://developer.salesforce.com/resources2/certification-site/files/SGCertifiedPlatformDeveloperII.pdf) — Official exam guide with topic/weight breakdown
+- [Platform Developer II Exam Guide](https://help.salesforce.com/s/articleView?id=005298967&language=en_US&type=1) — Official exam guide (live Trailhead Help page; passing score 70%, 60 Qs + up to 5 unscored, 120 min) `[volatile — verify live]`
 - [Trailhead Academy — Exam Registration (Plat-Dev-301)](https://trailheadacademy.salesforce.com/certificate/exam-platform-dev2---Plat-Dev-301) — Official registration portal (replaced Webassessor July 2025)
 
 ### Community Study Guides

@@ -7,7 +7,7 @@ metadata:
   domain: salesforce
   type: certification-playbook
   status: current
-  last-reviewed: 2026-06-09
+  last-reviewed: 2026-06-10
   blueprint-verified: 2026-06-07
 ---
 
@@ -17,8 +17,10 @@ metadata:
 
 The **Salesforce Certified Marketing Cloud Email Specialist** (exam code **MC-202**) validates
 proven knowledge, skills, and hands-on experience in email marketing best practices within the
-Salesforce Marketing Cloud (SFMC) platform. It covers message design, subscriber and data
-management, marketing automation, deliverability, and inbox analytics.
+Salesforce Marketing Cloud (SFMC) platform. The six exam domains are: Email Marketing Best
+Practices, Email Message Design, Content Creation & Delivery, Marketing Automation, Subscriber &
+Data Management, and Tracking & Reporting (see domain weights in
+[references/study-resources.md](references/study-resources.md)) `[volatile — verify live]`.
 
 This is the primary entry-level certification in the Marketing Cloud track. It is a prerequisite
 for advanced credentials such as Marketing Cloud Consultant, Marketing Cloud Developer, and
@@ -101,6 +103,21 @@ Credential logistics and study path: see [references/study-resources.md](referen
   re-permission step → high bounce + complaint risk. Re-engage or suppress stale addresses first.
 
 Email design rules (mobile-first, subject/preheader, A/B test discipline): [references/coverage-additions.md](references/coverage-additions.md).
+
+---
+
+## 1b. Email Message Design — Operational Rules
+
+This is a standalone blueprint domain (13% of the exam `[volatile — verify live]`) covering the design, testing, and approval of email messages before send.
+
+**Core rules to hold inline:**
+
+- **A/B test one variable at a time** — subject line OR from-name OR send-time; define the winner metric (open vs. click vs. conversion) *before* launching; ensure test cells are large enough to be statistically significant. Do not stack multiple variables in a single test.
+- **Approvals workflow:** if your SFMC account has the Approvals feature enabled, a send or journey activation that requires approval will be blocked until an approver acts. Build approval lead-time into the send schedule; a pending-approval block is the most common cause of a delayed send that "looks ready."
+- **Template vs. free-form:** slot-based templates enforce brand compliance and are the correct choice for multi-author or multi-BU environments; free-form HTML emails are for one-off or developer-built sends. Never edit a template's locked slot structure per-send — that is the compliance control.
+- **Rendering validation:** always run a cross-client render check (Litmus or Validate) before a major send. Outlook uses the Word rendering engine and is the most common source of broken layouts; test on Outlook explicitly.
+
+Full email design rules (mobile-first, responsive layout, preheader best practices): [references/coverage-additions.md](references/coverage-additions.md) — the "Email design rules" and "Content Builder: slot-based templates" sections.
 
 ---
 
@@ -276,7 +293,7 @@ Core rule to hold inline: **verify the CRM objects you intend to segment on are 
 
 ---
 
-## 5. Insights & Analytics — Operational Rules
+## 5. Tracking & Reporting — Operational Rules
 
 Key metric definitions (Delivered, Open Rate, CTOR, Click Rate, Bounce Rate, Unsubscribe Rate, Spam Complaint Rate), the report-selection table (Account Send Summary, Campaign Email Tracking, Email Performance by Domain, Bounce Summary, etc.), and guidance on Tracking Extracts and Data View SQL for re-engagement suppression: [references/analytics-reports.md](references/analytics-reports.md) — load when building dashboards, diagnosing deliverability trends, or writing engagement-suppression queries.
 
@@ -437,6 +454,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-10** — Cycle-4 curation (inbox): (1) Passing score corrected 67%→65% (~39/60) with `[volatile — verify live]` tag in study-resources.md. (2) Domain weights updated to official six-domain blueprint: Best Practices 15%, Email Message Design 13%, Content Creation & Delivery 18%, Marketing Automation 19%, Subscriber & Data Management 28%, Tracking & Reporting 7% — all marked `[volatile — verify live]`; study-resources.md domain table, study-plan, and Trailhead module list all updated. (3) New §1b "Email Message Design" added (inline A/B testing rules, Approvals workflow, template vs. free-form guidance, rendering validation); pointer to existing coverage-additions.md for full rules. (4) §5 renamed from "Insights & Analytics" to "Tracking & Reporting" throughout SKILL.md, analytics-reports.md, and study-resources.md; Overview updated to list all six current exam domains. `last-reviewed` updated to 2026-06-10. Eval probes 13–14 added.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09. Section 5 (Insights & Analytics detail) moved to references/analytics-reports.md to keep body within word budget.
 
 ---

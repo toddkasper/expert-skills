@@ -20,5 +20,20 @@ Rate limits, keyword lists, member flagging, and review queues require hands-on 
 
 Salesforce Mobile App experience wrapping (Mobile Publisher) is occasionally tested on the exam. Not covered in the SKILL.md body. See the official Mobile Publisher documentation on Salesforce Help.
 
+## Enhanced Sites and Content Platform (Enhanced LWR) `[volatile — verify live]`
+
+Introduced as a distinct, more capable tier above standard Build Your Own (LWR). Key capabilities not available in standard LWR:
+
+- **Expression-based visibility:** per-component visibility rules using logic expressions (field values, audience membership, custom conditions) — goes beyond standard Audience targeting.
+- **Expression-based component variations:** multiple versions of the same component with rule-driven switching per visitor context.
+- **Enhanced CMS workspaces:** tighter content-channel binding; data binding for rendering Salesforce CMS content directly in LWR pages.
+- **Data Cloud visitor insights:** connect Data Cloud identity and segment data to personalize experiences for known and anonymous visitors.
+- **Partial deployment:** deploy only changed portions of a site, not the full bundle.
+- **SEO-friendly URLs:** the `/s` path suffix is removed as part of the upgrade prerequisite.
+
+**Upgrade path:** existing standard LWR sites can be upgraded to Enhanced LWR (Setup → Digital Experiences → [site] → Upgrade); the upgrade is **one-way and cannot be reversed**. Prerequisites: (1) remove the `/s` suffix from the site URL; (2) update CI/CD pipelines — enhanced sites use `DigitalExperienceBundle` / `DigitalExperienceConfig` metadata types instead of `ExperienceBundle`; metadata operations targeting `ExperienceBundle` will silently break on an enhanced site.
+
+**Decision rule:** for new builds requiring expression-based personalization, Data Cloud integration, or partial deployment, start on Enhanced LWR rather than standard LWR. For existing Aura or standard LWR sites, evaluate the upgrade cost (URL migration, pipeline changes, one-way commitment) against the feature benefit before migrating.
+
 ---
 *Companion reference — independent educational content, not affiliated with or endorsed by any vendor; product/credential names are used for identification only. Guidance, not ground truth — verify against official docs. Full disclaimer: the parent `SKILL.md` and the repo `POLICY.md`.*

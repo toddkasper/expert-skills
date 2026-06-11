@@ -66,8 +66,9 @@ while IFS= read -r skill; do
   # 4e. Disclaimer
   grep -qiE '## *Disclaimer|not affiliated|independent educational' "$skill" || fail "no disclaimer"
 
-  # 5. no exam-logistics keywords in the body
-  hits="$(body_after_fm "$skill" | grep -inE "$LOGISTICS_RE" | head -3)"
+  # 5. no exam-logistics keywords in the body (Changelog provenance bullets are exempt —
+  #    they legitimately name the logistics they corrected, which live in study-resources.md)
+  hits="$(body_after_fm "$skill" | grep -vE '^- \*\*[0-9]{4}-[0-9]{2}-[0-9]{2}' | grep -inE "$LOGISTICS_RE" | head -3)"
   [ -z "$hits" ] || fail "exam-logistics keyword(s) in body: $(echo "$hits" | tr '\n' '|')"
 
   # 6. every references/*.md referenced from SKILL.md AND carries a disclaimer (R4)
