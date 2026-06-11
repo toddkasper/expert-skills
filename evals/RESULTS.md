@@ -13,6 +13,27 @@ Columns: **K** = knowledge eval (`situations.md`, Lens 3) as `baseline→skilled
 application eval (`tasks.md`, Lens 4), same format. **Rubric** = 12-dimension static audit total
 /36 (Lens 1). **Trig** = trigger-test pass rate (Lens 2). `—` = that lens not run yet.
 
+> **Read these numbers honestly — three standing caveats (see the Cycle-4 block at the bottom for
+> the full account):**
+> 1. **The mirror-detector over-fires.** It conflates "the probe tests the same fact the skill
+>    teaches" (expected, fine) with "the answer lifts the skill's *wording*" (the real leakage we
+>    care about), so it flagged many cleanly-authored original probes — even whole sets. Treat
+>    mirror flags as a **weak, noisy** signal. Where a *large* new-probe lift sits on a
+>    heavily-flagged skill (**github +66.7, admin, advanced-admin, aws-sa**), the lift is
+>    **partly fact-overlap-confounded and was not human-reviewed** — do not over-trust the
+>    magnitude. The fix is filed and **deferred** (project paused); run it before any future cycle.
+> 2. **Cross-cycle deltas are model-confounded.** Cycle 2 used `claude-fable-5`; Cycle 3–4 used
+>    `claude-opus-4-8`. Only the **within-run baseline-vs-skilled lift** is a valid comparison;
+>    do not read trends *across* cycles as like-for-like.
+> 3. **`[volatile — verify live]` blueprint percentages are unconfirmed.** Domain weights / passing
+>    scores corrected in Cycle 3–4 came from secondary sources (e.g. salesforceben.com) and still
+>    **await official exam-guide confirmation**. They carry the `[volatile]` marker in-skill for
+>    that reason.
+>
+> **Bottom line:** on flagged rows, trust the **direction** of lift (the curation helped), not the
+> **magnitude**. The unflagged, mirror-free wins (experience-cloud, pd1, typescript, agentforce,
+> nonprofit, js-dev-1, aws-devops, aws-security, marketing) are the trustworthy evidence.
+
 > **Cycle 1 (2026-06-09):** Lens 1 (static rubric) + Lens 2 (trigger routing) run for all 22
 > (auditor: static-audit agent). Lens 3–5 (live-model knowledge/application evals + adversarial
 > web audit) are a separate session → `pending`. Sub-2 rubric findings filed to

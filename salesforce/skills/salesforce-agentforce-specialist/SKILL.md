@@ -292,13 +292,13 @@ Full rules, anti-patterns, and A2A protocol decision criteria: [references/study
   zero-data-retention with Salesforce's LLM partners, dynamic data masking
   before the external call, toxicity/bias scoring on the response, and an audit
   trail of prompts + responses.
-- **Zero retention** means PII and sensitive data sent in a grounded prompt is
-  **not** used to train external models. This is the property that makes it
-  acceptable to ground on records containing sensitive data at all.
-- **Configure masking for sensitive fields explicitly.** Mask SSN, sensitive
-  document content, medical detail, DOB, and contact PII so they're tokenized
-  before the prompt leaves Salesforce and de-tokenized in the response. Do not
-  assume defaults cover custom sensitive fields — verify.
+- **Zero retention** means PII sent in a grounded prompt is **not** used to
+  train external models — the property that makes grounding on sensitive records
+  acceptable at all.
+- **Configure masking for sensitive fields explicitly.** Mask SSN, document
+  content, medical detail, DOB, and contact PII so they're tokenized before the
+  prompt leaves Salesforce and de-tokenized in the response. Don't assume
+  defaults cover custom sensitive fields — verify.
 - **The audit trail is your compliance evidence.** Keep it on; it records what
   was sent and returned for every prompt over sensitive data.
 
@@ -400,51 +400,40 @@ Original teaching scenarios — distinct from held-out eval scenarios in `evals/
 
 **Scenario 1 — Field Generation silent truncation**
 
-> **Situation:** A developer builds a Field Generation template that writes an
-> AI-generated product description to a custom `Description__c` field. In the
-> preview pane the output looks correct and reads naturally at ~500 characters.
-> In the live org, saved descriptions are always cut off mid-sentence at the
-> same spot. No error appears anywhere.
+> **Situation:** A Field Generation template writes an AI description to custom
+> `Description__c`. The preview reads fine at ~500 chars, but saved values are
+> always cut off mid-sentence at the same spot — no error anywhere.
 >
-> **Competent move:** Run `describe` on the object to check the actual length of
-> `Description__c`. The field is almost certainly shorter than 500 characters
-> (e.g., 255). Update the prompt's max-output instruction to stay within that
-> length, re-activate the template, and re-test. Never assume a field length —
-> always confirm with `describe` before wiring.
+> **Competent move:** `describe` the object for the field's `length` — it's
+> almost certainly shorter than 500 (e.g., 255). Set the prompt's max-output
+> instruction at or below that, re-activate, re-test. Never assume a field
+> length; confirm with `describe` before wiring.
 >
-> **Tempting-but-wrong:** Increase the model's max-token output setting,
-> thinking the model is cutting off its own generation. The model isn't the
-> constraint — the Salesforce field length is. Raising the model limit changes
-> nothing; the write still silently truncates.
+> **Tempting-but-wrong:** Raising the model's max-token setting. The model isn't
+> the constraint — the field length is — so the write still silently truncates.
 >
-> **Verify:** `describe` the object, read the `length` property on the target
-> field, and confirm the prompt's output constraint is at or below that value.
+> **Verify:** `describe` the object, read the target field's `length`, confirm
+> the prompt's output constraint is at or below it.
 
 ---
 
 **Scenario 2 — Agent user over-privileged "to make it work"**
 
-> **Situation:** A new Service Agent keeps failing at run time because its
-> Apex action returns no records. The developer discovers the agent user's
-> profile has restrictive object access. The quick fix applied: assign the agent
-> user the System Administrator profile so the agent can always see the data
-> it needs.
+> **Situation:** A Service Agent's Apex action returns no records because the
+> agent user's profile has restrictive object access. The quick fix applied:
+> assign that user the System Administrator profile.
 >
 > **Competent move:** Identify exactly which objects, fields, and sharing the
-> Apex action requires. Grant those permissions through a dedicated permission
-> set assigned to the agent user — nothing more. Dry-run the SOQL from the Apex
-> action logged in as the agent user (or via `runAs` in a test) to confirm
-> the records are visible with minimal rights before going live.
+> action needs, and grant only those via a dedicated permission set. Dry-run the
+> action's SOQL as the agent user (or `runAs` in a test) to confirm records are
+> visible with minimal rights before go-live.
 >
-> **Tempting-but-wrong:** Assigning the System Administrator profile solves the
-> immediate error but creates a critical security gap: a prompt injection or
-> misconfigured action now runs with org-wide admin rights. The blast radius of
-> any exploit or logic error grows to the entire org. Least-privilege is a
-> non-negotiable design constraint, not a nice-to-have.
+> **Tempting-but-wrong:** The admin profile clears the error but lets any prompt
+> injection or misconfigured action run with org-wide rights — the blast radius
+> becomes the whole org. Least-privilege is non-negotiable, not a nice-to-have.
 >
 > **Verify:** Query the affected objects as the agent user's profile + permission
-> set combination in Workbench or via Apex `runAs`, confirm records are
-> returned, then remove any excess permissions.
+> set in Workbench or `runAs`, confirm records return, remove any excess.
 
 ---
 
@@ -454,68 +443,57 @@ Original teaching scenarios — distinct from held-out eval scenarios in `evals/
 > follow-up message. In testing the Flow throws a generic error on the Prompt
 > Builder step. The template was built last week and tested in the preview pane.
 >
-> **Competent move:** Check the template's status in Prompt Builder. If it reads
-> "Draft" rather than "Active," activate it. A template must be in Active status
-> before any Flow, Lightning page, or agent action can invoke it. Reactivate and
-> re-run the Flow.
+> **Competent move:** Check the template's status in Prompt Builder. A template
+> must be **Active** before any Flow, Lightning page, or agent action can invoke
+> it — if it reads "Draft," activate it and re-run the Flow.
 >
-> **Tempting-but-wrong:** Assume the error is in the Flow logic, spend time
-> debugging elements, or open a support case. The template itself is the issue —
-> drafts don't resolve at run time, and the error message is often generic enough
-> to mask this.
+> **Tempting-but-wrong:** Debugging Flow elements or opening a support case. The
+> template is the issue — drafts don't resolve at run time, and the generic error
+> masks it.
 >
-> **Verify:** Open the template in Prompt Builder, confirm status = Active, and
-> re-run the Flow in a fresh debug. Add a pre-deploy checklist step that
-> verifies all referenced templates are Active.
+> **Verify:** Confirm template status = Active, re-run in a fresh debug, and add
+> a pre-deploy checklist step that verifies all referenced templates are Active.
 
 ---
 
 **Scenario 4 — RAG retriever for an org without Data 360**
 
-> **Situation:** A solution design calls for a Service Agent grounded on a
-> library of internal process PDFs using Data 360 (formerly Data Cloud) vector
-> search. The architect starts building the Data Library and retriever
-> configuration, then discovers the feature is unavailable in Setup.
+> **Situation:** A design calls for a Service Agent grounded on internal process
+> PDFs via Data 360 (formerly Data Cloud) vector search. The architect starts
+> building the Data Library, then finds the feature is unavailable in Setup.
 >
-> **Competent move:** Confirm whether Data 360 is provisioned by checking
-> whether Data 360 DMO/DLO objects appear in the object list, or whether the
-> Data 360 section is visible in Setup. If Data 360 is absent, RAG / Data
-> Library / vector search are unavailable. Pivot to Knowledge articles for
-> unstructured grounding (requires Knowledge to be enabled), or scope in Data
-> 360 provisioning as a prerequisite work item with budget and timeline impact.
+> **Competent move:** Confirm Data 360 is provisioned (its DMO/DLO objects in
+> the object list, or the Data 360 section in Setup). If absent, RAG / Data
+> Library / vector search are unavailable — pivot to Knowledge articles for
+> unstructured grounding (Knowledge must be enabled), or scope Data 360
+> provisioning as a funded prerequisite with budget and timeline impact.
 >
-> **Tempting-but-wrong:** Begin building Data Library configurations assuming the
-> feature exists, or promise a go-live date without first validating Data 360's
-> presence. This wastes build effort and sets a delivery date against a
-> dependency that hasn't been funded.
+> **Tempting-but-wrong:** Building Data Library config or promising a go-live
+> date before validating Data 360's presence — wasted effort against an unfunded
+> dependency.
 >
-> **Verify:** Check the object list for Data 360 objects before any design
-> work. Document Data 360 as a dependency in the solution spec.
+> **Verify:** Check the object list for Data 360 objects before any design work;
+> document Data 360 as a dependency in the solution spec.
 
 ---
 
 **Scenario 5 — PII in static grounding bypasses Trust Layer masking**
 
-> **Situation:** To make a record summary template feel more personal, a
-> developer pastes a customer's full name and contract ID as fixed example text
-> directly into the template body (static grounding) so the model always has
-> context about the account structure. The same approach is later used in
-> production for real account data.
+> **Situation:** To personalize a record-summary template, a developer pastes a
+> customer's full name and contract ID as fixed text in the template body
+> (static grounding) — later reused in production for real account data.
 >
-> **Competent move:** Move all record-specific facts — especially anything that
-> could be PII (name, ID, contact info, DOB, financial data) — into dynamic
-> merge fields resolved at run time. Dynamic merge fields flow through the Trust
-> Layer where masking rules apply. Static text in the template is never masked
-> regardless of Trust Layer configuration.
+> **Competent move:** Move all record-specific facts — especially PII (name, ID,
+> contact info, DOB, financial data) — into dynamic merge fields resolved at run
+> time. Merge fields flow through the Trust Layer where masking applies; static
+> template text is never masked, whatever the Trust Layer config.
 >
-> **Tempting-but-wrong:** Assume the Trust Layer will mask static text the same
-> way it masks dynamic merge-field output. It does not. Static template body
-> text is sent to the LLM exactly as written; there is no masking pass applied
-> to it.
+> **Tempting-but-wrong:** Assuming the Trust Layer masks static text like it
+> masks merge-field output. It does not — static body text reaches the LLM
+> exactly as written, with no masking pass.
 >
-> **Verify:** Review the template's body for any hard-coded record data. Use
-> `describe` to enumerate PII fields and ensure each one enters the prompt only
-> via a dynamic merge field, never as literal text.
+> **Verify:** Review the template body for hard-coded record data; use `describe`
+> to enumerate PII fields and ensure each enters only via a dynamic merge field.
 
 ---
 
@@ -537,6 +515,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-11** — D10 right-size (wind-down): compressed the five decision-scenario prose blocks and tightened §6 Trust Layer rules; no facts removed. Body trimmed ~250 words toward the project's context-economy ceiling; all five scenarios retained (D9).
 - **2026-06-10** — Cycle-4 curation (inbox): (1) Blueprint reweight: §1 Prompt Engineering corrected from 30% → 20%; §2 AI Agents corrected from 30% → 35% (largest domain); "largest topic" label removed from Prompt Engineering and moved to AI Agents. (2) New top-level sections added: §4 Development Lifecycle (20%) and §5 Multi-Agent Interoperability (5%) — both are current AI-201 exam domains. Service Cloud / Sales Cloud guard-rules folded into §4 (no longer standalone 10%-each framing). (3) Data Cloud → Data 360 rename (Dreamforce Oct 2025): all body occurrences updated; "Data 360 (formerly Data Cloud)" on first use, description field, volatile tags, scenarios, quick reference, and study-resources. (4) Passing score: 72% → 73% (44/60) `[volatile — verify live]` in study-resources.md. Sources: salesforceben.com/salesforce-agentforce-specialist-certification-guide-tips/ (domain weights, passing score); salesforceben.com/salesforce-data-cloud-renamed-to-data-360-as-part-of-agentforce-360/ (Data 360 rename). Domain percentages marked `[volatile — verify live]`.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 

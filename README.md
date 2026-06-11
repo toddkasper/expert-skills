@@ -18,6 +18,9 @@ Claude Code plugins.
 > [POLICY.md](POLICY.md) for the content policy and vendor non-affiliation disclaimer. Skills are
 > guidance, not ground truth — verify against live systems and official docs before acting.
 
+> **Project status:** see [PROJECT-STATUS.md](PROJECT-STATUS.md) for current state, what is
+> evidence-backed (Cycle-4 lift), known measurement caveats, and the resume checklist.
+
 ## Domains
 
 | Plugin | Skills | Coverage |
