@@ -53,7 +53,7 @@ Every workflow starts with `on:`. Pick the narrowest trigger that fits.
 
 `workflow_dispatch` inputs have types: `string`, `boolean`, `choice`, `environment`, `number`. Always declare `required` and `default`. Pass inputs into a called workflow via `with:` (for inputs) and `secrets: inherit` or explicit mapping (for secrets).
 
-**Filtering is a first-class cost control:** use `paths:` and `branches:` filters to avoid triggering expensive matrix builds on unrelated changes. A workflow with no filters runs on every push to every branch.
+**Filtering is cost control:** use `paths:`/`branches:` filters so expensive matrices don't run on unrelated changes; no filter = runs on every push to every branch.
 
 ### Jobs, Steps, and Needs
 
@@ -81,7 +81,7 @@ strategy:
 Key contexts: `github`, `runner`, `env`, `vars`, `secrets`, `inputs`, `matrix`, `needs`, `strategy`, `job`, `steps`, `github.event`, `github.ref`.
 
 - Contexts are evaluated at runtime (inside `${{ }}`); some values are only available in certain job phases.
-- **Secret leakage in expressions:** never construct a shell command string by interpolating `${{ secrets.FOO }}` directly into a `run:` step's inline script — a log echoing the expression would expose the secret. Instead, pass secrets via environment variables: set `env: MY_SECRET: ${{ secrets.FOO }}` on the step and reference `$MY_SECRET` in the script.
+- **Secret leakage in expressions:** never interpolate `${{ secrets.FOO }}` directly into a `run:` script — pass it via `env:` and reference `$MY_SECRET` instead (same env-var pattern as Script Injection, §5).
 - `github.ref` is the full ref (`refs/heads/main`); `github.ref_name` is the short name (`main`). Use `github.event_name` to branch behavior between push and PR triggers.
 
 ### YAML Reuse within a File
@@ -108,36 +108,23 @@ concurrency:
 
 ### Service Containers
 
-Service containers run Docker images as sidecar services alongside your job — databases, queues, or any network-reachable dependency. Declare them under `services:` at the job level:
+Run Docker sidecar services (databases, queues, any network dependency) under `services:` at the job level:
 
 ```yaml
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+services:
+  postgres:
+    image: postgres:16
+    env: { POSTGRES_PASSWORD: test }
+    ports: ['5432:5432']
+    options: --health-cmd pg_isready --health-interval 10s --health-retries 5
 ```
 
 Key rules:
-- Service containers only work on **Linux runners** (GitHub-hosted `ubuntu-*` or self-hosted Linux). They are not supported on Windows or macOS runners.
-- Use `ports:` to map container ports to host ports; reference the service from job steps via `localhost:<host-port>`.
-- Use `options: --health-cmd ... --health-interval ... --health-retries` to ensure GitHub waits until the container is ready before starting job steps — without a health check the service may not be accepting connections when your test step runs.
-- The `image:` value supports any public Docker image or a private image accessible via registry credentials set in `env:` on the service.
-- To reference a service by hostname instead of `localhost`, jobs running in a **container** (`container:`) can use the service name directly (e.g., `postgres:5432`); jobs running directly on the runner host must use `localhost`.
+- **Linux runners only** (GitHub-hosted `ubuntu-*` or self-hosted Linux — not Windows/macOS, where it fails silently).
+- Map `ports:` and reach the service at `localhost:<host-port>`; a job running inside a `container:` instead uses the service name directly (e.g. `postgres:5432`).
+- A health check (`--health-cmd`/`--health-interval`/`--health-retries`) is required, or steps may start before the service accepts connections. Map private-image/DB credentials from `secrets:`, never hard-code them in `env:`.
 
-**Red flags in review:** a service container with no health-check `options:` (tests may start before the DB is ready); a service container on a Windows or macOS runner (unsupported — will silently fail); hard-coded credentials in the `env:` block of a service (map from `secrets:` instead).
-
-**Red flags in review:** `on: push:` with no `branches:` filter on a high-traffic repo (every push triggers a full matrix); `if: always()` on a deploy step that should only run on success; `fail-fast: true` on a cross-OS test matrix where you need all failure data; `${{ secrets.X }}` interpolated directly into a `run:` command string.
+**Red flags in review:** a service container with no health check, on a Windows/macOS runner, or with hard-coded credentials; `on: push:` with no `branches:` filter on a high-traffic repo (every push triggers a full matrix); `if: always()` on a deploy step that should only run on success; `fail-fast: true` on a cross-OS matrix where you need all failure data; `${{ secrets.X }}` interpolated directly into a `run:` command string.
 
 ---
 
@@ -176,7 +163,6 @@ Three mechanisms, in order of preference:
 1. **Check the job log:** expand each step; the red X pinpoints the failing step. Look for exit code, error message, and preceding output.
 2. **Enable debug logging:** set repository secret `ACTIONS_STEP_DEBUG=true` and `ACTIONS_RUNNER_DEBUG=true` for verbose runner/step logs on the next run.
 3. **Matrix failures:** you can re-run individual matrix jobs (not the whole matrix) from the UI — use this to confirm a fix without burning the full matrix.
-4. **Interpret YAML anchors in logs:** anchors and aliases are expanded at parse time; the log shows the resolved commands, not the anchor reference.
 
 **Red flags in review:** downloading artifacts in a job with no corresponding upload; relying on `GITHUB_ENV` to pass data across jobs (it only spans within a job); cache keys with no versioning component (a dependency upgrade won't bust the cache).
 
@@ -184,7 +170,7 @@ Three mechanisms, in order of preference:
 
 ## 3. Authoring Custom Actions
 
-Three action types: **JavaScript** (Node.js, fast, cross-OS, no container spin-up), **Docker** (custom OS/tools, compiled binaries), **Composite** (YAML steps, runs on the caller's runner). With immutable actions enforcement, floating tags (`@v3`) resolve against a GHCR snapshot rather than the live repo — pin to a full SHA for auditability. Full type comparison table and immutable-actions details: [references/advanced-features.md](references/advanced-features.md) → "Action Types."
+Three action types: **JavaScript** (Node.js, fast, cross-OS, no container spin-up), **Docker** (custom OS/tools, compiled binaries), **Composite** (YAML steps, runs on the caller's runner). Full type comparison table and immutable-actions details: [references/advanced-features.md](references/advanced-features.md) → "Action Types" (and §5 on SHA-pinning).
 
 ### `action.yml` Structure
 
@@ -284,7 +270,7 @@ permissions:
 
 ### OIDC — Eliminating Long-Lived Cloud Credentials
 
-OIDC lets a workflow authenticate to a cloud provider (AWS, Azure, GCP) without storing a long-lived key as a secret. The workflow requests a short-lived token from GitHub's OIDC provider, which the cloud provider validates.
+OIDC lets a workflow authenticate to a cloud provider (AWS/Azure/GCP) via a short-lived token from GitHub's OIDC provider that the provider validates — no long-lived key stored as a secret.
 
 Requirements:
 1. `permissions: id-token: write` in the workflow/job.
@@ -301,9 +287,9 @@ Requirements:
 
 Pinning to a full SHA is the only guarantee that the action code cannot change between runs. Tags are mutable; a malicious or compromised publisher can repoint `v4` to different code. SHA-pinning is especially important for actions that have `id-token: write` or elevated `contents: write` permission.
 
-With immutable actions enforcement on GitHub-hosted runners, GitHub resolves tag-pinned actions from an immutable GHCR snapshot — this closes the tag-mutation attack vector for hosted runners, but SHA pinning remains the best practice for auditability and self-hosted runner consistency.
+Immutable-actions enforcement resolves tag-pinned actions from a GHCR snapshot on hosted runners (closing tag-mutation there); SHA-pinning remains best practice for auditability and self-hosted consistency.
 
-**Organization/enterprise SHA-pinning enforcement (Aug 2025):** admins can enable a policy checkbox that *requires* all workflow `uses:` references to include a full commit SHA — workflows using floating tags (`@v4`, `@main`) fail immediately at the policy layer rather than at execution time `[volatile — verify live]`. This converts SHA-pinning from a voluntary author practice to an enforced platform constraint. If your org has this policy active, tag-only references will cause an immediate "not allowed by policy" failure; the fix is always to add the full SHA.
+**Org/enterprise SHA-pinning enforcement** (the §4 policy checkbox, Aug 2025) makes this mandatory rather than voluntary: with it active, tag-only refs (`@v4`, `@main`) fail immediately with "not allowed by policy" — the fix is always to add the full SHA. `[volatile — verify live]`
 
 ### Script Injection
 
@@ -454,6 +440,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-11** — D10 right-size (wind-down): merged duplicated guidance (the env-var secret pattern stated twice; immutable-actions explained in three places now cross-referenced to §5), compacted the Service Containers example, and tightened OIDC/filtering notes. Body trimmed ~250 words toward the context-economy ceiling; no facts removed.
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 - **2026-06-09** — Curation pass (inbox: D9 audit finding): inlined 3 decision scenarios into the body (Scenarios 2–4: GITHUB_OUTPUT vs GITHUB_ENV, OIDC org-scope trust, reusable workflow nesting depth) to meet the teaching-scenario standard (≥4 inline). Scenario 5 remains in references. "Versioning and Publishing" and "Artifact Attestations" subsections moved to references/advanced-features.md to offset body length.
 - **2026-06-10** — Cycle-4 curation (inbox): corrected reusable workflow nesting limit from 4 → 10 levels in all three locations (Uncertainty §, §2 body, Scenario 4) and updated Scenario 4's example chain to demonstrate a genuine 11-level over-limit case; added "max 50 unique reusable workflows per file" limit. Corrected cache 10 GB from "hard cap" to "configurable default" (billable above 10 GB, up to 10 TB). Added §1 Service Containers subsection (GH-200 blueprint gap). Added `!`-prefix blocklist and SHA-pinning enforcement policy controls to §4 Policies and §5 SHA-Pinning (Aug 2025 feature). Eval probes 13–15 added.

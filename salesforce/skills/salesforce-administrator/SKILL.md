@@ -187,12 +187,14 @@ Access is computed by **layering** — reason about the whole stack, not one lay
 
 | | Data Import Wizard | Data Loader |
 |---|---|---|
-| Max records | 50,000 | 5,000,000 `[volatile — verify live]` (sources conflict: limits cheat-sheet 5M vs data-import FAQ 150M) |
+| Max records | 50,000 | up to **5M (Bulk API 1.0)** / up to **150M (Bulk API 2.0)** `[volatile — verify live]` |
 | Objects | Accounts, Contacts, Leads, Campaign Members, Person Accounts, custom objects | All objects incl. custom |
 | Upsert by external ID | Limited | ✅ full |
 | Hard delete | ❌ | ✅ |
 | Built-in dup matching | ✅ | ❌ |
 | Interface | Browser wizard | Desktop app / CLI (CLI for scheduled jobs) |
+
+The two Data Loader figures are not a conflict — they are two API modes of the same tool: the legacy **Bulk API 1.0** ceiling is ~5M records, while **Bulk API 2.0** raises it to ~150M ([limits cheat-sheet](https://developer.salesforce.com/docs/atlas.en-us.salesforce_app_limits_cheatsheet.meta/salesforce_app_limits_cheatsheet/salesforce_app_limits_platform_bulkapi.htm), [data-import FAQ](https://help.salesforce.com/s/articleView?id=xcloud.faq_data_import_wizard_how_many_records.htm&language=en_US&type=5)). Throughput is bound by the org's 24h API/batch limits regardless.
 
 **On a managed-package org, prefer the package's own loader** — it understands required relationships and field mappings a generic loader gets wrong (e.g. NPSP Data Import for Household/Contact/gift loads; see [salesforce-nonprofit-cloud-consultant](../salesforce-nonprofit-cloud-consultant/SKILL.md)).
 
@@ -342,7 +344,7 @@ Read this first. Each rule is concrete and imperative.
 - **DON'T** give two Lookups to the same parent the same `relationshipName` — use role-specific suffixes.
 - **DO** derive form/integration string `max()` and picklist constraints from live field metadata; regenerate after any field resize/picklist edit; never hand-edit generated schema files.
 - **DO** cache-bust a Quick Action after adding fields: edit `<description>`/`<label>` and redeploy, or the new fields won't render on the contextual tab.
-- **DON'T** use Data Import Wizard for >50k rows or unsupported objects — use Data Loader (5M cap); on a managed-package org prefer the package's own loader (e.g. NPSP Data Import).
+- **DON'T** use Data Import Wizard for >50k rows or unsupported objects — use Data Loader (up to 5M via Bulk API 1.0 / 150M via Bulk API 2.0); on a managed-package org prefer the package's own loader (e.g. NPSP Data Import).
 - **DO** remember Recycle Bin default retention is 15 days (up to 30 days with Extended Retention); hard delete skips the Recycle Bin entirely and is unrecoverable — back up first.
 - **DON'T** delete a user — deactivate (frees license) or freeze (instant lockout, keeps license).
 - **DO** check Setup Audit Trail (180-day) first when org behavior changes unexpectedly.
@@ -371,6 +373,7 @@ These are harvested back into the skill via the learning loop. When the live sys
 
 ## Changelog
 
+- **2026-06-11** — Ratified the Data Loader capacity item (Cycle-4 adjudication): stated both limits by API mode — 5M (Bulk API 1.0) / 150M (Bulk API 2.0) — with both official sources cited; removed the "sources conflict" framing (the two figures describe two modes, not a contradiction).
 - **2026-06-09** — Conformed to the 12-dimension skill standard: task-vocab description + Scope block, Uncertainty & Escalation guidance with inline `[volatile — verify live]` marks, executable workflows, tool-agnostic verify steps, and the feedback protocol above. Exam logistics relocated to references/study-resources.md; `last-reviewed` set to 2026-06-09.
 - **2026-06-10** — Curation (inbox audit, 2026-06-10):
   - **Finding 1:** External ID limit corrected 7 → **25** (shared pool with unique custom fields); updated §3 body and Quick Reference. Source: help.salesforce.com 000385134.
