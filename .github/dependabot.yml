@@ -1,0 +1,10 @@
+# GitHub Actions version updates, grouped into one PR a week (sysadmin finding 28, 2026-10-30).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
